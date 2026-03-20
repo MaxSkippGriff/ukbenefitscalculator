@@ -239,62 +239,218 @@ GUIDES: Dict[str, Dict] = {
     },
     "redundancy-process-guide": {
         "title": "Redundancy process and costs: employer guide",
-        "description": "A practical employer guide to redundancy process, statutory pay, notice and risk control.",
+        "description": "A practical employer guide to redundancy process, statutory pay, notice and risk control in 2025.",
         "topic": "Redundancy",
         "sections": [
             {
-                "heading": "Process discipline matters",
+                "heading": "Statutory redundancy pay: how the calculation works",
                 "paragraphs": [
-                    "Redundancy planning should start with role rationale, selection methodology and a consultation timetable. Documentation quality is as important as arithmetic.",
-                    "Cost modelling should include statutory redundancy pay, notice pay, accrued holiday, pension interactions and professional support where needed.",
-                    "A rushed process can create legal exposure that exceeds the direct payroll savings sought by the exercise.",
+                    "Statutory redundancy pay is calculated using three variables: age, complete years of service (up to 20), and weekly pay (capped at £643 per week from April 2024). The multiplier is 0.5 weeks for each year worked under age 22, 1 week for each year aged 22–40, and 1.5 weeks for each year aged 41 and above.",
+                    "As a worked example: an employee aged 38 with 8 years of service on a £35,000 salary (weekly pay £673, capped at £643) would receive 8 × 1 × £643 = £5,144 in statutory redundancy pay. The first £30,000 of redundancy payments is generally free from income tax.",
+                    "Many employers offer enhanced redundancy terms beyond the statutory minimum, particularly for longer-serving employees. Where enhanced terms exist, document them clearly in employment contracts or a standalone redundancy policy so they are enforceable and consistently applied.",
                 ],
             },
             {
-                "heading": "Core cost components",
+                "heading": "Notice pay and payment in lieu of notice",
                 "paragraphs": [
-                    "The baseline cost usually includes statutory redundancy entitlement for eligible employees, plus notice obligations under statute or contract.",
-                    "Employers may also need to account for payment in lieu of notice, untaken holiday, and any agreed enhanced terms.",
-                    "Treat these as scenario ranges during planning. Actual outcomes depend on service length, contracts, consultation outcomes and settlement choices.",
+                    "Statutory minimum notice is one week for each complete year of service, up to a maximum of 12 weeks. Contracts often specify longer notice periods, in which case the contractual period applies. Notice must be served or bought out — whichever is the right approach depends on the circumstances and contract terms.",
+                    "Payment in lieu of notice (PILON) is taxed as earnings where there is a contractual PILON clause. Where there is no contractual right, tax treatment is more complex; take payroll or legal advice before paying PILON without a clause. Accrued but untaken holiday must also be paid out on termination.",
+                    "Include notice and holiday pay in your redundancy cost model from the outset. Both are legal obligations and are easily missed when the focus is on the headline redundancy payment. For a £35,000 employee with 3 months notice, PILON represents approximately £8,750, which can dwarf the statutory redundancy amount.",
                 ],
             },
             {
-                "heading": "Reducing operational risk",
+                "heading": "Process steps and consultation obligations",
                 "paragraphs": [
-                    "Use a checklist covering consultation records, role pooling decisions, scoring evidence and communications history.",
-                    "Ensure managers are briefed before meetings. Inconsistent messaging can weaken process integrity.",
-                    "Where uncertainty is high, take legal advice early. Calculator outputs are useful for planning but are not substitutes for legal review.",
+                    "For individual redundancies, employers must follow a fair process: establish a genuine redundancy situation, apply fair selection criteria, consult meaningfully with the affected employee, and consider suitable alternative roles. For 20 or more redundancies in 90 days, collective consultation rules apply and minimum 45-day consultation periods are required.",
+                    "Documentation is as important as the arithmetic. Keep consultation records, scoring evidence, meeting notes and all written communications. Employment tribunals frequently find in employees' favour not because the redundancy was commercially unjustified but because the process was flawed or inconsistently applied.",
+                    "If using a scoring matrix for selection, apply it consistently and document rationale for each decision. Avoid criteria that could be directly or indirectly discriminatory, such as selecting solely on absence records where protected characteristics are linked to the absences.",
+                ],
+            },
+            {
+                "heading": "Total cost modelling for redundancy decisions",
+                "paragraphs": [
+                    "A complete redundancy cost model should include: statutory redundancy pay, contractual notice or PILON, accrued holiday pay, any enhanced terms, settlement agreement value where applicable, and professional support costs. It should also include the ongoing salary saving used to justify the decision.",
+                    "Calculate the payback period: total redundancy cost divided by monthly salary saving gives the number of months before the business breaks even. For a £35,000 role costing £18,000 to exit, with a monthly saving of £2,916, payback is approximately 6.2 months. Decisions made without this figure tend to be harder to defend at senior review.",
+                    "Where settlement is likely, model a realistic settlement scenario alongside the statutory baseline. Settlement agreements typically exceed the statutory minimum in exchange for a waiver of employment tribunal claims. Legal costs, both employer-side and the contribution to employee advice, should be included in the settlement total.",
+                ],
+            },
+            {
+                "heading": "Reducing operational and legal risk",
+                "paragraphs": [
+                    "The most common redundancy legal risks are: failure to consult meaningfully, inconsistent selection criteria, failure to consider alternative roles, and procedural irregularities (wrong notice, wrong pay). Addressing these before the process starts is cheaper than resolving them after an employment tribunal claim.",
+                    "Brief line managers before any employee-facing meetings. Inconsistent messages between HR and line management, or promises made informally by managers, can undermine process integrity. Use a script or talking points for difficult conversations.",
+                    "Where legal risk is elevated — for example where the employee has or may claim a protected characteristic, or where unfair dismissal risk is real — take employment law advice before serving notice. The cost of early legal advice is almost always less than tribunal defence costs.",
                 ],
             },
         ],
     },
     "employment-rights-act-2025": {
         "title": "Employment Rights Act 2025: what employers need to know",
-        "description": "Operational implications of Employment Rights Act 2025 reforms for UK employers.",
+        "description": "Operational implications of Employment Rights Act 2025 reforms for UK employers, including unfair dismissal day one rights, flexible working and zero-hours changes.",
         "topic": "Legislation",
         "sections": [
             {
-                "heading": "Why this matters for employers",
+                "heading": "The key changes employers need to prepare for",
                 "paragraphs": [
-                    "Employment law reforms alter hiring, contracts, probation management and dismissal risk. For employers, implementation readiness is usually a process challenge rather than a single policy update.",
-                    "Leadership teams should separate confirmed commencement dates from proposals and consultation items. Planning against unconfirmed assumptions can waste effort.",
-                    "Maintain a dated change log and policy register so operational teams can see what has changed, when, and why.",
+                    "The Employment Rights Act 2025 introduces the most significant expansion of employee rights in a generation. The headline change is the removal of the two-year qualifying period for unfair dismissal claims, making unfair dismissal protection a day-one right for most employees. The practical implication is that probation periods will need to be better managed and more consistently applied.",
+                    "Other significant changes include: flexible working becoming a default right from day one; zero-hours workers gaining the right to guaranteed hours contracts based on their regularly worked pattern; third-party harassment rules being strengthened; and trade union access rights being expanded.",
+                    "Not all reforms have confirmed implementation dates. Leadership teams should separate confirmed commencement orders from proposals still in consultation. Planning against unconfirmed assumptions creates effort that may need to be re-done when dates slip.",
                 ],
             },
             {
-                "heading": "Practical implementation approach",
+                "heading": "Day-one unfair dismissal: practical implications",
                 "paragraphs": [
-                    "Start with a gap review: contracts, handbooks, manager training and grievance workflows. Prioritise high-impact workflows such as recruitment, probation, and disciplinary steps.",
-                    "Update template documentation centrally and set one deployment date for all managers. Fragmented rollout increases inconsistency and risk.",
-                    "Track compliance ownership by function. HR, payroll, legal and line management each hold different controls.",
+                    "Once day-one unfair dismissal protection is in force, employers cannot simply dismiss employees during a probation period without following a fair process. The government has indicated that probation periods of up to nine months will be the relevant framework, with a statutory procedure expected to apply during that window.",
+                    "In practice, this means probation management needs to become more structured. Clear performance objectives at the start of employment, documented mid-probation reviews, and formal probation failure conversations with evidence all become more important. The risk of an informal 'this isn't working' conversation followed by immediate dismissal is materially higher than under the current two-year qualifying period.",
+                    "Review your probation policy and manager training before implementation. Line managers are often the weakest link in probation management because they are not trained to give honest performance feedback early enough for it to be documented and acted on within the probation window.",
                 ],
             },
             {
-                "heading": "Cost and workforce planning impact",
+                "heading": "Flexible working and zero-hours changes",
                 "paragraphs": [
-                    "Some reforms increase administration time per employee lifecycle event. Budget should include that overhead, not just direct pay.",
-                    "When policy changes interact with payroll rules, review calculators and manager guidance together. Out-of-date tools create avoidable mistakes.",
-                    "For strategic planning, combine legal-risk controls with clear cost models. This allows faster decision-making when hiring demand changes.",
+                    "Flexible working is already a day-one right to request since April 2024, but the Employment Rights Act extends this by limiting the grounds on which employers can refuse. Where flexible working is refused, the reasons must be demonstrably reasonable and documented. This raises the bar above the current eight statutory grounds for refusal.",
+                    "Zero-hours and minimum-hours workers who work a regular pattern over a reference period will be entitled to a guaranteed-hours contract reflecting that pattern. Employers who rely on zero-hours arrangements for operational flexibility will need to either accept that pattern becoming contractual or restructure rotas to avoid regularity. Both approaches carry cost and administrative implications.",
+                    "Review your workforce composition before implementation. Zero-hours usage is not uniformly problematic — some workers genuinely prefer flexibility — but where it is being used to avoid employment cost and legal risk, that model will need to change.",
+                ],
+            },
+            {
+                "heading": "Workforce planning and cost implications",
+                "paragraphs": [
+                    "The combined effect of these reforms is to increase the average cost and legal risk of employing people, particularly for lower-paid and variable-hours workers. Employers should update their hiring cost models to include a higher provision for probation management, performance process time, and potential settlement costs for early-stage dismissals.",
+                    "Structured onboarding and probation programmes — which are good practice regardless of legislation — become more valuable as legal protection for day-one rights. Employers who already run well-documented probation processes will see less disruption than those who rely on informality.",
+                    "Use the next six months before implementation to complete the gap review: contracts, handbooks, probation policies, manager training, flexible working procedure and zero-hours audit. Set one deployment date for updated documentation so that all managers are working from the same version.",
+                ],
+            },
+            {
+                "heading": "Building a compliant cost model",
+                "paragraphs": [
+                    "Every significant employment law change creates a corresponding administration cost that rarely appears in headcount budgets. Estimate the time cost of better probation management, more flexible working requests, guaranteed-hours reviews and any workforce consultation requirements. That time has a real payroll value.",
+                    "Where the legal risk of day-one dismissal is real (for example, a hire into a business-critical role that does not work out within a few months), model a potential settlement scenario alongside the direct employment cost. Having that number visible in advance makes the decision to hire — or to take legal advice — faster.",
+                    "Track compliance ownership clearly across HR, payroll and line management. When policy changes interact with payroll rules, out-of-date processes create avoidable errors. Assign named owners for each area of the reform and review compliance quarterly for the first year.",
+                ],
+            },
+        ],
+    },
+    "hiring-costs-london": {
+        "title": "Cost of hiring in London (2025/26): employer NI, pension and salary benchmarks",
+        "description": "Employer cost of hiring in London for 2025/26. Typical salary bands, employer NI at 15%, pension and total monthly cost at common London pay levels.",
+        "topic": "London hiring",
+        "sections": [
+            {
+                "heading": "Typical London salary bands and employer NI cost",
+                "paragraphs": [
+                    "London salary levels are significantly higher than the UK average across most sectors. For 2025/26, employer NI is 15% on earnings above the £5,000 secondary threshold. At a £40,000 London salary (common for early-to-mid career roles), employer NI is £5,250 per year (£437.50 per month). At £50,000, NI is £6,750 per year (£562.50 per month). At £60,000, it rises to £8,250 per year (£687.50 per month).",
+                    "Adding minimum employer pension on qualifying earnings increases these figures. At £40,000, pension is approximately £1,013 per year; at £50,000 it is approximately £1,321 per year (capped at the qualifying earnings upper limit of £50,270). Total employer cost above salary at £40,000 is therefore around £6,263 per year, or £522 per month.",
+                    "For London roles offering salary sacrifice pension, the pension cost comes from pre-tax salary, which reduces the employer NI base slightly. At £50,000 with 5% salary sacrifice, the NIable pay falls to £47,500, reducing employer NI to approximately £6,375 per year compared with £6,750 on the full salary.",
+                ],
+            },
+            {
+                "heading": "London vs national hiring cost comparison",
+                "paragraphs": [
+                    "London employers face a dual cost premium: higher gross salaries and proportionally higher employer NI on those salaries. A role that benchmarks at £30,000 in a northern city might benchmark at £40,000 in London — adding £1,500 more in employer NI alone (£4,500 London vs £3,750 on a £30,000 salary).",
+                    "The employment allowance (up to £10,500 per year) can partially offset this for eligible employers with annual NI below that threshold. A small London business with three employees averaging £35,000 in salary generates approximately £13,500 in annual employer NI — still above the allowance ceiling, so the offset is partial.",
+                    "Remote work has changed London hiring dynamics. Many employers now hire at London salary rates for roles that can be performed from anywhere, while others use regional salary banding to pay market rates by location. Either approach has employer NI implications because NI follows the employee's salary, not their location.",
+                ],
+            },
+            {
+                "heading": "Practical London hiring cost checklist",
+                "paragraphs": [
+                    "Before committing to a London hire, model: gross salary, employer NI (15% above £5,000), minimum pension, and your operational overhead assumption. For London, equipment, software licences and any desk or office space allocation should be priced explicitly. A common range for operational overhead is £3,000–£6,000 per employee per year for an office-based role.",
+                    "For London senior roles above £100,000, note that employer NI continues at 15% with no upper cap. A £120,000 salary generates £17,250 in employer NI annually (£1,437.50 per month). Pension for that salary caps at the qualifying earnings upper limit — the employer minimum contribution is approximately £1,321 per year regardless of how far above £50,270 the salary sits.",
+                    "Use the employer cost calculator to model the exact NI and pension for any London salary. Input the salary, set pension rate and overhead assumption, and record both monthly and annual totals as your hiring baseline. This output is the number to use in headcount approval, not gross salary alone.",
+                ],
+            },
+        ],
+    },
+    "hiring-costs-manchester": {
+        "title": "Cost of hiring in Manchester (2025/26): employer NI and total hiring costs",
+        "description": "Employer cost of hiring in Manchester for 2025/26. Common salary ranges, employer NI at 15% and total cost above salary at typical Manchester pay levels.",
+        "topic": "Manchester hiring",
+        "sections": [
+            {
+                "heading": "Manchester salary benchmarks and employer NI",
+                "paragraphs": [
+                    "Manchester is one of the UK's strongest regional hiring markets, with salary levels ranging from £24,000–£30,000 for entry roles to £45,000–£65,000 for senior individual contributors and team leads in tech, finance and professional services. For 2025/26, employer NI is 15% on earnings above the £5,000 secondary threshold.",
+                    "At a £30,000 Manchester salary, employer NI is £3,750 per year (£312.50 per month). At £35,000, NI is £4,500 per year (£375 per month). At £45,000, it is £6,000 per year (£500 per month). Adding minimum employer pension at 3% of qualifying earnings: at £35,000 the pension cost is approximately £863 per year, giving a total above-salary cost of £5,363 per year (£447 per month).",
+                    "Manchester's growing tech sector includes significant demand for roles in the £35,000–£55,000 band. At £50,000, total employer cost above salary is approximately £8,071 per year (NI £6,750 plus pension £1,321), making the total annual cost around £58,071 for that hire.",
+                ],
+            },
+            {
+                "heading": "Manchester cost of hiring versus London",
+                "paragraphs": [
+                    "Manchester salary benchmarks are typically 15–25% below London for comparable roles, though the gap is narrowing in tech and financial services. The employer NI difference compounds this: at £35,000 (a common Manchester mid-career benchmark) versus £45,000 (a more common London equivalent), the annual NI difference is £1,500 per employee.",
+                    "For employers with operations in both cities, this means Manchester-based headcount carries lower NI per employee, even before accounting for lower salary. Employment Allowance — which can offset up to £10,500 of employer NI for eligible businesses — may be fully usable by a Manchester team where it only partially offsets London NI bills.",
+                    "Operational overhead assumptions also differ. Manchester office space and equipment costs are lower than London equivalents, though the gap has narrowed as demand for Manchester office space has grown. Use local market rates for workspace and benchmark salary data for your sector before finalising a hiring cost model.",
+                ],
+            },
+            {
+                "heading": "Using this for Manchester headcount approval",
+                "paragraphs": [
+                    "For a headcount approval presentation, the most useful format is: role title, gross salary, monthly employer NI, monthly pension, monthly overhead, and total monthly cost. This is more useful to finance and founders than annual gross salary because it shows recurring cashflow impact.",
+                    "Use the employer cost calculator to generate the NI and pension components, then add your overhead assumption. Document the pension basis (qualifying earnings minimum, or full salary) and overhead rule (per-employee figure or shared cost allocation). Consistent documentation means re-approvals later in the year use the same framework.",
+                    "For growing Manchester teams, model a hiring plan across the next 12 months with monthly NI running totals. This helps identify whether Employment Allowance will be fully absorbed during the year and shows when NI liability starts compounding materially.",
+                ],
+            },
+        ],
+    },
+    "hiring-costs-birmingham": {
+        "title": "Cost of hiring in Birmingham (2025/26): employer NI and salary benchmarks",
+        "description": "Employer hiring costs in Birmingham for 2025/26. Salary ranges, employer NI at 15%, pension and total cost at common Birmingham pay levels.",
+        "topic": "Birmingham hiring",
+        "sections": [
+            {
+                "heading": "Birmingham salary levels and employer NI",
+                "paragraphs": [
+                    "Birmingham is the UK's second largest city economy with a diverse hiring market spanning financial services, professional services, manufacturing, public sector and a growing tech sector. Salary ranges vary significantly by sector: £22,000–£30,000 for entry roles, £30,000–£50,000 for experienced hires, and £50,000–£75,000 for senior management and technical specialists.",
+                    "At a £30,000 Birmingham salary, employer NI for 2025/26 is £3,750 per year (£312.50 per month). At £35,000, NI is £4,500 per year (£375 per month). At £40,000, NI is £5,250 per year (£437.50 per month). Adding 3% employer pension at £35,000: approximately £863 per year, making total above-salary cost around £5,363 per year (£447 per month).",
+                    "Birmingham HMRC processing and financial services roles, and the growing professional services cluster, often benchmark between £28,000 and £45,000. HS2 and infrastructure projects have created additional demand in engineering and project management at higher salary bands.",
+                ],
+            },
+            {
+                "heading": "Employment Allowance impact for Birmingham employers",
+                "paragraphs": [
+                    "Employment Allowance (up to £10,500 for eligible employers in 2025/26) can be particularly valuable for growing Birmingham businesses. A team of four employees averaging £32,000 in salary generates approximately £16,200 in annual employer NI — allowance offsets the first £10,500, leaving a net NI liability of approximately £5,700 for the year.",
+                    "For Birmingham small and medium employers, the removal of the previous £100,000 NI bill eligibility cap in 2025/26 means more businesses can now claim. Previously, businesses with NI bills above £100,000 were excluded; that restriction has now been lifted. Check eligibility (solo-director companies remain excluded) and claim through your payroll software.",
+                    "For Birmingham employers near the Employment Allowance ceiling, model the full-year position monthly. The allowance offsets cumulative employer NI in-year; once used, standard rates apply from that point forward. This affects cashflow particularly in the second half of the tax year.",
+                ],
+            },
+            {
+                "heading": "Building a Birmingham hiring cost model",
+                "paragraphs": [
+                    "For a repeatable Birmingham hiring cost model, use: gross salary, 15% NI on earnings above £5,000, 3% pension on qualifying earnings, and an overhead assumption specific to your operational setup. Birmingham office and equipment costs are broadly similar to Manchester and lower than London equivalents.",
+                    "For mixed Birmingham headcount (some office-based, some remote), use a consistent overhead assumption or document different rates by work type. Finance teams reviewing headcount approval find inconsistent overhead assumptions confusing and may apply their own, potentially incorrect, figures.",
+                    "Use the employer cost calculator to produce the NI and pension baseline for any Birmingham salary. Combine that with your overhead assumption to create the complete monthly hiring cost number. Review quarterly, particularly around budget reviews or when salary bands are adjusted.",
+                ],
+            },
+        ],
+    },
+    "hiring-costs-edinburgh-scotland": {
+        "title": "Cost of hiring in Scotland (2025/26): employer NI and Scottish payroll considerations",
+        "description": "Employer cost of hiring in Scotland for 2025/26. Employer NI at 15%, Scottish income tax context, pension and total hiring costs at common Scottish salary levels.",
+        "topic": "Scotland hiring",
+        "sections": [
+            {
+                "heading": "Employer NI in Scotland: what is and is not different",
+                "paragraphs": [
+                    "Employer National Insurance is UK-wide. Scottish employers pay the same 15% employer NI on earnings above £5,000 as employers anywhere else in the UK. Scottish income tax (which uses five bands with rates from 19% to 48%) is deducted from employees' wages and does not affect employer NI or pension contributions.",
+                    "At a £35,000 salary in Edinburgh or Glasgow, employer NI is £4,500 per year (£375 per month) — exactly the same as in Manchester or Birmingham at the same salary. Pension cost at 3% minimum is approximately £863 per year. Total employer cost above salary is around £5,363 per year.",
+                    "For employers comparing Scottish and rUK headcount, the employer cost model is identical for the same salary. The difference appears on the employee's payslip — Scottish income tax reduces take-home pay at mid and higher salaries compared with rUK — which can affect recruitment, retention and salary negotiation dynamics.",
+                ],
+            },
+            {
+                "heading": "Scottish salary benchmarks and hiring context",
+                "paragraphs": [
+                    "Edinburgh and Glasgow are the two major Scottish hiring centres. Edinburgh has a strong financial services cluster (Standard Life, Baillie Gifford, fund administration) alongside legal, technology and public sector employers. Glasgow has broader private sector diversity including financial services, retail, logistics and growing tech.",
+                    "Scottish salary benchmarks are generally 5–15% below London for equivalent roles, and broadly comparable with other major UK regional cities. Edinburgh financial services roles and technology roles in both cities have seen upward salary pressure, with some roles now benchmarking close to London levels for specialist skills.",
+                    "Aberdeen salary levels in energy and engineering can vary significantly with commodity cycles. During peak periods, offshore and subsea roles commanded significant premia that are less common now. Model Aberdeen salaries against current market benchmarks rather than historical peaks.",
+                ],
+            },
+            {
+                "heading": "Employee awareness of Scottish income tax in hiring",
+                "paragraphs": [
+                    "Scottish income tax affects take-home pay at mid and higher salary levels. A £45,000 salary produces a slightly lower net monthly take-home under Scottish rules than under rUK — approximately £60–£90 per month less depending on deduction settings. For employers hiring from outside Scotland, this is sometimes a surprise to candidates during offer negotiation.",
+                    "Being transparent about Scottish income tax in offer discussions — and pointing candidates to reliable net pay comparison tools — reduces late-stage negotiation friction. Candidates who understand the tax position early are less likely to request last-minute salary uplifts.",
+                    "For relocating employees, the change in income tax region happens when they become Scottish resident (main home in Scotland). This is handled via payroll and HMRC; employers should notify payroll when a relocation takes effect so the correct tax code is applied.",
                 ],
             },
         ],
