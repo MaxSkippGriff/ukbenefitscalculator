@@ -1,0 +1,583 @@
+{% extends "base.html" %}
+
+{% block head_extra %}
+<style>
+  /* ── PAGE LAYOUT ── */
+  .page-wrap { max-width: var(--max-w); margin: 0 auto; padding: 2rem 1.25rem 3rem; }
+  .page-intro { margin-bottom: 1.5rem; }
+  .page-intro p { color: var(--text-secondary); font-size: 0.95rem; max-width: 640px; margin-top: 0.4rem; }
+
+  /* ── MAIN GRID ── */
+  .calc-layout {
+    display: grid;
+    grid-template-columns: minmax(280px, 420px) 1fr;
+    gap: 1rem; align-items: start;
+  }
+  @media (max-width: 860px) { .calc-layout { grid-template-columns: 1fr; } }
+
+  /* ── INPUT PANEL ── */
+  .panel {
+    background: var(--surface);
+    border: 1.5px solid var(--border-strong);
+    border-top: 3px solid var(--accent);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+  }
+  .panel-head {
+    padding: 1.1rem 1.3rem 0;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 1rem;
+  }
+  .panel-head h2 { font-size: 1rem; font-weight: 600; letter-spacing: -0.01em; }
+  .panel-body { padding: 1.1rem 1.3rem 1.3rem; }
+  @media (max-width: 560px) {
+    .panel-head { padding: 0.9rem 1rem 0.85rem; }
+    .panel-head h2 {
+      font-size: 0.95rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+
+  .field { margin-bottom: 0.9rem; }
+  .field:last-child { margin-bottom: 0; }
+  .field label {
+    display: block; font-size: 0.75rem; text-transform: uppercase;
+    letter-spacing: 0.04em; color: var(--text-secondary); font-weight: 700; margin-bottom: 0.28rem;
+  }
+  .field input, .field select {
+    width: 100%; height: 42px; border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm); background: var(--bg);
+    padding: 0 0.75rem; font-family: var(--font-body); font-size: 0.92rem;
+    color: var(--text-primary); transition: border-color 0.15s, box-shadow 0.15s;
+    -webkit-appearance: none;
+  }
+  .field select {
+    padding-right: 1.75rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='%236B6860'%3E%3Cpath d='M3 5l4 4 4-4'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 0.65rem center;
+  }
+  .field input:focus, .field select:focus {
+    outline: none; border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(27,107,74,0.11);
+  }
+  .field-prefix { position: relative; }
+  .currency-input { position: relative; }
+  .currency-symbol {
+    position: absolute; left: 0.75rem; top: 50%;
+    transform: translateY(-50%); color: var(--text-tertiary); font-size: 0.92rem;
+    pointer-events: none; line-height: 1;
+  }
+  .currency-input input { padding-left: 1.5rem; }
+  #salary, #overheads {
+    font-variant-numeric: tabular-nums lining-nums;
+    font-feature-settings: 'tnum' 1, 'lnum' 1;
+  }
+  .hint { color: var(--text-tertiary); font-size: 0.73rem; margin-top: 0.2rem; }
+  .btn-row { display: flex; gap: 0.35rem; flex-wrap: wrap; margin-top: 0.45rem; }
+  .btn-row button {
+    border: 1.5px solid var(--border); background: var(--bg);
+    color: var(--text-secondary); border-radius: 100px;
+    padding: 0.25rem 0.6rem; cursor: pointer; font-size: 0.73rem;
+    font-family: var(--font-body); font-weight: 500;
+    transition: all 0.15s ease;
+  }
+  .btn-row button:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+  .btn-row button.qa-active { border-color: var(--accent); color: var(--accent); background: var(--accent-light); font-weight: 600; }
+
+  /* ── RESULT PANEL ── */
+  .result-panel {
+    background: var(--surface);
+    border: 1.5px solid var(--border-strong);
+    border-top: 3px solid var(--accent);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+  }
+
+  /* ── RESULT HEADER (prominent total) ── */
+  .result-head {
+    padding: 1.1rem 1.5rem 0.9rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .result-total-label {
+    font-size: 0.7rem; font-weight: 700; color: var(--text-tertiary);
+    text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.25rem;
+  }
+  .result-total-value {
+    font-family: var(--font-body); font-size: clamp(1.7rem, 3.5vw, 2.3rem);
+    font-weight: 500; color: var(--text-primary); letter-spacing: -0.02em; line-height: 1.1;
+    transition: opacity 0.15s ease;
+    font-variant-numeric: tabular-nums lining-nums;
+    font-feature-settings: 'tnum' 1, 'lnum' 1;
+  }
+  .result-total-sub {
+    font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.2rem;
+    transition: opacity 0.15s ease;
+  }
+
+  /* ── DONUT SECTION ── */
+  .donut-section {
+    display: flex; align-items: center; gap: 2rem;
+    padding: 1.5rem 1.5rem 1.25rem; flex-wrap: wrap;
+    border-bottom: 1px solid var(--border);
+  }
+  .donut-svg {
+    width: 190px; height: 190px; display: block; flex-shrink: 0;
+  }
+  .donut-track { fill: none; stroke: var(--border); stroke-width: 26; }
+  .donut-seg {
+    fill: none; stroke-width: 26;
+    stroke-dasharray: 0 452;
+    stroke-dashoffset: 0;
+    transition: stroke-dasharray 0.45s cubic-bezier(0.4,0,0.2,1),
+                stroke-dashoffset 0.45s cubic-bezier(0.4,0,0.2,1);
+  }
+  .donut-total-text {
+    font-family: var(--font-body);
+    font-size: 18px; font-weight: 500; fill: var(--text-primary);
+    font-variant-numeric: tabular-nums lining-nums;
+    font-feature-settings: 'tnum' 1, 'lnum' 1;
+  }
+  .donut-sub-text { font-size: 9px; fill: var(--text-tertiary); font-family: 'DM Sans', system-ui, sans-serif; }
+  .donut-month-text {
+    font-size: 9px; fill: var(--text-secondary); font-weight: 600; font-family: 'DM Sans', system-ui, sans-serif;
+    font-variant-numeric: tabular-nums lining-nums;
+    font-feature-settings: 'tnum' 1, 'lnum' 1;
+  }
+
+  .donut-legend { flex: 1; min-width: 180px; }
+  .legend-row {
+    display: flex; align-items: center; gap: 0.5rem;
+    padding: 0.32rem 0; border-bottom: 1px solid var(--border); font-size: 0.82rem;
+  }
+  .legend-row:last-child { border-bottom: none; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .legend-name { flex: 1; color: var(--text-secondary); }
+  .legend-val {
+    font-weight: 600; color: var(--text-primary);
+    font-variant-numeric: tabular-nums lining-nums;
+    font-feature-settings: 'tnum' 1, 'lnum' 1;
+  }
+  .legend-pct { color: var(--text-tertiary); font-size: 0.73rem; min-width: 3rem; text-align: right; }
+
+  /* ── KPI STRIP ── */
+  .kpi-strip {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0; border-bottom: 1px solid var(--border);
+  }
+  .kpi {
+    padding: 0.9rem 1.1rem; border-right: 1px solid var(--border);
+  }
+  .kpi:last-child { border-right: none; }
+  .kpi-label { font-size: 0.68rem; text-transform: uppercase; color: var(--text-tertiary); letter-spacing: 0.04em; font-weight: 700; margin-bottom: 0.2rem; }
+  .kpi-value {
+    font-family: var(--font-body); font-size: 1.1rem; letter-spacing: -0.01em; font-weight: 600; transition: opacity 0.15s ease;
+    font-variant-numeric: tabular-nums lining-nums;
+    font-feature-settings: 'tnum' 1, 'lnum' 1;
+  }
+  .kpi-detail { font-size: 0.72rem; color: var(--text-tertiary); margin-top: 0.1rem; }
+
+  /* ── BREAKDOWN TABLES ── */
+  .tables-section { padding: 1rem 1.3rem 1.3rem; }
+  .tables-section h3 { font-size: 0.82rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-tertiary); margin: 0.9rem 0 0.5rem; }
+  .tables-section h3:first-child { margin-top: 0; }
+  .table { width: 100%; border-collapse: collapse; }
+  .table th, .table td { text-align: left; border-bottom: 1px solid var(--border); padding: 0.48rem 0.3rem; font-size: 0.83rem; }
+  .table th { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-tertiary); font-weight: 700; }
+  .table td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+  .table tr:last-child td { border-bottom: none; font-weight: 600; }
+  .assumptions {
+    margin-top: 0.9rem; border: 1px solid var(--border); background: var(--surface-alt);
+    border-radius: var(--radius-sm); padding: 0.75rem 0.9rem;
+    font-size: 0.78rem; color: var(--text-secondary); line-height: 1.65;
+  }
+
+  /* ── STICKY BAR ── */
+  .sticky-result {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: var(--surface); border-top: 2px solid var(--border);
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
+    z-index: 50; transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+  }
+  .sticky-result.visible { transform: translateY(0); }
+  .sticky-result-inner {
+    max-width: var(--max-w); margin: 0 auto; padding: 0.75rem 1.25rem;
+    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  }
+  .sr-left { display: flex; align-items: center; gap: 1rem; }
+  .sr-divider { width: 1px; height: 30px; background: var(--border); }
+  .sticky-result .sr-label { font-size: 0.72rem; color: var(--text-tertiary); }
+  .sticky-result .sr-value {
+    font-family: var(--font-body); color: var(--accent); font-size: 1.1rem; letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums lining-nums;
+    font-feature-settings: 'tnum' 1, 'lnum' 1;
+  }
+  .sticky-result .sr-detail { font-size: 0.75rem; color: var(--text-tertiary); line-height: 1.5; }
+  @media (max-width: 520px) { .sr-divider, .sr-detail-col { display: none; } }
+</style>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "UK Employer Cost Calculator 2025/26",
+  "url": "{{ canonical_url }}",
+  "description": "Calculate the true employer cost of any UK salary: employer NI at 15%, auto-enrolment pension, Employment Allowance, and total annual cost for 2025/26.",
+  "applicationCategory": "FinanceApplication",
+  "operatingSystem": "Any",
+  "inLanguage": "en-GB",
+  "isAccessibleForFree": true,
+  "keywords": "employer NI calculator, employer national insurance, cost of employing, UK payroll cost, employer cost 2025",
+  "offers": {"@type": "Offer", "price": "0", "priceCurrency": "GBP"},
+  "provider": {"@type": "Organization", "name": "EmployerCalculator.co.uk", "url": "{{ site_url }}"}
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<section class="page-wrap">
+  <div class="page-intro">
+    <div class="badge">Employer cost calculator</div>
+    <h1>Employer NI &amp; total cost calculator ({{ tax_year }})</h1>
+    <p>Enter any UK salary to run an employer total cost calculator and employer cost calculator UK check: NI at 15%, auto-enrolment pension, Employment Allowance and optional overheads. This also works as a total cost to employer calculator UK and NI change calculator versus pre-April 2025 assumptions.</p>
+  </div>
+
+  <div class="calc-layout">
+
+    <!-- INPUT PANEL -->
+    <section class="panel">
+      <div class="panel-head"><h2>Calculator inputs</h2></div>
+      <div class="panel-body">
+        <div class="field field-prefix">
+          <label for="salary">Annual salary</label>
+          <div class="currency-input">
+            <span class="currency-symbol" aria-hidden="true">£</span>
+            <input id="salary" type="text" value="{{ "{:,}".format(query_state.salary) }}" inputmode="numeric">
+          </div>
+        </div>
+        <div class="btn-row">
+          <button type="button" data-salary="25000" onclick="setSalary(25000)">£25k</button>
+          <button type="button" data-salary="35000" onclick="setSalary(35000)">£35k</button>
+          <button type="button" data-salary="50000" onclick="setSalary(50000)">£50k</button>
+          <button type="button" data-salary="75000" onclick="setSalary(75000)">£75k</button>
+          <button type="button" data-salary="100000" onclick="setSalary(100000)">£100k</button>
+        </div>
+        <div class="field" style="margin-top:1rem;">
+          <label for="pension">Employer pension rate</label>
+          <select id="pension">
+            {% for v in [0,3,4,5,6,8,10] %}
+            <option value="{{ v }}" {% if query_state.pension == v %}selected{% endif %}>{{ v }}%{% if v == 3 %} (auto-enrolment minimum){% endif %}</option>
+            {% endfor %}
+          </select>
+          <div class="hint">Minimum {{ min_employer_pension }}% on qualifying earnings (£6,240–£50,270).</div>
+        </div>
+        <div class="field field-prefix">
+          <label for="overheads">Annual overheads</label>
+          <div class="currency-input">
+            <span class="currency-symbol" aria-hidden="true">£</span>
+            <input id="overheads" type="text" value="{{ "{:,}".format(query_state.overheads) }}" inputmode="numeric">
+          </div>
+          <div class="hint">Equipment, software, workspace, training, etc.</div>
+        </div>
+        <div class="field">
+          <label for="allowance">Employment Allowance</label>
+          <select id="allowance">
+            <option value="0" {% if query_state.allowance == 0 %}selected{% endif %}>Not applied</option>
+            <option value="10500" {% if query_state.allowance == 10500 %}selected{% endif %}>Apply up to £10,500</option>
+          </select>
+          <div class="hint">Most single-director companies cannot claim.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RESULT PANEL -->
+    <section class="result-panel" id="resultPanel">
+
+      <!-- RESULT HEADER -->
+      <div class="result-head">
+        <div class="result-total-label">Total employer cost / year</div>
+        <div class="result-total-value" id="resultTotalBig">{{ calc.total_cost|money }}</div>
+        <div class="result-total-sub" id="resultTotalSub">{{ calc.total_cost|monthly }} per month &middot; {{ calc.cost_above_salary_pct|percent }} above salary</div>
+      </div>
+
+      <!-- DONUT + LEGEND -->
+      <div class="donut-section">
+        <svg class="donut-svg" viewBox="0 0 200 200" role="img" aria-label="Cost breakdown chart">
+          <circle class="donut-track" cx="100" cy="100" r="72"/>
+          <circle class="donut-seg" id="seg-salary"   cx="100" cy="100" r="72" stroke="#1B6B4A" transform="rotate(-90 100 100)"/>
+          <circle class="donut-seg" id="seg-ni"       cx="100" cy="100" r="72" stroke="#D4763C" transform="rotate(-90 100 100)"/>
+          <circle class="donut-seg" id="seg-pension"  cx="100" cy="100" r="72" stroke="#5B8DB8" transform="rotate(-90 100 100)"/>
+          <circle class="donut-seg" id="seg-overhead" cx="100" cy="100" r="72" stroke="#B0A89E" transform="rotate(-90 100 100)"/>
+          <text class="donut-total-text" x="100" y="89" text-anchor="middle" id="donut-total">{{ calc.total_cost|money }}</text>
+          <text class="donut-sub-text"   x="100" y="104" text-anchor="middle">total / year</text>
+          <text class="donut-month-text" x="100" y="118" text-anchor="middle" id="donut-monthly">{{ calc.total_cost|monthly }} / month</text>
+        </svg>
+        <div class="donut-legend">
+          <div class="legend-row">
+            <span class="legend-dot" style="background:#1B6B4A"></span>
+            <span class="legend-name">Salary</span>
+            <span class="legend-val" id="lSalary">{{ calc.salary|money }}</span>
+            <span class="legend-pct" id="lSalaryPct"></span>
+          </div>
+          <div class="legend-row">
+            <span class="legend-dot" style="background:#D4763C"></span>
+            <span class="legend-name">Employer NI</span>
+            <span class="legend-val" id="lNI">{{ calc.employer_ni.ni_due|money }}</span>
+            <span class="legend-pct" id="lNIPct"></span>
+          </div>
+          <div class="legend-row">
+            <span class="legend-dot" style="background:#5B8DB8"></span>
+            <span class="legend-name">Pension</span>
+            <span class="legend-val" id="lPension">{{ calc.pension_contribution|money }}</span>
+            <span class="legend-pct" id="lPensionPct"></span>
+          </div>
+          <div class="legend-row">
+            <span class="legend-dot" style="background:#B0A89E"></span>
+            <span class="legend-name">Overheads</span>
+            <span class="legend-val" id="lOverhead">{{ calc.overheads|money }}</span>
+            <span class="legend-pct" id="lOverheadPct"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI STRIP -->
+      <div class="kpi-strip">
+        <div class="kpi">
+          <div class="kpi-label">Monthly total</div>
+          <div class="kpi-value" id="monthlyTotal">{{ calc.total_cost|monthly }}</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Employer NI / month</div>
+          <div class="kpi-value" id="niMonthly">{{ calc.employer_ni.ni_due|monthly }}</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Cost above salary</div>
+          <div class="kpi-value" id="costAbove">{{ calc.cost_above_salary|money }}</div>
+          <div class="kpi-detail" id="costAbovePct">{{ calc.cost_above_salary_pct|percent }} above</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">EA saving</div>
+          <div class="kpi-value" id="eaSaving">{{ calc.employer_ni.allowance_used|money }}</div>
+        </div>
+      </div>
+
+      <!-- BREAKDOWN TABLES -->
+      <div class="tables-section">
+        <h3>Full breakdown</h3>
+        <table class="table" id="breakdownTable">
+          <tr><th>Item</th><th>Annual</th></tr>
+          <tr><td>Gross salary</td><td id="bSalary">{{ calc.salary|money }}</td></tr>
+          <tr><td>Employer NI (gross)</td><td id="bGrossNI">{{ calc.employer_ni.gross_ni|money }}</td></tr>
+          <tr><td>Employment Allowance used</td><td id="bAllowance">−{{ calc.employer_ni.allowance_used|money }}</td></tr>
+          <tr><td>Employer NI due</td><td id="bNIDue">{{ calc.employer_ni.ni_due|money }}</td></tr>
+          <tr><td>Pension contribution</td><td id="bPension">{{ calc.pension_contribution|money }}</td></tr>
+          <tr><td>Overheads</td><td id="bOverheads">{{ calc.overheads|money }}</td></tr>
+          <tr><td><strong>Total employer cost</strong></td><td id="bTotal"><strong>{{ calc.total_cost|money }}</strong></td></tr>
+        </table>
+
+        <h3>Employer NI bands</h3>
+        <table class="table">
+          <tr><th>Earnings band</th><th>Rate</th><th>NI</th></tr>
+          <tr><td>Up to £5,000</td><td>0%</td><td>£0</td></tr>
+          <tr><td>Above £5,000</td><td>15%</td><td id="niBandUpper">{{ calc.employer_ni.gross_ni|money }}</td></tr>
+          <tr><td><strong>Total</strong></td><td></td><td id="niBandTotal"><strong>{{ calc.employer_ni.gross_ni|money }}</strong></td></tr>
+        </table>
+
+        <div class="assumptions" id="assumptions">
+          Tax year {{ tax_year }} · Employer NI 15% above £5,000 · Comparison year 13.8% above £9,100 · Estimates only — not financial or legal advice.
+        </div>
+      </div>
+    </section>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section style="max-width:var(--max-w);margin:2.5rem auto 0;padding:0 1.25rem;">
+  <div style="font-size:0.72rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem;">How it works</div>
+  <h2 style="font-family:var(--font-display);font-size:clamp(1.4rem,3vw,1.85rem);font-weight:500;color:var(--text-primary);letter-spacing:-0.02em;margin:0 0 1.1rem;">Three steps to your employer cost estimate</h2>
+  <div style="display:grid;gap:1rem;grid-template-columns:repeat(3,1fr);" class="ec-steps-grid">
+    <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:1.25rem 1.4rem;">
+      <div style="font-family:var(--font-display);font-size:1.8rem;font-weight:500;color:var(--accent);line-height:1;margin-bottom:0.6rem;">01</div>
+      <div style="font-weight:600;color:var(--text-primary);margin-bottom:0.3rem;font-size:0.95rem;font-family:var(--font-body);">Enter the salary</div>
+      <div style="font-size:0.85rem;color:var(--text-secondary);line-height:1.6;font-family:var(--font-body);">Type any annual gross salary. Use the quick chips for common bands or enter your own figure.</div>
+    </div>
+    <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:1.25rem 1.4rem;">
+      <div style="font-family:var(--font-display);font-size:1.8rem;font-weight:500;color:var(--accent);line-height:1;margin-bottom:0.6rem;">02</div>
+      <div style="font-weight:600;color:var(--text-primary);margin-bottom:0.3rem;font-size:0.95rem;font-family:var(--font-body);">Set pension and overheads</div>
+      <div style="font-size:0.85rem;color:var(--text-secondary);line-height:1.6;font-family:var(--font-body);">Adjust employer pension rate and add any equipment, software or workspace costs.</div>
+    </div>
+    <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:1.25rem 1.4rem;">
+      <div style="font-family:var(--font-display);font-size:1.8rem;font-weight:500;color:var(--accent);line-height:1;margin-bottom:0.6rem;">03</div>
+      <div style="font-weight:600;color:var(--text-primary);margin-bottom:0.3rem;font-size:0.95rem;font-family:var(--font-body);">Read the total cost</div>
+      <div style="font-size:0.85rem;color:var(--text-secondary);line-height:1.6;font-family:var(--font-body);">The donut and KPI strip update live. Apply Employment Allowance if eligible to see the net NI bill.</div>
+    </div>
+  </div>
+  <style>@media(max-width:640px){.ec-steps-grid{grid-template-columns:1fr!important;}}</style>
+</section>
+
+<!-- ABOUT THIS CALCULATOR -->
+<section style="max-width:var(--max-w);margin:2.5rem auto 0;padding:0 1.25rem;">
+  <div style="font-size:0.72rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem;">About</div>
+  <h2 style="font-family:var(--font-display);font-size:clamp(1.4rem,3vw,1.85rem);font-weight:500;color:var(--text-primary);letter-spacing:-0.02em;margin:0 0 0.85rem;">Employer NI calculator 2025/26 — what it calculates</h2>
+  <div style="display:grid;gap:1rem;grid-template-columns:1fr 1fr;" class="ec-about-grid">
+    <div>
+      <p style="font-size:0.92rem;color:var(--text-secondary);line-height:1.7;margin-bottom:0.75rem;">This calculator computes the true employer cost of any UK salary for the 2025/26 tax year. Enter a gross salary and it instantly calculates employer National Insurance at 15% above the £5,000 secondary threshold, auto-enrolment pension on qualifying earnings, and optional overheads — giving you an annual and monthly total.</p>
+      <p style="font-size:0.92rem;color:var(--text-secondary);line-height:1.7;margin-bottom:0;">Employment Allowance can be applied to offset up to £10,500 of the employer NI liability — eligible businesses can toggle this in the inputs to see their net cost after the allowance.</p>
+    </div>
+    <div>
+      <h3 style="font-family:var(--font-display);font-size:1rem;font-weight:500;letter-spacing:-0.02em;margin-bottom:0.55rem;">April 2025 NI rise — what changed</h3>
+      <p style="font-size:0.88rem;color:var(--text-secondary);line-height:1.7;margin-bottom:0.6rem;">From 6 April 2025 the employer NI rate increased from 13.8% to 15% and the secondary threshold was cut from £9,100 to £5,000. This dual change raised employer NI at almost every salary level — the comparison figure shown below the breakdown reflects this year-on-year increase.</p>
+      <p style="font-size:0.88rem;color:var(--text-secondary);line-height:1.7;margin:0;">Employer NI has no upper cap, unlike employee contributions which drop to 2% above £50,270. Reduced rates apply for employees under 21 and apprentices under 25. For pension-only checks, use the <a href="/pension-cost">auto enrolment payroll costs calculator</a>.</p>
+    </div>
+  </div>
+  <style>@media(max-width:640px){.ec-about-grid{grid-template-columns:1fr!important;}}</style>
+</section>
+
+<!-- FAQ -->
+{% if faq_items %}
+<section style="max-width:var(--max-w);margin:2.5rem auto 0;padding:0 1.25rem 3rem;">
+  <div style="font-size:0.72rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem;">FAQ</div>
+  <h2 style="font-family:var(--font-display);font-size:clamp(1.4rem,3vw,1.85rem);font-weight:500;color:var(--text-primary);letter-spacing:-0.02em;margin:0 0 1rem;">Frequently asked questions</h2>
+  <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);overflow:hidden;">
+    {% for item in faq_items %}
+    <details style="border-top:{% if loop.first %}none{% else %}1px solid var(--border){% endif %};padding:0.85rem 1.25rem;">
+      <summary style="font-size:0.9rem;font-weight:600;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;color:var(--text-primary);gap:1rem;">
+        {{ item.q }}
+        <span style="font-size:1.1rem;color:var(--text-tertiary);flex-shrink:0;font-weight:400;">+</span>
+      </summary>
+      <p style="font-size:0.88rem;color:var(--text-secondary);line-height:1.7;margin:0.6rem 0 0.1rem;padding-right:1.5rem;">{{ item.a }}</p>
+    </details>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<!-- STICKY BAR -->
+<div class="sticky-result" id="stickyResult">
+  <div class="sticky-result-inner">
+    <div class="sr-left">
+      <div>
+        <div class="sr-label">Total employer cost</div>
+        <div class="sr-value" id="stickyValue">{{ calc.total_cost|money }} / year</div>
+      </div>
+      <div class="sr-divider"></div>
+      <div class="sr-detail-col">
+        <div class="sr-detail" id="stickyMonth">{{ calc.total_cost|monthly }} / month</div>
+        <div class="sr-detail" id="stickyPct">{{ calc.cost_above_salary_pct|percent }} above salary</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const QE_LOWER = 6240, QE_UPPER = 50270, NI_THRESHOLD = 5000, NI_RATE = 0.15;
+const DONUT_R = 72, DONUT_C = 2 * Math.PI * DONUT_R;
+
+function parseCurrency(v){ return parseInt(String(v).replace(/[^0-9]/g,''),10) || 0; }
+function money(n){ return '£' + Math.round(n).toLocaleString('en-GB'); }
+function money2(n){ return '£' + Number(n).toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function pct(n){ return n.toFixed(1)+'%'; }
+function setText(id,v){ const el=document.getElementById(id); if(el) el.textContent=v; }
+function calcPension(s,r){ return Math.max(0,Math.min(s,QE_UPPER)-QE_LOWER)*(r/100); }
+function calcNI(s,a){ const g=Math.max(0,s-NI_THRESHOLD)*NI_RATE; const u=Math.min(g,a); return{gross:g,used:u,due:Math.max(0,g-u)}; }
+
+function updateDonut(salary, niDue, pension, overheads, total) {
+  const segs = [['seg-salary',salary],['seg-ni',niDue],['seg-pension',pension],['seg-overhead',overheads]];
+  let offset = 0;
+  segs.forEach(([id,val]) => {
+    const len = total > 0 ? Math.max(0,(val/total)*DONUT_C) : 0;
+    const el = document.getElementById(id);
+    if(el){
+      el.style.strokeDasharray = len.toFixed(3)+' '+DONUT_C.toFixed(3);
+      el.style.strokeDashoffset = (-offset).toFixed(3);
+    }
+    offset += len;
+  });
+  setText('donut-total', money(total));
+  setText('donut-monthly', money(total/12)+' / month');
+  setText('lSalary', money(salary));   setText('lNI', money(niDue));
+  setText('lPension', money(pension)); setText('lOverhead', money(overheads));
+  if(total>0){
+    setText('lSalaryPct',  pct((salary/total)*100));
+    setText('lNIPct',      pct((niDue/total)*100));
+    setText('lPensionPct', pct((pension/total)*100));
+    setText('lOverheadPct',pct((overheads/total)*100));
+  }
+}
+
+function updateUrl(salary,pension,overheads,allowance){
+  history.replaceState({},'','/calculator?'+new URLSearchParams({salary,pension,overheads,allowance}));
+}
+
+function runCalc(){
+  const salary      = parseCurrency(document.getElementById('salary').value);
+  const pensionRate = parseFloat(document.getElementById('pension').value||'3');
+  const overheads   = parseCurrency(document.getElementById('overheads').value);
+  const allowance   = parseFloat(document.getElementById('allowance').value||'0');
+  if(salary<=0) return;
+
+  const ni      = calcNI(salary,allowance);
+  const pension = calcPension(salary,pensionRate);
+  const total   = salary+ni.due+pension+overheads;
+  const above   = total-salary;
+  const abovePct= (above/salary)*100;
+
+  updateDonut(salary, ni.due, pension, overheads, total);
+
+  // KPI strip
+  setText('monthlyTotal', money(total/12));
+  setText('niMonthly', money(ni.due/12));
+  setText('costAbove', money(above));
+  setText('costAbovePct', pct(abovePct)+' above');
+  setText('eaSaving', money(ni.used));
+
+  // Breakdown table
+  setText('bSalary', money2(salary));
+  setText('bGrossNI', money2(ni.gross));
+  setText('bAllowance', '−'+money2(ni.used));
+  setText('bNIDue', money2(ni.due));
+  setText('bPension', money2(pension));
+  setText('bOverheads', money2(overheads));
+  document.getElementById('bTotal').innerHTML = '<strong>'+money2(total)+'</strong>';
+  setText('niBandUpper', money2(ni.gross));
+  document.getElementById('niBandTotal').innerHTML = '<strong>'+money2(ni.gross)+'</strong>';
+
+  // Result header
+  setText('resultTotalBig', money(total));
+  setText('resultTotalSub', money(total/12)+' per month · '+pct(abovePct)+' above salary');
+
+  // Sticky bar
+  setText('stickyValue', money(total)+' / year');
+  setText('stickyMonth', money(total/12)+' / month');
+  setText('stickyPct', pct(abovePct)+' above salary');
+
+  updateUrl(salary, pensionRate, overheads, allowance);
+}
+
+function setSalary(val){
+  document.getElementById('salary').value = val.toLocaleString('en-GB');
+  document.querySelectorAll('.btn-row button').forEach(btn => {
+    btn.classList.toggle('qa-active', parseInt(btn.dataset.salary)===val);
+  });
+  runCalc();
+}
+
+['salary','pension','overheads','allowance'].forEach(id => {
+  document.getElementById(id).addEventListener('input', runCalc);
+  document.getElementById(id).addEventListener('change', runCalc);
+});
+document.getElementById('salary').addEventListener('blur', function(){ const v=parseCurrency(this.value); if(v) this.value=v.toLocaleString('en-GB'); });
+document.getElementById('overheads').addEventListener('blur', function(){ const v=parseCurrency(this.value); if(v) this.value=v.toLocaleString('en-GB'); });
+
+new IntersectionObserver(([e]) => {
+  document.getElementById('stickyResult').classList.toggle('visible',!e.isIntersecting);
+},{threshold:0.05}).observe(document.getElementById('resultPanel'));
+
+runCalc();
+</script>
+{% endblock %}

@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+
+{% block title %}Employer Pension Cost Calculator 2025/26 | EmployerCalculator.co.uk{% endblock %}
+
+{% block meta_description %}Calculate employer and employee auto-enrolment pension costs for 2025/26. Uses qualifying earnings band (£6,240–£50,270) to show exact pension contributions.{% endblock %}
+
+{% block jsonld %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Employer Pension Cost Calculator 2025/26",
+  "url": "{{ canonical_url }}",
+  "description": "Calculate auto-enrolment employer pension contributions on qualifying earnings (£6,240–£50,270). Updated for 2025/26.",
+  "applicationCategory": "FinanceApplication",
+  "operatingSystem": "Any",
+  "inLanguage": "en-GB",
+  "isAccessibleForFree": true,
+  "keywords": "employer pension calculator, auto enrolment calculator, workplace pension cost UK 2025",
+  "offers": {"@type": "Offer", "price": "0", "priceCurrency": "GBP"},
+  "provider": {"@type": "Organization", "name": "EmployerCalculator.co.uk", "url": "{{ site_url }}"}
+}
+</script>
+{% endblock %}
+
+{% block head_extra %}
+<style>
+.calc-wrap { max-width: 980px; margin: 0 auto; padding: 2rem 1.25rem 3.5rem; }
+.calc-header { margin-bottom: 1.5rem; }
+.calc-header p { color: var(--text-secondary); font-size: 0.95rem; max-width: 620px; margin-top: 0.4rem; }
+.calc-grid { display: grid; grid-template-columns: minmax(280px,380px) 1fr; gap: 1rem; align-items: start; }
+@media (max-width: 720px) { .calc-grid { grid-template-columns: 1fr; } }
+.input-card { background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 1.2rem 1.4rem; }
+.input-card h2 { font-family: var(--font-display); font-size: 1rem; font-weight: 500; letter-spacing: -0.02em; margin-bottom: 1rem; }
+.field { margin-bottom: 0.9rem; }
+.field label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.35rem; }
+.field input, .field select { width: 100%; padding: 0.55rem 0.75rem; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-body); font-size: 0.95rem; background: var(--surface); color: var(--text-primary); outline: none; transition: border-color var(--transition), box-shadow var(--transition); box-sizing: border-box; }
+.field input:focus, .field select:focus { border-color: rgba(27,107,74,0.4); box-shadow: 0 0 0 4px rgba(27,107,74,0.10); }
+.field-inline { display: flex; align-items: center; gap: 0.5rem; }
+.field-inline input { flex: 1; }
+.field-inline span { font-size: 0.88rem; color: var(--text-secondary); white-space: nowrap; }
+.result-card { background: var(--surface); border: 1.5px solid var(--border-strong); border-top: 3px solid var(--accent); border-radius: var(--radius); overflow: hidden; }
+.result-head { padding: 1.1rem 1.4rem 0.9rem; border-bottom: 1px solid var(--border); }
+.result-head-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent); margin-bottom: 0.3rem; }
+.result-primary { font-family: var(--font-display); font-size: clamp(1.8rem, 3.5vw, 2.3rem); font-weight: 500; color: var(--text-primary); letter-spacing: -0.02em; line-height: 1.1; }
+.result-sub { font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.25rem; }
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px,1fr)); gap: 0.5rem; padding: 0.9rem 1.4rem; }
+.kpi { background: var(--surface-alt); border-radius: var(--radius-sm); padding: 0.7rem 0.85rem; }
+.kpi-label { font-size: 0.72rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.2rem; }
+.kpi-value { font-family: var(--font-body); font-size: 1.1rem; font-weight: 600; color: var(--text-primary); letter-spacing: -0.01em; font-variant-numeric: tabular-nums lining-nums; font-feature-settings: 'tnum' 1, 'lnum' 1; }
+.result-note { padding: 0.7rem 1.4rem 1rem; font-size: 0.78rem; color: var(--text-tertiary); border-top: 1px solid var(--border); }
+.faq-section { margin-top: 1.5rem; background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 1.2rem 1.4rem; }
+.faq-section h2 { font-family: var(--font-display); font-size: 1.05rem; font-weight: 500; letter-spacing: -0.02em; margin-bottom: 1rem; }
+.faq-item { border-top: 1px solid var(--border); padding: 0.75rem 0; }
+.faq-item summary { font-size: 0.88rem; font-weight: 600; cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; color: var(--text-primary); }
+.faq-item summary::-webkit-details-marker { display: none; }
+.faq-item summary::after { content: '+'; font-size: 1.1rem; color: var(--text-tertiary); }
+.faq-item[open] summary::after { content: '−'; }
+.faq-answer { font-size: 0.85rem; color: var(--text-secondary); padding-top: 0.5rem; line-height: 1.6; }
+.cross-link { margin-top: 1.5rem; background: var(--accent-light); border: 1.5px solid rgba(27,107,74,0.2); border-radius: var(--radius); padding: 1rem 1.4rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.cross-link p { font-size: 0.88rem; color: var(--accent); font-weight: 500; margin: 0; }
+.cross-link a { font-size: 0.82rem; font-weight: 700; color: var(--accent); text-decoration: none; white-space: nowrap; padding: 0.4rem 0.9rem; border: 1.5px solid var(--accent); border-radius: var(--radius-sm); transition: all var(--transition); }
+.cross-link a:hover { background: var(--accent); color: #fff; }
+
+/* Checkbox field */
+.field-check { display: flex; align-items: flex-start; gap: 0.6rem; margin-bottom: 0.9rem; }
+.field-check input[type="checkbox"] { width: auto; margin-top: 0.15rem; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
+.field-check label { font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); cursor: pointer; line-height: 1.4; }
+
+/* Salary sacrifice note */
+.sacrifice-note { margin-top: 0.5rem; padding: 0.65rem 0.85rem; background: var(--accent-light); border-radius: var(--radius-sm); font-size: 0.78rem; color: var(--accent); line-height: 1.5; display: none; }
+.sacrifice-note.visible { display: block; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="calc-wrap">
+  <div class="calc-header">
+    <h1>Employer Pension Cost Calculator 2025/26</h1>
+    <p>Calculate auto-enrolment pension contributions using 2025/26 qualifying earnings (£6,240&ndash;£50,270).</p>
+  </div>
+
+  <div class="calc-grid">
+    <!-- Input card -->
+    <div class="input-card">
+      <h2>Enter Details</h2>
+
+      <div class="field">
+        <label for="salary">Annual salary</label>
+        <input type="text" id="salary" value="£35,000" inputmode="numeric">
+      </div>
+
+      <div class="field">
+        <label for="employer-rate">Employer contribution rate</label>
+        <div class="field-inline">
+          <input type="number" id="employer-rate" value="3" min="0" max="20" step="0.5">
+          <span>% of qualifying earnings</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="employee-rate">Employee contribution rate</label>
+        <div class="field-inline">
+          <input type="number" id="employee-rate" value="5" min="0" max="20" step="0.5">
+          <span>% of qualifying earnings</span>
+        </div>
+      </div>
+
+      <div class="field-check">
+        <input type="checkbox" id="salary-sacrifice">
+        <label for="salary-sacrifice">Salary sacrifice arrangement</label>
+      </div>
+      <div class="sacrifice-note" id="sacrifice-note">
+        Under salary sacrifice the employer pays the employee&apos;s contribution directly, saving employer NI at 15% on that amount. The NI saving is shown below.
+      </div>
+
+      <div style="margin-top: 1rem; padding: 0.7rem 0.85rem; background: var(--surface-alt); border-radius: var(--radius-sm); font-size: 0.78rem; color: var(--text-secondary);">
+        <strong>2025/26 qualifying earnings:</strong> £6,240 &ndash; £50,270 &bull; Minimum total: 8% (3% employer)
+      </div>
+    </div>
+
+    <!-- Result card -->
+    <div>
+      <div class="result-card">
+        <div class="result-head">
+          <div class="result-head-label">Employer pension cost per year</div>
+          <div class="result-primary" id="res-primary">£863</div>
+          <div class="result-sub" id="res-sub">3% of £28,760 qualifying earnings</div>
+        </div>
+        <div class="kpi-grid">
+          <div class="kpi">
+            <div class="kpi-label">Qualifying earnings</div>
+            <div class="kpi-value" id="kpi-qualifying">£28,760</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Employer contribution</div>
+            <div class="kpi-value" id="kpi-employer">£863</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Employee contribution</div>
+            <div class="kpi-value" id="kpi-employee">£1,438</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Total pension (annual)</div>
+            <div class="kpi-value" id="kpi-total">£2,301</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Employer pension % salary</div>
+            <div class="kpi-value" id="kpi-pct">2.5%</div>
+          </div>
+        </div>
+        <div class="result-note" id="result-note">
+          Qualifying earnings for 2025/26: £6,240 to £50,270. Pension contributions are on earnings within this band, not total salary.
+        </div>
+      </div>
+
+      <div class="cross-link">
+        <p>Calculate full employer cost including NI</p>
+        <a href="/calculator">Employer NI Calculator &rarr;</a>
+      </div>
+
+      <div class="faq-section">
+        <h2>Frequently Asked Questions</h2>
+
+        <details class="faq-item">
+          <summary>What are qualifying earnings for auto-enrolment?</summary>
+          <div class="faq-answer">
+            Qualifying earnings are the portion of pay used to calculate pension contributions. For 2025/26, this is earnings between £6,240 and £50,270 per year. Contributions are applied to earnings within this range only — not total salary — which is why the effective pension percentage appears lower than the stated rate for higher earners.
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary>What are the minimum auto-enrolment contribution rates?</summary>
+          <div class="faq-answer">
+            The legal minimum is 8% of qualifying earnings in total — at least 3% from the employer and the remainder from the employee. Most employers pay exactly 3% and employees contribute the remaining 5%. Employers may choose to pay more, which reduces the employee's required contribution.
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary>How does salary sacrifice affect pension costs?</summary>
+          <div class="faq-answer">
+            Under salary sacrifice, employees agree to reduce their gross salary and the employer pays that amount directly as pension contribution. This eliminates the employee's income tax and National Insurance on the sacrificed amount, and saves the employer National Insurance at 15% on the sacrificed sum. It is tax-efficient for both parties.
+          </div>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <div class="faq-section" style="margin-top:1rem;">
+    <div style="font-size:0.72rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.3rem;">How it works</div>
+    <h2 style="margin-bottom:0.75rem;">Three steps to estimate employer pension cost</h2>
+    <div style="display:grid;gap:0.6rem;grid-template-columns:repeat(3,1fr);" class="pension-steps-grid">
+      <div style="background:var(--surface-alt);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.7rem 0.8rem;">
+        <div style="font-size:0.86rem;font-weight:700;color:var(--text-primary);margin-bottom:0.15rem;">1. Enter salary</div>
+        <div style="font-size:0.8rem;color:var(--text-secondary);line-height:1.5;">Qualifying earnings are automatically capped to the statutory band.</div>
+      </div>
+      <div style="background:var(--surface-alt);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.7rem 0.8rem;">
+        <div style="font-size:0.86rem;font-weight:700;color:var(--text-primary);margin-bottom:0.15rem;">2. Set contribution rates</div>
+        <div style="font-size:0.8rem;color:var(--text-secondary);line-height:1.5;">Adjust employer and employee rates to reflect your pension policy.</div>
+      </div>
+      <div style="background:var(--surface-alt);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.7rem 0.8rem;">
+        <div style="font-size:0.86rem;font-weight:700;color:var(--text-primary);margin-bottom:0.15rem;">3. Review annual totals</div>
+        <div style="font-size:0.8rem;color:var(--text-secondary);line-height:1.5;">Read employer cost, total pension and salary-sacrifice NI saving.</div>
+      </div>
+    </div>
+    <style>@media(max-width:640px){.pension-steps-grid{grid-template-columns:1fr!important;}}</style>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  var LQE = 6240;
+  var UQE = 50270;
+  var EMPLOYER_NI_RATE = 0.15;
+
+  function money(n) { return '\u00a3' + Math.round(n).toLocaleString('en-GB'); }
+  function moneyDec(n) { return '\u00a3' + n.toLocaleString('en-GB', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+  function setText(id, v) { var el = document.getElementById(id); if (el) el.textContent = v; }
+  function parseMoney(v) { return parseFloat(String(v).replace(/[^0-9.]/g,'')) || 0; }
+
+  function calculate() {
+    var salary = parseMoney(document.getElementById('salary').value);
+    var employerRate = parseFloat(document.getElementById('employer-rate').value) || 0;
+    var employeeRate = parseFloat(document.getElementById('employee-rate').value) || 0;
+    var sacrifice = document.getElementById('salary-sacrifice').checked;
+
+    var qualifying = Math.max(0, Math.min(salary, UQE) - LQE);
+    var employerContrib = qualifying * (employerRate / 100);
+    var employeeContrib = qualifying * (employeeRate / 100);
+    var total = employerContrib + employeeContrib;
+    var pctOfSalary = salary > 0 ? (employerContrib / salary) * 100 : 0;
+
+    setText('res-primary', money(employerContrib));
+    setText('res-sub', employerRate + '% of ' + money(qualifying) + ' qualifying earnings');
+    setText('kpi-qualifying', money(qualifying));
+    setText('kpi-employer', money(employerContrib));
+    setText('kpi-employee', money(employeeContrib));
+    setText('kpi-total', money(total));
+    setText('kpi-pct', pctOfSalary.toFixed(1) + '%');
+
+    // Sacrifice note
+    document.getElementById('sacrifice-note').classList.toggle('visible', sacrifice);
+
+    var baseNote = 'Qualifying earnings for 2025/26: \u00a36,240 to \u00a350,270. Pension contributions are on earnings within this band, not total salary.';
+    if (sacrifice) {
+      var niSaving = employeeContrib * EMPLOYER_NI_RATE;
+      baseNote += ' Estimated employer NI saving from salary sacrifice: ' + moneyDec(niSaving) + ' per year.';
+    }
+    setText('result-note', baseNote);
+  }
+
+  // Format salary input
+  var salaryInput = document.getElementById('salary');
+  salaryInput.addEventListener('focus', function() {
+    this.value = String(parseMoney(this.value));
+  });
+  salaryInput.addEventListener('blur', function() {
+    var v = parseMoney(this.value);
+    this.value = v ? '\u00a3' + Math.round(v).toLocaleString('en-GB') : '';
+    calculate();
+  });
+  salaryInput.addEventListener('input', calculate);
+
+  document.getElementById('employer-rate').addEventListener('input', calculate);
+  document.getElementById('employee-rate').addEventListener('input', calculate);
+  document.getElementById('salary-sacrifice').addEventListener('change', calculate);
+
+  calculate();
+})();
+</script>
+{% endblock %}

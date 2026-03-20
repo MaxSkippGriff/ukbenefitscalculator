@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% block title %}{{ post.title }}{% endblock %}
+{% block meta_description %}{{ post.description }}{% endblock %}
+{% block canonical %}<link rel="canonical" href="{{ site_url }}/blog/{{ post.slug }}">{% endblock %}
+
+{% block head_extra %}
+<meta property="og:type" content="article">
+<meta property="og:url" content="{{ site_url }}/blog/{{ post.slug }}">
+<meta property="og:title" content="{{ post.title }}">
+<meta property="og:description" content="{{ post.description }}">
+<meta name="twitter:card" content="summary_large_image">
+{% endblock %}
+
+{% block jsonld %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "{{ post.title }}",
+  "description": "{{ post.description }}",
+  "datePublished": "{{ post.date_iso }}",
+  "author": {"@type":"Organization","name":"AfterTaxSalary"},
+  "mainEntityOfPage": "{{ site_url }}/blog/{{ post.slug }}"
+}
+</script>
+{% if article_faqs %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {% for item in article_faqs %}
+    {
+      "@type": "Question",
+      "name": "{{ item.q }}",
+      "acceptedAnswer": {"@type": "Answer", "text": "{{ item.a|replace('"', '\\"') }}"}
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ]
+}
+</script>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<section class="max-w-3xl mx-auto px-4 sm:px-6 pt-12 pb-8">
+  <nav class="text-sm text-slate-500 mb-4"><a href="/" class="hover:text-blue-600">Home</a> / <a href="/blog" class="hover:text-blue-600">Blog</a> / <span class="text-slate-700">{{ post.title }}</span></nav>
+  <div class="text-sm text-slate-400">Last updated: {{ post.date }} · {{ post.reading_time }}</div>
+  <p class="mt-2 text-sm text-slate-500">Written by AfterTaxSalary Editorial. Reviewed against official UK guidance. <a href="/editorial-standards" class="underline hover:text-blue-600">Editorial standards</a> · <a href="/methodology" class="underline hover:text-blue-600">Methodology</a></p>
+  <h1 class="text-4xl sm:text-5xl font-extrabold text-slate-900 mt-2">{{ post.title }}</h1>
+  <p class="mt-4 text-lg text-slate-500">{{ post.description }}</p>
+
+  <div class="card p-5 mt-6 border-blue-200 bg-blue-50/60">
+    <h2 class="font-bold text-slate-900 mb-2">Quick examples (2025/26)</h2>
+    <p class="text-sm text-slate-700">Typical default take-home figures for fast context before reading.</p>
+    <div class="grid sm:grid-cols-3 gap-3 mt-3">
+      {% for row in examples %}
+      <a href="/salary/{{ row.salary }}/england" class="rounded-xl bg-white border border-slate-200 p-3 hover:border-blue-300">
+        <div class="text-xs text-slate-500">£{{ "{:,}".format(row.salary) }}</div>
+        <div class="font-semibold text-slate-900">{{ row.result.take_home.monthly|gbp2 }} /mo</div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="max-w-3xl mx-auto px-4 sm:px-6 pb-20">
+  {% for section in post.sections %}
+  <h2 class="text-2xl font-bold text-slate-900 mt-10 mb-3">{{ section.heading }}</h2>
+  {% for paragraph in section.paragraphs %}
+  <p class="text-slate-600 leading-relaxed mb-4">{{ paragraph }}</p>
+  {% endfor %}
+  {% if section.bullets %}
+  <ul class="list-disc pl-6 text-slate-600 mb-4">
+    {% for bullet in section.bullets %}
+    <li>{{ bullet }}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  {% endfor %}
+
+  <div class="card p-5 mt-8">
+    <h3 class="font-bold text-slate-900 mb-2">Use the calculator and tools</h3>
+    <div class="flex flex-wrap gap-3 text-sm">
+      <a href="/calculator" class="text-blue-600 font-semibold hover:underline">Open salary calculator</a>
+      <a href="/salary/50000/england" class="text-blue-600 font-semibold hover:underline">Salary page: £50,000 England</a>
+      <a href="/salary/100000/england" class="text-blue-600 font-semibold hover:underline">Salary page: £100,000 England</a>
+      <a href="/compare/45000-vs-55000/england" class="text-blue-600 font-semibold hover:underline">Compare offers</a>
+      <a href="/target-take-home" class="text-blue-600 font-semibold hover:underline">Target net monthly</a>
+      <a href="/guides" class="text-blue-600 font-semibold hover:underline">Read all guides</a>
+      <a href="/city/london/take-home-pay" class="text-blue-600 font-semibold hover:underline">City salary examples</a>
+    </div>
+  </div>
+
+  <div class="card p-5 mt-8">
+    <h3 class="font-bold text-slate-900 mb-2">2025/26 factual reference points</h3>
+    <p class="text-sm text-slate-600 mb-3">Use these current tax-year figures as context while reading this article.</p>
+    <details class="rounded-xl border border-slate-200 p-4 mb-3">
+      <summary class="cursor-pointer font-semibold text-slate-800">rUK income tax bands</summary>
+      <div class="mt-3 overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead><tr class="text-slate-500 border-b border-slate-200"><th class="text-left py-2">Band</th><th class="text-left py-2">Gross salary range</th><th class="text-right py-2">Rate</th></tr></thead>
+          <tbody class="divide-y divide-slate-100">
+            {% for row in reference_facts.ruk_bands %}
+            <tr><td class="py-2">{{ row.band }}</td><td class="py-2">{{ row.gross_range }}</td><td class="py-2 text-right">{{ row.rate }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </details>
+    <details class="rounded-xl border border-slate-200 p-4 mb-3">
+      <summary class="cursor-pointer font-semibold text-slate-800">Scottish income tax bands</summary>
+      <div class="mt-3 overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead><tr class="text-slate-500 border-b border-slate-200"><th class="text-left py-2">Band</th><th class="text-left py-2">Gross salary range</th><th class="text-right py-2">Rate</th></tr></thead>
+          <tbody class="divide-y divide-slate-100">
+            {% for row in reference_facts.scotland_bands %}
+            <tr><td class="py-2">{{ row.band }}</td><td class="py-2">{{ row.gross_range }}</td><td class="py-2 text-right">{{ row.rate }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </details>
+    <details class="rounded-xl border border-slate-200 p-4">
+      <summary class="cursor-pointer font-semibold text-slate-800">NI and student loan thresholds</summary>
+      <ul class="mt-3 list-disc pl-5 text-sm text-slate-700 space-y-1">
+        <li>NI primary threshold: £{{ "{:,}".format(reference_facts.ni.primary_threshold) }}</li>
+        <li>NI upper earnings limit: £{{ "{:,}".format(reference_facts.ni.upper_earnings) }}</li>
+        <li>NI rates: {{ reference_facts.ni.main_rate }} then {{ reference_facts.ni.upper_rate }}</li>
+      </ul>
+      <div class="mt-3 overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead><tr class="text-slate-500 border-b border-slate-200"><th class="text-left py-2">Plan</th><th class="text-right py-2">Threshold</th><th class="text-right py-2">Rate</th></tr></thead>
+          <tbody class="divide-y divide-slate-100">
+            {% for row in reference_facts.loan_plans %}
+            <tr><td class="py-2">{{ row.plan }}</td><td class="py-2 text-right">£{{ "{:,}".format(row.threshold) }}</td><td class="py-2 text-right">{{ row.rate }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </details>
+  </div>
+
+  {% if article_faqs %}
+  <div class="card p-6 mt-8">
+    <h3 class="text-2xl font-bold text-slate-900 mb-3">FAQ</h3>
+    <div class="space-y-3">
+      {% for item in article_faqs %}
+      <details class="rounded-xl border border-slate-200 p-4">
+        <summary class="cursor-pointer font-semibold text-slate-800">{{ item.q }}</summary>
+        <p class="mt-2 text-slate-700 leading-relaxed">{{ item.a }}</p>
+      </details>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="card p-5 mt-8">
+    <h3 class="font-bold text-slate-900 mb-2">Sources</h3>
+    <ul class="list-disc pl-6 text-sm text-slate-700 space-y-1">
+      {% for src in sources %}
+      <li><a class="text-blue-600 hover:underline" href="{{ src.url }}" rel="nofollow">{{ src.label }}</a></li>
+      {% endfor %}
+    </ul>
+  </div>
+</section>
+{% endblock %}

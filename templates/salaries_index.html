@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}UK Salary Pages Hub (2025/26) | AfterTaxSalary.co.uk{% endblock %}
+{% block meta_description %}Browse UK salary after-tax pages by pay band and region. Compare monthly and annual take-home across England, Scotland, Wales and Northern Ireland.{% endblock %}
+{% block canonical %}<link rel="canonical" href="{{ canonical_url }}">{% endblock %}
+
+{% block head_extra %}
+<meta property="og:type" content="website">
+<meta property="og:url" content="{{ canonical_url }}">
+<meta property="og:title" content="UK Salary Pages Hub (2025/26)">
+<meta property="og:description" content="Find salary after-tax pages by salary band and UK region.">
+{% endblock %}
+
+{% block jsonld %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  "name": "UK Salary Pages Hub",
+  "description": "Internal index of UK salary after-tax pages by pay band and region.",
+  "url": "{{ canonical_url }}"
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<section class="max-w-6xl mx-auto px-4 sm:px-6 pt-12 pb-8">
+  <nav class="text-sm text-slate-500 mb-4"><a href="/" class="hover:text-blue-600">Home</a> / <span class="text-slate-700">Salaries</span></nav>
+  <h1 class="text-4xl sm:text-5xl font-extrabold text-slate-900">UK Salary Pages Hub</h1>
+  <p class="mt-4 text-lg text-slate-600 max-w-3xl">Use this index to open salary pages quickly by pay band and region, then compare assumptions in the calculator or compare tool.</p>
+</section>
+
+<section class="max-w-6xl mx-auto px-4 sm:px-6 pb-12">
+  <div class="card p-6 mb-6">
+    <h2 class="text-2xl font-bold text-slate-900">High-intent “after tax” pages</h2>
+    <p class="mt-2 text-slate-600">These pages match direct salary intent searches and link straight into scenario checks.</p>
+    <div class="mt-4 flex flex-wrap gap-2">
+      {% for salary in salary_intent_values %}
+      <a href="/salary/{{ salary }}-after-tax" class="px-3 py-1.5 rounded-full border border-slate-300 text-sm font-medium text-slate-700 hover:bg-slate-50">&pound;{{ "{:,}".format(salary) }} after tax</a>
+      {% endfor %}
+    </div>
+    <div class="mt-4 flex flex-wrap gap-2 text-sm">
+      <a href="/day-rate" class="rounded-full border border-slate-300 px-3 py-1.5 hover:bg-slate-50">Day-rate hub</a>
+      <a href="/day-rate/250-after-tax" class="rounded-full border border-slate-300 px-3 py-1.5 hover:bg-slate-50">£250/day after tax</a>
+      <a href="/day-rate/500-after-tax" class="rounded-full border border-slate-300 px-3 py-1.5 hover:bg-slate-50">£500/day after tax</a>
+    </div>
+  </div>
+
+  <div class="card p-6">
+    <h2 class="text-2xl font-bold text-slate-900">Popular salary checks</h2>
+    <div class="mt-4 flex flex-wrap gap-2">
+      {% for salary in featured %}
+      <a href="/salary/{{ salary }}/england" class="px-3 py-1.5 rounded-full border border-slate-300 text-sm font-medium text-slate-700 hover:bg-slate-50">&pound;{{ "{:,}".format(salary) }} (England)</a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="max-w-6xl mx-auto px-4 sm:px-6 pb-14 space-y-6">
+  {% for group in ranges %}
+  <div class="card p-6">
+    <h2 class="text-2xl font-bold text-slate-900">{{ group["title"] }}</h2>
+    <p class="mt-1 text-slate-600">{{ group["description"] }}</p>
+    <div class="mt-4 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {% for salary in group["values"] %}
+      <div class="rounded-xl border border-slate-200 p-4 bg-slate-50/60">
+        <h3 class="font-bold text-slate-900 mb-2">&pound;{{ "{:,}".format(salary) }}</h3>
+        <div class="flex flex-wrap gap-2 text-xs">
+          {% for region in regions %}
+          <a href="/salary/{{ salary }}/{{ region.slug }}" class="px-2.5 py-1 rounded-full border border-slate-300 text-slate-700 hover:bg-white">{{ region.label }}</a>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</section>
+
+<section class="max-w-6xl mx-auto px-4 sm:px-6 pb-20">
+  <div class="card p-6">
+    <h2 class="text-2xl font-bold text-slate-900">Comparison pages</h2>
+    <p class="mt-1 text-slate-600">Decision-intent pages for offer comparison and shareable links.</p>
+    <div class="mt-3 flex flex-wrap gap-2">
+      {% for salary_a, salary_b, region in compare_presets %}
+      <a href="/compare/{{ salary_a }}-vs-{{ salary_b }}/{{ region }}" class="rounded-full border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50">&pound;{{ "{:,}".format(salary_a) }} vs &pound;{{ "{:,}".format(salary_b) }} ({{ region|replace('-', ' ')|title }})</a>
+      {% endfor %}
+      <a href="/compare/scotland-vs-england-on-50000" class="rounded-full border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50">Scotland vs England on &pound;50k</a>
+    </div>
+
+    <h3 class="mt-6 text-xl font-bold text-slate-900">Downloadable planning asset</h3>
+    <p class="mt-1 text-slate-600">Use this checklist before accepting an offer so your comparison uses matched assumptions.</p>
+    <a href="/downloads/salary-offer-checklist.txt" class="inline-flex mt-3 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">Download salary offer checklist</a>
+
+    <hr class="my-6 border-slate-200">
+
+    <h2 class="text-2xl font-bold text-slate-900">Use alongside guides</h2>
+    <p class="mt-1 text-slate-600">Combine salary pages with guide context when checking tax code, loans, pension and regional differences.</p>
+    <div class="mt-4 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {% for guide in related_guides %}
+      <a href="/guides/{{ guide.slug }}" class="rounded-xl border border-slate-200 p-4 hover:border-slate-300 bg-white">
+        <div class="text-xs text-slate-500 mb-1">{{ guide.reading_time }}</div>
+        <div class="font-semibold text-slate-900">{{ guide.title }}</div>
+      </a>
+      {% endfor %}
+    </div>
+    <h3 class="mt-6 text-xl font-bold text-slate-900">Compare by city labour market</h3>
+    <p class="mt-1 text-slate-600">Use city pages to compare offer quality under matching tax and deduction assumptions.</p>
+    <div class="mt-3 flex flex-wrap gap-2">
+      {% for slug in featured_cities %}
+      <a href="/city/{{ slug }}/take-home-pay" class="px-3 py-1.5 rounded-full border border-slate-300 text-sm text-slate-700 hover:bg-slate-50">{{ city_titles[slug] }}</a>
+      {% endfor %}
+    </div>
+    <div class="mt-5 flex flex-wrap gap-3 text-sm">
+      <a class="text-blue-600 font-semibold hover:underline" href="/compare-salaries">Compare two salary offers</a>
+      <a class="text-blue-600 font-semibold hover:underline" href="/target-take-home">Target monthly net pay</a>
+      <a class="text-blue-600 font-semibold hover:underline" href="/calculator">Open full calculator</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

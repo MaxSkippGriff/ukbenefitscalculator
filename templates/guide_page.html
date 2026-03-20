@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block jsonld %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": {{ guide.title|tojson }},
+  "description": {{ guide.description|tojson }},
+  "datePublished": "2025-04-06",
+  "dateModified": "{{ now.date().isoformat() }}",
+  "author": {
+    "@type": "Organization",
+    "name": "EmployerCalculator Editorial",
+    "url": "{{ site_url }}/editorial-standards"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "EmployerCalculator.co.uk",
+    "url": "{{ site_url }}"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "{{ canonical_url }}"
+  }
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<section class="section">
+  <div class="badge">Guide</div>
+  <h1>{{ guide.title }}</h1>
+  <p style="font-size:0.875rem; color:var(--text-tertiary); margin-bottom:0.5rem;">Written by EmployerCalculator Editorial &nbsp;·&nbsp; Reviewed against official UK sources &nbsp;·&nbsp; Last updated: {{ now.strftime('%B %Y') }}</p>
+  <p style="font-size:0.95rem; color:var(--text-secondary);">{{ guide.description }}</p>
+
+  {% for sec in guide.sections %}
+  <article class="card" style="padding:1rem 1.25rem; margin-top:0.9rem;">
+    <h2 style="font-size:1.2rem; margin-bottom:0.6rem;">{{ sec.heading }}</h2>
+    {% for para in sec.paragraphs %}
+    <p>{{ para }}</p>
+    {% endfor %}
+  </article>
+  {% endfor %}
+
+  <section class="card" style="padding:1rem 1.25rem; margin-top:0.9rem;">
+    <h2 style="font-size:1.15rem;">Use the calculator</h2>
+    <p style="margin-bottom:0.6rem; font-size:0.9rem; color:var(--text-secondary);">Put the figures from this guide into practice with the live calculator tools below.</p>
+    <div class="pill-grid">
+      <a class="pill" href="/calculator">Employer NI &amp; total cost calculator</a>
+      <a class="pill" href="/cost-of-employing">Employer cost by salary</a>
+      <a class="pill" href="/employer-ni">Employer NI by salary</a>
+      <a class="pill" href="/calculators">All calculators</a>
+    </div>
+    <div class="pill-grid" style="margin-top:0.6rem;">
+      <a class="pill" href="/cost/30000">Cost — £30,000 salary</a>
+      <a class="pill" href="/cost/35000">Cost — £35,000 salary</a>
+      <a class="pill" href="/cost/50000">Cost — £50,000 salary</a>
+      <a class="pill" href="/cost/75000">Cost — £75,000 salary</a>
+    </div>
+  </section>
+
+  <section class="card" style="padding:1rem 1.25rem; margin-top:0.9rem;">
+    <h2 style="font-size:1.15rem;">Related guides</h2>
+    <div class="pill-grid">
+      {% for item in related_guides %}
+      <a class="pill" href="/guides/{{ item.slug }}">{{ item.title }}</a>
+      {% endfor %}
+    </div>
+  </section>
+
+  {% if faq_items %}
+  <section class="card" style="padding:1rem 1.25rem; margin-top:0.9rem;">
+    <h2 style="font-size:1.15rem;">Frequently asked questions</h2>
+    <div class="faq-list">
+      {% for item in faq_items %}
+      <details class="faq-item"><summary>{{ item.q }}</summary><div class="faq-answer">{{ item.a }}</div></details>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  <div class="card" style="padding:1rem 1.25rem; margin-top:0.9rem; background:var(--surface-alt);">
+    <p style="margin-bottom:0; font-size:0.83rem; color:var(--text-tertiary);">EmployerCalculator Editorial. Content reviewed against <a href="https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2025-to-2026" rel="noopener" target="_blank" style="color:var(--accent);">HMRC guidance</a>. Estimates only — not financial or legal advice. See our <a href="/methodology" style="color:var(--accent);">methodology</a> and <a href="/sources" style="color:var(--accent);">sources</a>.</p>
+  </div>
+</section>
+{% endblock %}

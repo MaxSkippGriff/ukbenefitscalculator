@@ -1,0 +1,298 @@
+{% extends "base.html" %}
+
+{% block title %}Bradford Factor Calculator | EmployerCalculator.co.uk{% endblock %}
+
+{% block meta_description %}Calculate the Bradford Factor (S&sup2; &times; D) for employee absence. Instant risk band assessment — Low, Medium, High or Trigger — with reference score table.{% endblock %}
+
+{% block jsonld %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Bradford Factor Calculator",
+  "url": "{{ canonical_url }}",
+  "description": "Calculate your Bradford Factor absence score. Enter absence spells and total days to get your score and risk band.",
+  "applicationCategory": "BusinessApplication",
+  "operatingSystem": "Any",
+  "inLanguage": "en-GB",
+  "isAccessibleForFree": true,
+  "keywords": "Bradford Factor calculator, absence score calculator, Bradford Factor UK HR",
+  "offers": {"@type": "Offer", "price": "0", "priceCurrency": "GBP"},
+  "provider": {"@type": "Organization", "name": "EmployerCalculator.co.uk", "url": "{{ site_url }}"}
+}
+</script>
+{% endblock %}
+
+{% block head_extra %}
+<style>
+.calc-wrap { max-width: 980px; margin: 0 auto; padding: 2rem 1.25rem 3.5rem; }
+.calc-header { margin-bottom: 1.5rem; }
+.calc-header p { color: var(--text-secondary); font-size: 0.95rem; max-width: 620px; margin-top: 0.4rem; }
+.calc-grid { display: grid; grid-template-columns: minmax(280px,380px) 1fr; gap: 1rem; align-items: start; }
+@media (max-width: 720px) { .calc-grid { grid-template-columns: 1fr; } }
+.input-card { background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 1.2rem 1.4rem; }
+.input-card h2 { font-family: var(--font-display); font-size: 1rem; font-weight: 500; letter-spacing: -0.02em; margin-bottom: 1rem; }
+.field { margin-bottom: 0.9rem; }
+.field label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.35rem; }
+.field input, .field select { width: 100%; padding: 0.55rem 0.75rem; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-body); font-size: 0.95rem; background: var(--surface); color: var(--text-primary); outline: none; transition: border-color var(--transition), box-shadow var(--transition); box-sizing: border-box; }
+.field input:focus, .field select:focus { border-color: rgba(27,107,74,0.4); box-shadow: 0 0 0 4px rgba(27,107,74,0.10); }
+.result-card { background: var(--surface); border: 1.5px solid var(--border-strong); border-top: 3px solid var(--accent); border-radius: var(--radius); overflow: hidden; }
+.result-head { padding: 1.1rem 1.4rem 0.9rem; border-bottom: 1px solid var(--border); }
+.result-head-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent); margin-bottom: 0.3rem; }
+.result-primary { font-family: var(--font-display); font-size: clamp(1.8rem, 3.5vw, 2.3rem); font-weight: 500; color: var(--text-primary); letter-spacing: -0.02em; line-height: 1.1; }
+.result-sub { font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.25rem; }
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px,1fr)); gap: 0.5rem; padding: 0.9rem 1.4rem; }
+.kpi { background: var(--surface-alt); border-radius: var(--radius-sm); padding: 0.7rem 0.85rem; }
+.kpi-label { font-size: 0.72rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.2rem; }
+.kpi-value { font-family: var(--font-body); font-size: 1.1rem; font-weight: 600; color: var(--text-primary); letter-spacing: -0.01em; font-variant-numeric: tabular-nums lining-nums; font-feature-settings: 'tnum' 1, 'lnum' 1; }
+.result-note { padding: 0.7rem 1.4rem 1rem; font-size: 0.78rem; color: var(--text-tertiary); border-top: 1px solid var(--border); }
+.faq-section { margin-top: 1.5rem; background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 1.2rem 1.4rem; }
+.faq-section h2 { font-family: var(--font-display); font-size: 1.05rem; font-weight: 500; letter-spacing: -0.02em; margin-bottom: 1rem; }
+.faq-item { border-top: 1px solid var(--border); padding: 0.75rem 0; }
+.faq-item summary { font-size: 0.88rem; font-weight: 600; cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; color: var(--text-primary); }
+.faq-item summary::-webkit-details-marker { display: none; }
+.faq-item summary::after { content: '+'; font-size: 1.1rem; color: var(--text-tertiary); }
+.faq-item[open] summary::after { content: '−'; }
+.faq-answer { font-size: 0.85rem; color: var(--text-secondary); padding-top: 0.5rem; line-height: 1.6; }
+.cross-link { margin-top: 1.5rem; background: var(--accent-light); border: 1.5px solid rgba(27,107,74,0.2); border-radius: var(--radius); padding: 1rem 1.4rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.cross-link p { font-size: 0.88rem; color: var(--accent); font-weight: 500; margin: 0; }
+.cross-link a { font-size: 0.82rem; font-weight: 700; color: var(--accent); text-decoration: none; white-space: nowrap; padding: 0.4rem 0.9rem; border: 1.5px solid var(--accent); border-radius: var(--radius-sm); transition: all var(--transition); }
+.cross-link a:hover { background: var(--accent); color: #fff; }
+
+/* Band indicator */
+.band-indicator { display: inline-block; padding: 0.25rem 0.7rem; border-radius: var(--radius-sm); font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.4rem; }
+.band-low    { background: rgba(27,107,74,0.12); color: #1B6B4A; }
+.band-medium { background: rgba(212,118,60,0.12); color: #D4763C; }
+.band-high   { background: rgba(196,80,0,0.12); color: #C45000; }
+.band-trigger{ background: rgba(185,28,28,0.12); color: #B91C1C; }
+
+/* Band bar visual */
+.band-bar-wrap { padding: 0.75rem 1.4rem 0.85rem; border-top: 1px solid var(--border); }
+.band-bar-label { font-size: 0.72rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.4rem; }
+.band-bar { display: flex; border-radius: var(--radius-sm); overflow: hidden; height: 10px; gap: 2px; }
+.band-bar-seg { flex: 1; transition: opacity var(--transition); opacity: 0.25; border-radius: 2px; }
+.band-bar-seg.active { opacity: 1; }
+.seg-low     { background: #1B6B4A; }
+.seg-medium  { background: #D4763C; }
+.seg-high    { background: #C45000; }
+.seg-trigger { background: #B91C1C; }
+
+/* Reference table */
+.ref-table-wrap { margin-top: 1.5rem; background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 1.2rem 1.4rem; }
+.ref-table-wrap h2 { font-family: var(--font-display); font-size: 1.05rem; font-weight: 500; letter-spacing: -0.02em; margin-bottom: 0.85rem; }
+.ref-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+.ref-table th { text-align: left; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); padding: 0.4rem 0.6rem; border-bottom: 1.5px solid var(--border); }
+.ref-table td { padding: 0.45rem 0.6rem; border-bottom: 1px solid var(--border); color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.ref-table tr:last-child td { border-bottom: none; }
+.ref-table .band-cell { font-weight: 700; }
+.ref-table .low    { color: #1B6B4A; }
+.ref-table .medium { color: #D4763C; }
+.ref-table .high   { color: #C45000; }
+.ref-table .trigger{ color: #B91C1C; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="calc-wrap">
+  <div class="calc-header">
+    <h1>Bradford Factor Calculator</h1>
+    <p>Calculate the Bradford Factor score (S&sup2; &times; D) and identify the absence risk band for an employee over a 52-week period.</p>
+  </div>
+
+  <div class="calc-grid">
+    <!-- Input card -->
+    <div class="input-card">
+      <h2>Enter Absence Details</h2>
+
+      <div class="field">
+        <label for="spells">Number of absence spells (in 52 weeks)</label>
+        <input type="number" id="spells" value="3" min="1" max="52">
+      </div>
+
+      <div class="field">
+        <label for="days">Total days absent</label>
+        <input type="number" id="days" value="8" min="1" max="260">
+      </div>
+
+      <div style="margin-top: 1rem; padding: 0.7rem 0.85rem; background: var(--surface-alt); border-radius: var(--radius-sm); font-size: 0.78rem; color: var(--text-secondary); line-height: 1.5;">
+        <strong>Formula:</strong> Bradford Factor = S&sup2; &times; D<br>
+        S = number of separate absence spells &bull; D = total days absent
+      </div>
+    </div>
+
+    <!-- Result card -->
+    <div>
+      <div class="result-card">
+        <div class="result-head">
+          <div class="result-head-label">Bradford Factor Score</div>
+          <div class="result-primary" id="res-score">72</div>
+          <div class="result-sub" id="res-band-text">
+            <span class="band-indicator band-medium" id="res-band-badge">Medium</span>
+            <span id="res-band-desc" style="margin-left:0.5rem;">&mdash; informal discussion recommended</span>
+          </div>
+        </div>
+        <div class="band-bar-wrap">
+          <div class="band-bar-label">Risk level</div>
+          <div class="band-bar">
+            <div class="band-bar-seg seg-low"     id="seg-low"    ></div>
+            <div class="band-bar-seg seg-medium"  id="seg-medium" ></div>
+            <div class="band-bar-seg seg-high"    id="seg-high"   ></div>
+            <div class="band-bar-seg seg-trigger" id="seg-trigger"></div>
+          </div>
+        </div>
+        <div class="kpi-grid">
+          <div class="kpi">
+            <div class="kpi-label">Absence spells (S)</div>
+            <div class="kpi-value" id="kpi-spells">3</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Total days (D)</div>
+            <div class="kpi-value" id="kpi-days">8</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Score (S&sup2;&times;D)</div>
+            <div class="kpi-value" id="kpi-score">72</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Risk band</div>
+            <div class="kpi-value" id="kpi-band" style="font-size:0.95rem;">Medium</div>
+          </div>
+        </div>
+        <div class="result-note">
+          The Bradford Factor is a management tool, not a legal standard. Organisations set their own trigger points. Always combine Bradford scores with individual circumstances and occupational health input.
+        </div>
+      </div>
+
+      <div class="cross-link">
+        <p>Calculate full employer cost including NI and pension</p>
+        <a href="/calculator">Employer Cost Calculator &rarr;</a>
+      </div>
+
+      <!-- Reference table -->
+      <div class="ref-table-wrap">
+        <h2>Common Bradford Scores</h2>
+        <table class="ref-table">
+          <thead>
+            <tr>
+              <th>Spells (S)</th>
+              <th>Days (D)</th>
+              <th>Score</th>
+              <th>Band</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>3</td><td>3</td><td>27</td>
+              <td class="band-cell low">Low</td>
+            </tr>
+            <tr>
+              <td>4</td><td>6</td><td>96</td>
+              <td class="band-cell medium">Medium</td>
+            </tr>
+            <tr>
+              <td>5</td><td>10</td><td>250</td>
+              <td class="band-cell high">High</td>
+            </tr>
+            <tr>
+              <td>6</td><td>8</td><td>288</td>
+              <td class="band-cell high">High</td>
+            </tr>
+            <tr>
+              <td>7</td><td>7</td><td>343</td>
+              <td class="band-cell high">High</td>
+            </tr>
+            <tr>
+              <td>8</td><td>5</td><td>320</td>
+              <td class="band-cell high">High</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="faq-section">
+        <h2>Frequently Asked Questions</h2>
+
+        <details class="faq-item">
+          <summary>What is the Bradford Factor?</summary>
+          <div class="faq-answer">
+            The Bradford Factor is an absence measurement tool used by HR teams to identify patterns of frequent short-term absences. It is calculated as S&sup2; &times; D, where S is the number of separate absence spells and D is the total days absent. Higher scores indicate more disruptive absence patterns.
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary>Why does frequency matter more than total days?</summary>
+          <div class="faq-answer">
+            The Bradford Factor is designed to highlight frequent short absences because these are typically more disruptive than a single long-term absence of the same total duration. Multiple short absences create uncertainty and operational challenges, while a longer absence can often be planned around.
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary>Is the Bradford Factor a legal tool?</summary>
+          <div class="faq-answer">
+            No. The Bradford Factor is not defined in employment law. It is a management tool and its use must comply with employment law including disability discrimination requirements. Employers using it must apply it consistently and use it as one factor in an absence conversation, not as an automatic trigger for dismissal.
+          </div>
+        </details>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  function setText(id, v) { var el = document.getElementById(id); if (el) el.textContent = v; }
+
+  var BANDS = [
+    { max: 44,  label: 'Low',     desc: 'monitor normally',                    cls: 'band-low',     seg: 'low',     color: '#1B6B4A' },
+    { max: 99,  label: 'Medium',  desc: 'informal discussion recommended',      cls: 'band-medium',  seg: 'medium',  color: '#D4763C' },
+    { max: 399, label: 'High',    desc: 'formal absence review',                cls: 'band-high',    seg: 'high',    color: '#C45000' },
+    { max: Infinity, label: 'Trigger', desc: 'disciplinary/capability consideration', cls: 'band-trigger', seg: 'trigger', color: '#B91C1C' }
+  ];
+
+  function getBand(score) {
+    for (var i = 0; i < BANDS.length; i++) {
+      if (score <= BANDS[i].max) return BANDS[i];
+    }
+    return BANDS[BANDS.length - 1];
+  }
+
+  function calculate() {
+    var S = parseInt(document.getElementById('spells').value) || 0;
+    var D = parseInt(document.getElementById('days').value) || 0;
+    var score = S * S * D;
+    var band = getBand(score);
+
+    setText('res-score', score.toLocaleString('en-GB'));
+    setText('kpi-spells', S);
+    setText('kpi-days', D);
+    setText('kpi-score', score.toLocaleString('en-GB'));
+    setText('kpi-band', band.label);
+
+    var badge = document.getElementById('res-band-badge');
+    badge.textContent = band.label;
+    badge.className = 'band-indicator ' + band.cls;
+
+    setText('res-band-desc', '\u2014 ' + band.desc);
+
+    // Update result card border
+    var resultCard = document.querySelector('.result-card');
+    resultCard.style.borderTopColor = band.color;
+
+    // Update band bar
+    var segs = ['low', 'medium', 'high', 'trigger'];
+    segs.forEach(function(s) {
+      var el = document.getElementById('seg-' + s);
+      if (el) {
+        el.classList.toggle('active', s === band.seg);
+      }
+    });
+  }
+
+  document.getElementById('spells').addEventListener('input', calculate);
+  document.getElementById('days').addEventListener('input', calculate);
+
+  calculate();
+})();
+</script>
+{% endblock %}

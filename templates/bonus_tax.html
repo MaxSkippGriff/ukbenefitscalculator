@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Bonus Tax Calculator — Pro{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+  <h1 class="text-3xl font-extrabold text-gray-900 mb-2 animate-fade-in">Bonus Tax Calculator <span class="text-brand-600">Pro</span></h1>
+  <p class="text-gray-500 mb-8">See how a bonus is taxed on top of your base salary</p>
+
+  <div class="bg-white rounded-2xl card-shadow p-6 mb-6">
+    <div class="grid sm:grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-600 mb-1.5">Base salary</label>
+        <div class="relative">
+          <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 font-semibold">&pound;</span>
+          <input id="base" type="text" inputmode="numeric" value="45,000" class="w-full pl-9 pr-4 py-3 text-lg font-bold bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none" autocomplete="off">
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-600 mb-1.5">Bonus amount</label>
+        <div class="relative">
+          <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 font-semibold">&pound;</span>
+          <input id="bonus" type="text" inputmode="numeric" value="5,000" class="w-full pl-9 pr-4 py-3 text-lg font-bold bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none" autocomplete="off">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="bonus-result" class="bg-white rounded-2xl card-shadow p-6"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function(){
+  const fmt = n => '£' + Math.round(n).toLocaleString('en-GB');
+  const fmt2 = n => '£' + n.toLocaleString('en-GB', {minimumFractionDigits:2, maximumFractionDigits:2});
+  const parse = s => parseInt(s.replace(/[^0-9]/g,''),10) || 0;
+
+  async function calc(){
+    const base = parse(document.getElementById('base').value);
+    const bonus = parse(document.getElementById('bonus').value);
+    if(base<1||bonus<1) return;
+    document.getElementById('base').value = base.toLocaleString('en-GB');
+    document.getElementById('bonus').value = bonus.toLocaleString('en-GB');
+
+    const [rBase, rTotal] = await Promise.all([
+      fetch('/api/takehome?salary='+base).then(r=>r.json()),
+      fetch('/api/takehome?salary='+(base+bonus)).then(r=>r.json()),
+    ]);
+
+    const bonusTax = rTotal.income_tax.total_tax - rBase.income_tax.total_tax;
+    const bonusNI = rTotal.national_insurance.total_ni - rBase.national_insurance.total_ni;
+    const bonusTakeHome = bonus - bonusTax - bonusNI;
+    const bonusRate = ((bonusTax + bonusNI) / bonus * 100).toFixed(1);
+
+    document.getElementById('bonus-result').innerHTML = `
+      <h3 class="font-bold text-gray-900 mb-4">Bonus breakdown</h3>
+      <div class="space-y-3 text-sm">
+        <div class="flex justify-between"><span class="text-gray-600">Bonus amount</span><span class="font-semibold">${fmt(bonus)}</span></div>
+        <div class="flex justify-between"><span class="text-red-600">Income tax on bonus</span><span class="text-red-600 font-medium">${fmt2(bonusTax)}</span></div>
+        <div class="flex justify-between"><span class="text-orange-600">NI on bonus</span><span class="text-orange-600 font-medium">${fmt2(bonusNI)}</span></div>
+        <div class="flex justify-between border-t border-gray-100 pt-3"><span class="font-bold text-brand-700">Bonus take-home</span><span class="font-bold text-brand-700 text-lg">${fmt2(bonusTakeHome)}</span></div>
+        <div class="flex justify-between"><span class="text-gray-500">Effective bonus tax rate</span><span class="font-medium">${bonusRate}%</span></div>
+      </div>
+      <p class="mt-4 text-xs text-gray-400">Your bonus is taxed as additional income on top of your base salary of ${fmt(base)}.</p>`;
+  }
+
+  let t;
+  const d = () => { clearTimeout(t); t = setTimeout(calc, 400); };
+  document.getElementById('base').addEventListener('input', d);
+  document.getElementById('bonus').addEventListener('input', d);
+  calc();
+})();
+</script>
+{% endblock %}

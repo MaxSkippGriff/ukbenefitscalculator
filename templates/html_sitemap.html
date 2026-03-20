@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="section">
+  <div class="badge">Sitemap</div>
+  <h1>HTML sitemap</h1>
+  <div class="grid-3" style="margin-top:1rem; align-items:start;">
+    <div class="card" style="padding:1rem;">
+      <h2 style="font-size:1.05rem;">Core pages</h2>
+      <a class="pill" href="/">Home</a>
+      <a class="pill" href="/calculator">Calculator</a>
+      <a class="pill" href="/employer-total-cost-calculator">Employer total cost calculator</a>
+      <a class="pill" href="/employer-cost-calculator-uk">Employer cost calculator UK</a>
+      <a class="pill" href="/total-cost-to-employer-calculator-uk">Total cost to employer calculator UK</a>
+      <a class="pill" href="/auto-enrolment-payroll-costs">Auto-enrolment payroll costs</a>
+      <a class="pill" href="/ni-change-calculator">NI change calculator</a>
+      <a class="pill" href="/employer-ni-calculator-2025-26">Employer NI calculator 2025/26</a>
+      <a class="pill" href="/calculators">Calculators</a>
+      <a class="pill" href="/cost-of-employing">Cost by salary</a>
+      <a class="pill" href="/employer-ni">Employer NI by salary</a>
+      <a class="pill" href="/guides">Guides</a>
+    </div>
+    <div class="card" style="padding:1rem;">
+      <h2 style="font-size:1.05rem;">Static pages</h2>
+      <a class="pill" href="/methodology">Methodology</a>
+      <a class="pill" href="/editorial-standards">Editorial standards</a>
+      <a class="pill" href="/sources">Sources</a>
+      <a class="pill" href="/about">About</a>
+      <a class="pill" href="/privacy">Privacy</a>
+      <a class="pill" href="/terms">Terms</a>
+      <a class="pill" href="/contact">Contact</a>
+    </div>
+    <div class="card" style="padding:1rem;">
+      <h2 style="font-size:1.05rem;">Guide pages</h2>
+      {% for slug, guide in guides.items() %}
+      <a class="pill" href="/guides/{{ slug }}">{{ guide.title }}</a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card" style="padding:1rem; margin-top:0.9rem;">
+    <h2 style="font-size:1.05rem;">Salary cost pages</h2>
+    <div class="pill-grid">
+      {% for amount in salary_amounts %}
+      <a class="pill" href="/cost/{{ amount }}">£{{ "{:,}".format(amount) }}</a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card" style="padding:1rem; margin-top:0.9rem;">
+    <h2 style="font-size:1.05rem;">Employer NI pages</h2>
+    <div class="pill-grid">
+      {% for amount in salary_amounts %}
+      <a class="pill" href="/employer-ni/{{ amount }}">NI on £{{ "{:,}".format(amount) }}</a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+
+{% block jsonld %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Statutory Redundancy Pay Calculator 2025/26",
+  "url": "{{ canonical_url }}",
+  "description": "Calculate statutory redundancy pay by age, years of service and weekly pay. Weekly pay cap £700 for 2025/26.",
+  "applicationCategory": "FinanceApplication",
+  "operatingSystem": "Any",
+  "inLanguage": "en-GB",
+  "isAccessibleForFree": true,
+  "keywords": "redundancy pay calculator, statutory redundancy UK, redundancy calculator 2025",
+  "offers": {"@type": "Offer", "price": "0", "priceCurrency": "GBP"},
+  "provider": {"@type": "Organization", "name": "EmployerCalculator.co.uk", "url": "{{ site_url }}"}
+}
+</script>
+{% endblock %}
+
+{% block head_extra %}
+<style>
+  .calc-wrap { max-width: 980px; margin: 0 auto; padding: 2rem 1.25rem 3.5rem; }
+  .calc-header { margin-bottom: 1.5rem; }
+  .calc-header p { color: var(--text-secondary); font-size: 0.95rem; max-width: 620px; margin-top: 0.4rem; }
+  .calc-grid { display: grid; grid-template-columns: minmax(280px,380px) 1fr; gap: 1rem; align-items: start; }
+  @media (max-width: 720px) { .calc-grid { grid-template-columns: 1fr; } }
+  .input-card { background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 1.2rem 1.4rem; }
+  .input-card h2 { font-family: var(--font-display); font-size: 1rem; font-weight: 500; letter-spacing: -0.02em; margin-bottom: 1rem; }
+  .field { margin-bottom: 0.9rem; }
+  .field label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.35rem; }
+  .field input, .field select { width: 100%; padding: 0.55rem 0.75rem; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-body); font-size: 0.95rem; background: var(--surface); color: var(--text-primary); outline: none; transition: border-color var(--transition), box-shadow var(--transition); }
+  .field input:focus, .field select:focus { border-color: rgba(27,107,74,0.4); box-shadow: 0 0 0 4px rgba(27,107,74,0.10); }
+  .field-prefix { position: relative; }
+  .field-prefix::before { content: '£'; position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: var(--text-tertiary); font-size: 0.95rem; pointer-events: none; }
+  .field-prefix input { padding-left: 1.5rem; }
+  .hint { font-size: 0.75rem; color: var(--text-tertiary); margin-top: 0.25rem; }
+  .result-card { background: var(--surface); border: 1.5px solid var(--border-strong); border-top: 3px solid var(--accent); border-radius: var(--radius); overflow: hidden; }
+  .result-head { padding: 1.1rem 1.4rem 0.9rem; border-bottom: 1px solid var(--border); }
+  .result-head-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent); margin-bottom: 0.3rem; }
+  .result-primary { font-family: var(--font-display); font-size: clamp(1.8rem, 3.5vw, 2.3rem); font-weight: 500; color: var(--text-primary); letter-spacing: -0.02em; line-height: 1.1; }
+  .result-sub { font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.25rem; }
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px,1fr)); gap: 0.5rem; padding: 0.9rem 1.4rem; }
+  .kpi { background: var(--surface-alt); border-radius: var(--radius-sm); padding: 0.7rem 0.85rem; }
+  .kpi-label { font-size: 0.72rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.2rem; }
+  .kpi-value { font-family: var(--font-body); font-size: 1.1rem; font-weight: 600; color: var(--text-primary); letter-spacing: -0.01em; font-variant-numeric: tabular-nums lining-nums; font-feature-settings: 'tnum' 1, 'lnum' 1; }
+  .result-note { padding: 0.7rem 1.4rem 1rem; font-size: 0.78rem; color: var(--text-tertiary); border-top: 1px solid var(--border); }
+  .breakdown-table { width: 100%; border-collapse: collapse; margin: 0 0 0.5rem; font-size: 0.84rem; }
+  .breakdown-table th { text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-tertiary); font-weight: 700; padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--border); }
+  .breakdown-table td { padding: 0.45rem 0.5rem; border-bottom: 1px solid var(--border); color: var(--text-secondary); }
+  .breakdown-table td:last-child { text-align: right; font-variant-numeric: tabular-nums; color: var(--text-primary); font-weight: 500; }
+  .breakdown-table tr:last-child td { border-bottom: none; font-weight: 700; color: var(--text-primary); }
+  .breakdown-section { padding: 0 1.4rem 1rem; }
+  .breakdown-section h3 { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-tertiary); margin: 0 0 0.6rem; }
+  .faq-section { margin-top: 1.5rem; background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 1.2rem 1.4rem; }
+  .faq-section h2 { font-family: var(--font-display); font-size: 1.05rem; font-weight: 500; letter-spacing: -0.02em; margin-bottom: 1rem; }
+  .faq-item { border-top: 1px solid var(--border); padding: 0.75rem 0; }
+  .faq-item summary { font-size: 0.88rem; font-weight: 600; cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; color: var(--text-primary); }
+  .faq-item summary::after { content: '+'; font-size: 1.1rem; color: var(--text-tertiary); }
+  .faq-item[open] summary::after { content: '−'; }
+  .faq-answer { font-size: 0.85rem; color: var(--text-secondary); padding-top: 0.5rem; line-height: 1.6; }
+  .cross-link { margin-top: 1.5rem; background: var(--accent-light); border: 1.5px solid rgba(27,107,74,0.2); border-radius: var(--radius); padding: 1rem 1.4rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+  .cross-link p { font-size: 0.88rem; color: var(--accent); font-weight: 500; margin: 0; }
+  .cross-link a { font-size: 0.82rem; font-weight: 700; color: var(--accent); text-decoration: none; white-space: nowrap; padding: 0.4rem 0.9rem; border: 1.5px solid var(--accent); border-radius: var(--radius-sm); transition: all var(--transition); }
+  .cross-link a:hover { background: var(--accent); color: #fff; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="calc-wrap">
+  <div class="calc-header">
+    <div class="badge">Statutory redundancy calculator</div>
+    <h1>Statutory Redundancy Pay Calculator 2025/26</h1>
+    <p>Calculate the statutory redundancy pay entitlement based on age, years of service and weekly pay, using the 2025/26 weekly pay cap of £700. Results update live.</p>
+  </div>
+
+  <div class="calc-grid">
+    <!-- Input panel -->
+    <div class="input-card">
+      <h2>Your details</h2>
+
+      <div class="field">
+        <label for="age">Age at date of redundancy</label>
+        <input type="number" id="age" value="35" min="18" max="80">
+      </div>
+
+      <div class="field">
+        <label for="service">Complete years of continuous service</label>
+        <input type="number" id="service" value="5" min="1" max="50">
+      </div>
+
+      <div class="field field-prefix">
+        <label for="weeklyPay">Gross weekly pay</label>
+        <input type="number" id="weeklyPay" value="600" min="0" max="99999" step="1" inputmode="numeric">
+        <div class="hint">Capped at £700 for 2025/26 statutory calculation.</div>
+      </div>
+    </div>
+
+    <!-- Result panel -->
+    <div class="result-card">
+      <div class="result-head">
+        <div class="result-head-label">Statutory redundancy pay</div>
+        <div class="result-primary" id="resultPrimary">£3,500</div>
+        <div class="result-sub" id="resultSub">Based on 5 weeks entitlement at £600/week</div>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi">
+          <div class="kpi-label">Weeks entitlement</div>
+          <div class="kpi-value" id="kpiWeeks">5.0</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Capped weekly pay</div>
+          <div class="kpi-value" id="kpiCappedPay">£600</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Years counted</div>
+          <div class="kpi-value" id="kpiYears">5</div>
+        </div>
+      </div>
+
+      <div class="breakdown-section">
+        <h3>Year-by-year breakdown</h3>
+        <table class="breakdown-table">
+          <thead>
+            <tr><th>Year (most recent first)</th><th>Age during year</th><th>Rate</th><th>Amount</th></tr>
+          </thead>
+          <tbody id="breakdownBody">
+          </tbody>
+          <tfoot>
+            <tr><td colspan="3">Total</td><td id="breakdownTotal">£3,500</td></tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <div class="result-note">
+        Weekly pay capped at £700 for 2025/26. Maximum statutory redundancy pay: £21,000. Not financial or legal advice.
+      </div>
+    </div>
+  </div>
+
+  <!-- FAQ -->
+  <div class="faq-section">
+    <h2>Frequently asked questions</h2>
+
+    <details class="faq-item">
+      <summary>How is statutory redundancy pay calculated?</summary>
+      <div class="faq-answer">Statutory redundancy pay is based on your age, continuous years of service (up to 20), and weekly pay (capped at £700 for 2025/26). You get half a week's pay for each full year worked when under 22, one week's pay for each year aged 22–40, and one and a half week's pay for each year aged 41 or over.</div>
+    </details>
+
+    <details class="faq-item">
+      <summary>What is the maximum statutory redundancy pay?</summary>
+      <div class="faq-answer">For 2025/26, the maximum is £21,000 — based on 20 qualifying years × 1.5 weeks × £700 weekly pay cap. This applies to employees aged 41 or over with at least 20 years' service.</div>
+    </details>
+
+    <details class="faq-item">
+      <summary>Is statutory redundancy pay tax-free?</summary>
+      <div class="faq-answer">Generally yes. Statutory redundancy pay is exempt from income tax and National Insurance, as it falls within the £30,000 termination payment exemption. Enhanced redundancy pay above the statutory amount may be taxable depending on how it is structured.</div>
+    </details>
+  </div>
+
+  <!-- Cross-link -->
+  <div class="cross-link">
+    <p>Calculate total employer cost for any salary</p>
+    <a href="/calculator">Employer cost calculator &rarr;</a>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function money(n) { return '£' + Math.round(n).toLocaleString('en-GB'); }
+  function moneyDec(n) { return '£' + n.toLocaleString('en-GB', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+  function num(n) { return Math.round(n).toLocaleString('en-GB'); }
+  function setText(id, v) { const el = document.getElementById(id); if (el) el.textContent = v; }
+  function parseMoney(v) { return parseFloat(String(v).replace(/[^0-9.]/g,'')) || 0; }
+
+  const WEEKLY_PAY_CAP = 700;
+  const MAX_YEARS = 20;
+
+  function calcRedundancy(age, service, weeklyPay) {
+    const wp = Math.min(weeklyPay, WEEKLY_PAY_CAP);
+    const years = Math.min(service, MAX_YEARS);
+    let total = 0;
+    const rows = [];
+
+    for (let y = 1; y <= years; y++) {
+      const ageAtYear = age - y + 1;
+      let multiplier;
+      let rateLabel;
+      if (ageAtYear < 22) {
+        multiplier = 0.5;
+        rateLabel = '0.5 week';
+      } else if (ageAtYear <= 40) {
+        multiplier = 1.0;
+        rateLabel = '1 week';
+      } else {
+        multiplier = 1.5;
+        rateLabel = '1.5 weeks';
+      }
+      const amount = multiplier * wp;
+      total += amount;
+      rows.push({ year: y, age: ageAtYear, rateLabel, amount });
+    }
+
+    return {
+      total,
+      weeksEntitled: wp > 0 ? total / wp : 0,
+      cappedWeeklyPay: wp,
+      yearsCounted: years,
+      rows
+    };
+  }
+
+  function calculate() {
+    const age = parseInt(document.getElementById('age').value) || 35;
+    const service = parseInt(document.getElementById('service').value) || 5;
+    const weeklyPay = parseFloat(document.getElementById('weeklyPay').value) || 600;
+
+    const result = calcRedundancy(age, service, weeklyPay);
+
+    setText('resultPrimary', money(result.total));
+    setText('resultSub', 'Based on ' + result.weeksEntitled.toFixed(1) + ' weeks entitlement at ' + money(result.cappedWeeklyPay) + '/week');
+
+    setText('kpiWeeks', result.weeksEntitled.toFixed(1));
+    setText('kpiCappedPay', money(result.cappedWeeklyPay));
+    setText('kpiYears', result.yearsCounted);
+
+    // Breakdown table
+    const tbody = document.getElementById('breakdownBody');
+    tbody.innerHTML = '';
+    result.rows.forEach(function(row) {
+      const tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td>Year ' + row.year + '</td>' +
+        '<td>' + row.age + '</td>' +
+        '<td>' + row.rateLabel + '</td>' +
+        '<td>' + money(row.amount) + '</td>';
+      tbody.appendChild(tr);
+    });
+
+    setText('breakdownTotal', money(result.total));
+  }
+
+  ['age', 'service', 'weeklyPay'].forEach(function(id) {
+    document.getElementById(id).addEventListener('input', calculate);
+    document.getElementById(id).addEventListener('change', calculate);
+  });
+
+  calculate();
+</script>
+{% endblock %}

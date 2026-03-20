@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}£{{ "{:,}".format(salary_a) }} vs £{{ "{:,}".format(salary_b) }} Take-Home ({{ region_label }}){% endblock %}
+{% block meta_description %}Compare £{{ "{:,}".format(salary_a) }} vs £{{ "{:,}".format(salary_b) }} take-home pay in {{ region_label }} with annual and monthly net differences.{% endblock %}
+{% block canonical %}<link rel="canonical" href="{{ canonical_url }}">{% endblock %}
+
+{% block content %}
+<section class="max-w-6xl mx-auto px-4 sm:px-6 py-10">
+  <nav class="text-sm text-slate-500 mb-4"><a href="/" class="hover:text-blue-600">Home</a> / <a href="/salaries" class="hover:text-blue-600">Salaries</a> / <span class="text-slate-700">Comparison</span></nav>
+  <h1 class="text-4xl font-extrabold text-slate-900">£{{ "{:,}".format(salary_a) }} vs £{{ "{:,}".format(salary_b) }} take-home pay ({{ region_label }})</h1>
+  <p class="mt-3 text-slate-600">Like-for-like comparison using the same tax region and default assumptions.</p>
+
+  <div class="grid md:grid-cols-2 gap-4 mt-6">
+    <div class="card p-5">
+      <div class="text-sm text-slate-500">£{{ "{:,}".format(salary_a) }}</div>
+      <div class="mt-2 text-2xl font-bold">{{ result_a.take_home.monthly|gbp2 }} / month</div>
+      <div class="text-sm text-slate-500">{{ result_a.take_home.annual|gbp2 }} / year</div>
+    </div>
+    <div class="card p-5">
+      <div class="text-sm text-slate-500">£{{ "{:,}".format(salary_b) }}</div>
+      <div class="mt-2 text-2xl font-bold">{{ result_b.take_home.monthly|gbp2 }} / month</div>
+      <div class="text-sm text-slate-500">{{ result_b.take_home.annual|gbp2 }} / year</div>
+    </div>
+  </div>
+
+  <div class="card p-6 mt-6">
+    <h2 class="text-2xl font-bold text-slate-900">Difference</h2>
+    <div class="mt-3 grid sm:grid-cols-2 gap-3">
+      <div class="rounded-xl border border-slate-200 p-4 text-sm">Monthly net change: <strong>{{ delta_monthly|gbp2 }}</strong></div>
+      <div class="rounded-xl border border-slate-200 p-4 text-sm">Annual net change: <strong>{{ delta_annual|gbp2 }}</strong></div>
+    </div>
+    <div class="mt-4 flex flex-wrap gap-3 text-sm">
+      <a class="rounded-xl border border-slate-300 px-4 py-2 hover:bg-slate-50" href="/calculator?salary={{ salary_a }}&region={{ region_slug }}">Open lower salary in calculator</a>
+      <a class="rounded-xl border border-slate-300 px-4 py-2 hover:bg-slate-50" href="/calculator?salary={{ salary_b }}&region={{ region_slug }}">Open higher salary in calculator</a>
+      <a class="rounded-xl border border-slate-300 px-4 py-2 hover:bg-slate-50" href="/downloads/salary-offer-checklist.txt">Download offer checklist</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

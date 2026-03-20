@@ -1,0 +1,283 @@
+{% extends "base.html" %}
+
+{% block jsonld %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Notice Period Calculator 2025/26",
+  "url": "{{ canonical_url }}",
+  "description": "Calculate statutory and contractual notice periods. Includes payment in lieu of notice (PILON) cost for UK employers.",
+  "applicationCategory": "FinanceApplication",
+  "operatingSystem": "Any",
+  "inLanguage": "en-GB",
+  "isAccessibleForFree": true,
+  "keywords": "notice period calculator, PILON calculator, statutory notice UK, notice period UK",
+  "offers": {"@type": "Offer", "price": "0", "priceCurrency": "GBP"},
+  "provider": {"@type": "Organization", "name": "EmployerCalculator.co.uk", "url": "{{ site_url }}"}
+}
+</script>
+{% endblock %}
+
+{% block head_extra %}
+<style>
+  .calc-wrap { max-width: 980px; margin: 0 auto; padding: 2rem 1.25rem 3.5rem; }
+  .calc-header { margin-bottom: 1.5rem; }
+  .calc-header p { color: var(--text-secondary); font-size: 0.95rem; max-width: 620px; margin-top: 0.4rem; }
+  .calc-grid { display: grid; grid-template-columns: minmax(280px,380px) 1fr; gap: 1rem; align-items: start; }
+  @media (max-width: 720px) { .calc-grid { grid-template-columns: 1fr; } }
+  .input-card { background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 1.2rem 1.4rem; }
+  .input-card h2 { font-family: var(--font-display); font-size: 1rem; font-weight: 500; letter-spacing: -0.02em; margin-bottom: 1rem; }
+  .field { margin-bottom: 0.9rem; }
+  .field label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.35rem; }
+  .field input, .field select { width: 100%; padding: 0.55rem 0.75rem; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-body); font-size: 0.95rem; background: var(--surface); color: var(--text-primary); outline: none; transition: border-color var(--transition), box-shadow var(--transition); }
+  .field input:focus, .field select:focus { border-color: rgba(27,107,74,0.4); box-shadow: 0 0 0 4px rgba(27,107,74,0.10); }
+  .field-prefix { position: relative; }
+  .field-prefix::before { content: '£'; position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: var(--text-tertiary); font-size: 0.95rem; pointer-events: none; }
+  .field-prefix input { padding-left: 1.5rem; }
+  .hint { font-size: 0.75rem; color: var(--text-tertiary); margin-top: 0.25rem; }
+  .result-card { background: var(--surface); border: 1.5px solid var(--border-strong); border-top: 3px solid var(--accent); border-radius: var(--radius); overflow: hidden; }
+  .result-head { padding: 1.1rem 1.4rem 0.9rem; border-bottom: 1px solid var(--border); }
+  .result-head-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent); margin-bottom: 0.3rem; }
+  .result-primary { font-family: var(--font-display); font-size: clamp(1.8rem, 3.5vw, 2.3rem); font-weight: 500; color: var(--text-primary); letter-spacing: -0.02em; line-height: 1.1; }
+  .result-sub { font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.25rem; }
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px,1fr)); gap: 0.5rem; padding: 0.9rem 1.4rem; }
+  .kpi { background: var(--surface-alt); border-radius: var(--radius-sm); padding: 0.7rem 0.85rem; }
+  .kpi-label { font-size: 0.72rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.2rem; }
+  .kpi-value { font-family: var(--font-body); font-size: 1.1rem; font-weight: 600; color: var(--text-primary); letter-spacing: -0.01em; font-variant-numeric: tabular-nums lining-nums; font-feature-settings: 'tnum' 1, 'lnum' 1; }
+  .result-note { padding: 0.7rem 1.4rem 1rem; font-size: 0.78rem; color: var(--text-tertiary); border-top: 1px solid var(--border); }
+  .breakdown-section { padding: 0 1.4rem 1rem; border-top: 1px solid var(--border); padding-top: 0.9rem; }
+  .breakdown-section h3 { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-tertiary); margin: 0 0 0.6rem; }
+  .breakdown-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+  .breakdown-table th { text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-tertiary); font-weight: 700; padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--border); }
+  .breakdown-table td { padding: 0.45rem 0.5rem; border-bottom: 1px solid var(--border); color: var(--text-secondary); }
+  .breakdown-table td:last-child { text-align: right; font-variant-numeric: tabular-nums; color: var(--text-primary); font-weight: 500; }
+  .breakdown-table tr:last-child td { border-bottom: none; font-weight: 700; color: var(--text-primary); }
+  .governing-badge { display: inline-block; background: var(--accent-light); color: var(--accent); font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 999px; margin-left: 0.4rem; vertical-align: middle; }
+  .faq-section { margin-top: 1.5rem; background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 1.2rem 1.4rem; }
+  .faq-section h2 { font-family: var(--font-display); font-size: 1.05rem; font-weight: 500; letter-spacing: -0.02em; margin-bottom: 1rem; }
+  .faq-item { border-top: 1px solid var(--border); padding: 0.75rem 0; }
+  .faq-item summary { font-size: 0.88rem; font-weight: 600; cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; color: var(--text-primary); }
+  .faq-item summary::after { content: '+'; font-size: 1.1rem; color: var(--text-tertiary); }
+  .faq-item[open] summary::after { content: '−'; }
+  .faq-answer { font-size: 0.85rem; color: var(--text-secondary); padding-top: 0.5rem; line-height: 1.6; }
+  .cross-link { margin-top: 1.5rem; background: var(--accent-light); border: 1.5px solid rgba(27,107,74,0.2); border-radius: var(--radius); padding: 1rem 1.4rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+  .cross-link p { font-size: 0.88rem; color: var(--accent); font-weight: 500; margin: 0; }
+  .cross-link a { font-size: 0.82rem; font-weight: 700; color: var(--accent); text-decoration: none; white-space: nowrap; padding: 0.4rem 0.9rem; border: 1.5px solid var(--accent); border-radius: var(--radius-sm); transition: all var(--transition); }
+  .cross-link a:hover { background: var(--accent); color: #fff; }
+  .hidden { display: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="calc-wrap">
+  <div class="calc-header">
+    <div class="badge">Notice period calculator</div>
+    <h1>Notice Period Calculator 2025/26</h1>
+    <p>Calculate the applicable notice period — statutory and contractual — and the payment in lieu of notice (PILON) if applicable. Results update live.</p>
+  </div>
+
+  <div class="calc-grid">
+    <!-- Input panel -->
+    <div class="input-card">
+      <h2>Your details</h2>
+
+      <div class="field">
+        <label for="yearsService">Years of continuous service</label>
+        <input type="number" id="yearsService" value="3" min="0" max="50" step="1">
+        <div class="hint">Statutory notice = 1 week per complete year (min 1 week, max 12 weeks).</div>
+      </div>
+
+      <div class="field">
+        <label for="contractualNotice">Contractual notice period</label>
+        <select id="contractualNotice" onchange="onContractualChange()">
+          <option value="statutory">Use statutory minimum</option>
+          <option value="4.33">1 month (4.33 weeks)</option>
+          <option value="8.66">2 months (8.66 weeks)</option>
+          <option value="13">3 months (13 weeks)</option>
+          <option value="26">6 months (26 weeks)</option>
+          <option value="52">12 months (52 weeks)</option>
+          <option value="custom">Custom</option>
+        </select>
+      </div>
+
+      <div class="field hidden" id="customNoticeField">
+        <label for="customWeeks">Custom contractual notice (weeks)</label>
+        <input type="number" id="customWeeks" value="4" min="0" max="260" step="1">
+      </div>
+
+      <div class="field field-prefix">
+        <label for="weeklyPay">Gross weekly pay</label>
+        <input type="number" id="weeklyPay" value="650" min="0" max="99999" step="1" inputmode="numeric">
+      </div>
+    </div>
+
+    <!-- Result panel -->
+    <div class="result-card">
+      <div class="result-head">
+        <div class="result-head-label">Applicable notice period</div>
+        <div class="result-primary" id="resultPrimary">3 weeks</div>
+        <div class="result-sub" id="resultSub">Governed by statutory minimum</div>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi">
+          <div class="kpi-label">Statutory notice</div>
+          <div class="kpi-value" id="kpiStatutory">3 weeks</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Contractual notice</div>
+          <div class="kpi-value" id="kpiContractual">3 weeks</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">PILON if paid in lieu</div>
+          <div class="kpi-value" id="kpiPilon">£1,950</div>
+        </div>
+      </div>
+
+      <div class="breakdown-section">
+        <h3>Calculation detail</h3>
+        <table class="breakdown-table">
+          <thead>
+            <tr><th>Item</th><th>Value</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Gross weekly pay</td><td id="bWeeklyPay">£650.00</td></tr>
+            <tr><td>Statutory notice weeks</td><td id="bStatWeeks">3</td></tr>
+            <tr><td>Contractual notice weeks</td><td id="bContractWeeks">3</td></tr>
+            <tr>
+              <td>Applicable notice weeks <span class="governing-badge" id="governingBadge">Statutory</span></td>
+              <td id="bApplicableWeeks">3</td>
+            </tr>
+            <tr><td>PILON (applicable weeks × weekly pay)</td><td id="bPilon">£1,950.00</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="result-note">
+        PILON is subject to income tax and National Insurance regardless of whether it is a contractual term. Statutory minimum applies even if contract states a lower period.
+      </div>
+    </div>
+  </div>
+
+  <!-- FAQ -->
+  <div class="faq-section">
+    <h2>Frequently asked questions</h2>
+
+    <details class="faq-item">
+      <summary>What is the statutory minimum notice period?</summary>
+      <div class="faq-answer">By law, employees are entitled to one week's notice for each complete year of service, up to a maximum of 12 weeks. The minimum is one week regardless of length of service. If the contractual notice period is longer than statutory, the longer period applies.</div>
+    </details>
+
+    <details class="faq-item">
+      <summary>What is payment in lieu of notice (PILON)?</summary>
+      <div class="faq-answer">PILON is a payment made to an employee instead of them working their notice period. The employer pays the equivalent wages for the notice period and the employment ends immediately. Since April 2018, PILON is subject to income tax and National Insurance regardless of whether it is included in the employment contract.</div>
+    </details>
+
+    <details class="faq-item">
+      <summary>Can an employer dismiss without notice?</summary>
+      <div class="faq-answer">In cases of gross misconduct, an employer may dismiss without notice and without PILON — known as summary dismissal. Outside gross misconduct situations, failure to give proper notice creates a breach of contract and the employee may be owed damages.</div>
+    </details>
+  </div>
+
+  <!-- Cross-link -->
+  <div class="cross-link">
+    <p>Calculate full employer hiring cost and NI</p>
+    <a href="/calculator">Employer cost calculator &rarr;</a>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function money(n) { return '£' + Math.round(n).toLocaleString('en-GB'); }
+  function moneyDec(n) { return '£' + n.toLocaleString('en-GB', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+  function num(n) { return Math.round(n).toLocaleString('en-GB'); }
+  function setText(id, v) { const el = document.getElementById(id); if (el) el.textContent = v; }
+  function parseMoney(v) { return parseFloat(String(v).replace(/[^0-9.]/g,'')) || 0; }
+
+  function onContractualChange() {
+    const val = document.getElementById('contractualNotice').value;
+    const customField = document.getElementById('customNoticeField');
+    customField.classList.toggle('hidden', val !== 'custom');
+    calculate();
+  }
+
+  function getContractualWeeks(yearsService) {
+    const sel = document.getElementById('contractualNotice').value;
+    if (sel === 'statutory') {
+      // Use statutory (handled below)
+      return null;
+    } else if (sel === 'custom') {
+      return parseFloat(document.getElementById('customWeeks').value) || 0;
+    } else {
+      return parseFloat(sel);
+    }
+  }
+
+  function roundHalf(n) {
+    // Round to 1 decimal for display of weeks
+    return Math.round(n * 10) / 10;
+  }
+
+  function calculate() {
+    const yearsService = parseInt(document.getElementById('yearsService').value) || 0;
+    const weeklyPay = parseFloat(document.getElementById('weeklyPay').value) || 650;
+
+    // Statutory notice: min 1 week, max 12 weeks (1 week per complete year, min 1)
+    const statutoryWeeks = Math.min(Math.max(1, yearsService), 12);
+
+    const contractualInput = document.getElementById('contractualNotice').value;
+    let contractualWeeks;
+    let contractualLabel;
+
+    if (contractualInput === 'statutory') {
+      contractualWeeks = statutoryWeeks;
+      contractualLabel = statutoryWeeks + ' weeks (statutory)';
+    } else if (contractualInput === 'custom') {
+      contractualWeeks = parseFloat(document.getElementById('customWeeks').value) || 0;
+      contractualLabel = roundHalf(contractualWeeks) + ' weeks (custom)';
+    } else {
+      contractualWeeks = parseFloat(contractualInput);
+      contractualLabel = roundHalf(contractualWeeks) + ' weeks';
+    }
+
+    const applicableWeeks = Math.max(statutoryWeeks, contractualWeeks);
+    const isStatutoryGoverning = statutoryWeeks >= contractualWeeks;
+    const pilon = applicableWeeks * weeklyPay;
+
+    // Result primary
+    const applicableDisplay = roundHalf(applicableWeeks);
+    const weeksLabel = applicableWeeks === 1 ? 'week' : 'weeks';
+    setText('resultPrimary', applicableDisplay + ' ' + weeksLabel);
+    setText('resultSub', isStatutoryGoverning ? 'Governed by statutory minimum' : 'Governed by contractual notice period');
+
+    // KPIs
+    setText('kpiStatutory', statutoryWeeks + (statutoryWeeks === 1 ? ' week' : ' weeks'));
+    setText('kpiContractual', roundHalf(contractualWeeks) + (contractualWeeks === 1 ? ' week' : ' weeks'));
+    setText('kpiPilon', money(pilon));
+
+    // Breakdown table
+    setText('bWeeklyPay', moneyDec(weeklyPay));
+    setText('bStatWeeks', statutoryWeeks);
+    setText('bContractWeeks', roundHalf(contractualWeeks));
+    setText('bApplicableWeeks', applicableDisplay);
+    setText('bPilon', moneyDec(pilon));
+
+    const badge = document.getElementById('governingBadge');
+    if (badge) {
+      badge.textContent = isStatutoryGoverning ? 'Statutory' : 'Contractual';
+    }
+  }
+
+  ['yearsService', 'contractualNotice', 'customWeeks', 'weeklyPay'].forEach(function(id) {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('input', calculate);
+      el.addEventListener('change', calculate);
+    }
+  });
+
+  calculate();
+</script>
+{% endblock %}

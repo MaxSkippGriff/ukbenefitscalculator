@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Editorial Standards{% endblock %}
+{% block meta_description %}Editorial and quality standards used for UK salary and tax content on AfterTaxSalary.{% endblock %}
+{% block canonical %}<link rel="canonical" href="{{ site_url }}/editorial-standards">{% endblock %}
+{% block content %}
+<section class="max-w-4xl mx-auto px-4 sm:px-6 py-12">
+  <h1 class="text-4xl font-extrabold text-slate-900">Editorial Standards</h1>
+  <div class="card p-6 mt-6 text-slate-600">
+    <p class="leading-relaxed mb-4">AfterTaxSalary publishes calculator pages, salary pages and guides for UK salary planning. Our editorial standard is practical accuracy: pages should help a user make a better decision about take-home pay, not just restate tax definitions.</p>
+    <ul class="list-disc pl-6 space-y-1">
+      <li>We prioritize factual accuracy and plain-English clarity.</li>
+      <li>Rates and thresholds are based on official public sources.</li>
+      <li>Guides are reviewed and updated when tax-year assumptions change.</li>
+      <li>We avoid unsupported claims and do not provide personal financial advice.</li>
+      <li>Every page should be useful without requiring JavaScript for core text.</li>
+    </ul>
+  </div>
+  <div class="card p-6 mt-6 text-slate-600">
+    <h2 class="text-2xl font-bold text-slate-900 mb-3">How we write and review content</h2>
+    <ul class="list-disc pl-6 space-y-2">
+      <li>Pages are written in plain British English and checked for practical readability.</li>
+      <li>Calculator assumptions and guide explanations are reviewed together so content matches current tool logic.</li>
+      <li>We prefer worked examples, comparison links and actionable explanations over generic tax definitions.</li>
+      <li>We update titles, metadata and internal links when a page’s purpose changes (for example, new tax-year assumptions or new comparison tools).</li>
+    </ul>
+  </div>
+  <div class="card p-6 mt-6 text-slate-600">
+    <h2 class="text-2xl font-bold text-slate-900 mb-3">Corrections and feedback</h2>
+    <p class="leading-relaxed">If you spot a mistake in a guide or think a calculator assumption is unclear, contact us via the <a href="/contact" class="text-blue-600 font-semibold hover:underline">contact page</a>. We review correction requests and update pages where appropriate. For calculation-method details, see the <a href="/methodology" class="text-blue-600 font-semibold hover:underline">methodology page</a>.</p>
+    <p class="mt-3 text-sm text-slate-500">Last reviewed: 23 February 2026.</p>
+  </div>
+</section>
+{% endblock %}

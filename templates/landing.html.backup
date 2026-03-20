@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ title }}</title>
+<meta name="description" content="{{ meta_description }}">
+<link rel="canonical" href="{{ canonical_url }}">
+<link rel="alternate" hreflang="en-gb" href="{{ canonical_url }}">
+<meta property="og:locale" content="en_GB">
+<meta property="og:type" content="website">
+<meta property="og:title" content="{{ title }}">
+<meta property="og:description" content="{{ meta_description }}">
+<meta property="og:url" content="{{ canonical_url }}">
+<meta property="og:site_name" content="EmployerCalculator.co.uk">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ title }}">
+<meta name="twitter:description" content="{{ meta_description }}">
+<meta name="geo.region" content="GB">
+<meta name="geo.placename" content="United Kingdom">
+<meta name="ICBM" content="54.7023545, -3.2765753">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💼</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300..700;1,9..40,300..700&family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #FAFAF8;
+  --surface: #FFFFFF;
+  --surface-alt: #F5F4F0;
+  --border: #E8E6E1;
+  --border-strong: #D4D1C9;
+  --text-primary: #1A1A18;
+  --text-secondary: #6B6860;
+  --text-tertiary: #9C9890;
+  --accent: #1B6B4A;
+  --accent-light: #E8F5EE;
+  --accent-hover: #155A3D;
+  --accent-warm: #D4763C;
+  --accent-warm-light: #FFF3EB;
+  --destructive: #C53030;
+  --destructive-light: #FFF5F5;
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-body: 'DM Sans', system-ui, sans-serif;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.06);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.08), 0 8px 32px rgba(0,0,0,0.04);
+  --max-w: 1120px;
+  --transition: 0.2s ease;
+}
+
+html { font-size: 16px; scroll-behavior: smooth; }
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--text-primary);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+/* ── NAV ── */
+.nav {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(250,250,248,0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+}
+.nav-inner {
+  max-width: var(--max-w); margin: 0 auto;
+  padding: 0 1.25rem;
+  display: flex; align-items: center; justify-content: space-between;
+  height: 56px;
+}
+.nav-brand {
+  font-family: var(--font-display); font-weight: 600; font-size: 1.1rem;
+  color: var(--text-primary); text-decoration: none;
+  letter-spacing: -0.02em;
+}
+.nav-brand span { color: var(--accent); }
+.nav-links { display: flex; gap: 0.25rem; }
+.nav-links a {
+  font-size: 0.875rem; font-weight: 500; color: var(--text-secondary);
+  text-decoration: none; padding: 0.4rem 0.75rem; border-radius: var(--radius-sm);
+  transition: all var(--transition);
+}
+.nav-links a:hover { color: var(--text-primary); background: var(--surface-alt); }
+.nav-links a.active { color: var(--accent); background: var(--accent-light); }
+.nav-mobile-toggle {
+  display: none; background: none; border: none; cursor: pointer;
+  width: 36px; height: 36px; align-items: center; justify-content: center;
+}
+.nav-mobile-toggle svg { width: 22px; height: 22px; color: var(--text-primary); }
+@media (max-width: 860px) {
+  .nav-mobile-toggle { display: flex; }
+  .nav-links {
+    display: none; position: absolute; top: 56px; left: 0; right: 0;
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    flex-direction: column; padding: 0.5rem 1rem;
+  }
+  .nav-links.open { display: flex; }
+}
+
+/* ── HERO ── */
+.hero {
+  max-width: var(--max-w); margin: 0 auto;
+  padding: 3rem 1.25rem 2rem;
+}
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  background: var(--accent-light); color: var(--accent);
+  font-size: 0.8rem; font-weight: 600; padding: 0.3rem 0.75rem;
+  border-radius: 100px; margin-bottom: 1rem;
+  letter-spacing: 0.02em;
+}
+.hero-badge::before {
+  content: ''; width: 6px; height: 6px; background: var(--accent);
+  border-radius: 50%; display: block;
+}
+.hero h1 {
+  font-family: var(--font-display); font-weight: 500;
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  line-height: 1.2; letter-spacing: -0.03em;
+  margin-bottom: 0.75rem; max-width: 720px;
+}
+.hero p {
+  color: var(--text-secondary); font-size: 1.05rem;
+  max-width: 580px; line-height: 1.6;
+}
+.hero-links {
+  display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1.25rem;
+}
+.hero-links a {
+  font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  text-decoration: none; padding: 0.35rem 0.8rem;
+  border: 1px solid var(--border); border-radius: 100px;
+  transition: all var(--transition);
+}
+.hero-links a:hover {
+  border-color: var(--accent); background: var(--accent-light);
+}
+
+/* ── CALCULATOR CARD ── */
+.calc-section {
+  max-width: var(--max-w); margin: 0 auto;
+  padding: 0 1.25rem 3rem;
+}
+.calc-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+.calc-header {
+  padding: 1.5rem 1.75rem 0;
+}
+.calc-header h2 {
+  font-family: var(--font-display); font-weight: 500;
+  font-size: 1.25rem; letter-spacing: -0.02em;
+}
+.calc-header p { color: var(--text-secondary); font-size: 0.875rem; margin-top: 0.25rem; }
+.calc-body { padding: 1.25rem 1.75rem 1.75rem; }
+.calc-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+@media (max-width: 640px) { .calc-grid { grid-template-columns: 1fr; } }
+.field label {
+  display: block; font-size: 0.8rem; font-weight: 600;
+  color: var(--text-secondary); margin-bottom: 0.35rem;
+  letter-spacing: 0.02em; text-transform: uppercase;
+}
+.field input, .field select {
+  width: 100%; height: 44px; padding: 0 0.875rem;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  font-family: var(--font-body); font-size: 0.95rem;
+  color: var(--text-primary); background: var(--bg);
+  transition: border-color var(--transition), box-shadow var(--transition);
+  -webkit-appearance: none;
+}
+.field select { padding-right: 2rem; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%236B6860'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.75rem center; }
+.field input:focus, .field select:focus {
+  outline: none; border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(27,107,74,0.1);
+}
+.field-prefix {
+  position: relative;
+}
+.field-prefix::before {
+  content: '£'; position: absolute; left: 0.875rem; top: 50%;
+  transform: translateY(-50%); color: var(--text-tertiary);
+  font-size: 0.95rem; pointer-events: none;
+}
+.field-prefix input { padding-left: 1.75rem; }
+.field-hint { font-size: 0.75rem; color: var(--text-tertiary); margin-top: 0.25rem; }
+.field-full { grid-column: 1 / -1; }
+.quick-amounts {
+  display: flex; gap: 0.35rem; margin-top: 0.5rem; flex-wrap: wrap;
+}
+.quick-amounts button {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 500;
+  padding: 0.25rem 0.6rem; border: 1px solid var(--border);
+  border-radius: 100px; background: var(--bg); color: var(--text-secondary);
+  cursor: pointer; transition: all var(--transition);
+}
+.quick-amounts button:hover {
+  border-color: var(--accent); color: var(--accent); background: var(--accent-light);
+}
+.checkbox-row {
+  display: flex; align-items: center; gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+.checkbox-row input[type="checkbox"] {
+  width: 18px; height: 18px; accent-color: var(--accent);
+}
+.checkbox-row label {
+  font-size: 0.875rem; color: var(--text-secondary);
+  text-transform: none; font-weight: 400; margin-bottom: 0;
+}
+
+/* ── RESULTS ── */
+.results-panel {
+  border-top: 1px solid var(--border);
+  padding: 1.75rem;
+  background: var(--surface-alt);
+}
+.results-headline {
+  display: flex; align-items: baseline; gap: 0.75rem;
+  margin-bottom: 1.25rem; flex-wrap: wrap;
+}
+.results-headline .big-number {
+  font-family: var(--font-display); font-weight: 500;
+  font-size: 2rem; letter-spacing: -0.03em;
+  color: var(--accent);
+}
+.results-headline .label {
+  font-size: 0.875rem; color: var(--text-secondary);
+}
+.results-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+.result-item {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 1rem;
+}
+.result-item .result-label {
+  font-size: 0.75rem; font-weight: 600; color: var(--text-tertiary);
+  text-transform: uppercase; letter-spacing: 0.03em;
+  margin-bottom: 0.25rem;
+}
+.result-item .result-value {
+  font-family: var(--font-display); font-weight: 500;
+  font-size: 1.35rem; letter-spacing: -0.02em;
+}
+.result-item .result-detail {
+  font-size: 0.8rem; color: var(--text-tertiary); margin-top: 0.15rem;
+}
+.result-item.highlight { border-color: var(--accent); background: var(--accent-light); }
+.result-item.highlight .result-value { color: var(--accent); }
+.result-item.warn { border-color: var(--accent-warm); background: var(--accent-warm-light); }
+.result-item.warn .result-value { color: var(--accent-warm); }
+
+/* ── BREAKDOWN TABLE ── */
+.breakdown {
+  margin-top: 1.25rem;
+}
+.breakdown summary {
+  font-size: 0.85rem; font-weight: 600; color: var(--text-secondary);
+  cursor: pointer; padding: 0.5rem 0;
+  list-style: none; display: flex; align-items: center; gap: 0.4rem;
+}
+.breakdown summary::before {
+  content: '▸'; font-size: 0.75rem; transition: transform var(--transition);
+}
+.breakdown[open] summary::before { transform: rotate(90deg); }
+.breakdown-table {
+  width: 100%; border-collapse: collapse; margin-top: 0.75rem;
+}
+.breakdown-table th, .breakdown-table td {
+  text-align: left; padding: 0.6rem 0.75rem;
+  font-size: 0.85rem; border-bottom: 1px solid var(--border);
+}
+.breakdown-table th {
+  font-weight: 600; color: var(--text-tertiary);
+  text-transform: uppercase; font-size: 0.7rem;
+  letter-spacing: 0.04em;
+}
+.breakdown-table td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+.breakdown-table tr:last-child td { border-bottom: none; font-weight: 600; }
+
+/* ── ASSUMPTIONS ── */
+.assumptions {
+  margin-top: 1rem; padding: 1rem; background: var(--bg);
+  border-radius: var(--radius-sm); font-size: 0.8rem; color: var(--text-tertiary);
+  line-height: 1.7;
+}
+.assumptions strong { color: var(--text-secondary); }
+
+/* ── SECTION STYLES ── */
+.section {
+  max-width: var(--max-w); margin: 0 auto;
+  padding: 2.5rem 1.25rem;
+}
+.section-label {
+  font-size: 0.75rem; font-weight: 700; color: var(--accent);
+  text-transform: uppercase; letter-spacing: 0.06em;
+  margin-bottom: 0.5rem;
+}
+.section h2 {
+  font-family: var(--font-display); font-weight: 500;
+  font-size: 1.5rem; letter-spacing: -0.02em;
+  margin-bottom: 0.5rem;
+}
+.section > p { color: var(--text-secondary); max-width: 580px; }
+
+/* ── HOW TO USE ── */
+.steps {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem; margin-top: 1.5rem;
+}
+.step {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1.25rem;
+}
+.step-num {
+  font-family: var(--font-display); font-weight: 500;
+  font-size: 0.85rem; color: var(--accent);
+  margin-bottom: 0.35rem;
+}
+.step h3 { font-size: 0.95rem; font-weight: 600; margin-bottom: 0.25rem; }
+.step p { font-size: 0.85rem; color: var(--text-secondary); }
+
+/* ── CALCULATOR GRID ── */
+.tools-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0.75rem; margin-top: 1.5rem;
+}
+.tool-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1.25rem;
+  text-decoration: none; color: var(--text-primary);
+  transition: all var(--transition);
+  display: flex; flex-direction: column;
+}
+.tool-card:hover {
+  border-color: var(--accent); box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+.tool-card h3 { font-size: 0.95rem; font-weight: 600; margin-bottom: 0.3rem; }
+.tool-card p { font-size: 0.8rem; color: var(--text-secondary); flex: 1; }
+.tool-card .tool-tag {
+  margin-top: 0.75rem; font-size: 0.7rem; font-weight: 600;
+  color: var(--accent); text-transform: uppercase; letter-spacing: 0.04em;
+}
+
+/* ── SALARY COST PAGES ── */
+.pill-grid {
+  display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 1rem;
+}
+.pill {
+  font-size: 0.8rem; font-weight: 500; color: var(--text-secondary);
+  text-decoration: none; padding: 0.4rem 0.85rem;
+  border: 1px solid var(--border); border-radius: 100px;
+  background: var(--surface); transition: all var(--transition);
+}
+.pill:hover {
+  border-color: var(--accent); color: var(--accent); background: var(--accent-light);
+}
+
+/* ── GUIDES ── */
+.guides-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 0.75rem; margin-top: 1.5rem;
+}
+.guide-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1.25rem 1.25rem 1rem;
+  text-decoration: none; color: var(--text-primary);
+  transition: all var(--transition);
+}
+.guide-card:hover { border-color: var(--accent); box-shadow: var(--shadow-sm); }
+.guide-card .guide-topic {
+  font-size: 0.7rem; font-weight: 700; color: var(--accent-warm);
+  text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.35rem;
+}
+.guide-card h3 { font-size: 0.95rem; font-weight: 600; margin-bottom: 0.25rem; }
+.guide-card p { font-size: 0.8rem; color: var(--text-secondary); }
+
+/* ── FAQ ── */
+.faq-list { margin-top: 1.5rem; }
+.faq-item {
+  border-bottom: 1px solid var(--border);
+}
+.faq-item summary {
+  padding: 1rem 0; font-weight: 600; font-size: 0.95rem;
+  cursor: pointer; list-style: none;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.faq-item summary::after {
+  content: '+'; font-size: 1.2rem; color: var(--text-tertiary);
+  transition: transform var(--transition);
+}
+.faq-item[open] summary::after { content: '−'; }
+.faq-answer {
+  padding: 0 0 1rem; font-size: 0.9rem; color: var(--text-secondary);
+  line-height: 1.7; max-width: 680px;
+}
+
+/* ── CROSS-LINK BANNER ── */
+.cross-link {
+  max-width: var(--max-w); margin: 0 auto;
+  padding: 0 1.25rem 2.5rem;
+}
+.cross-link-inner {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1.5rem 1.75rem;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 1rem; flex-wrap: wrap;
+}
+.cross-link-inner p { font-size: 0.9rem; color: var(--text-secondary); }
+.cross-link-inner p strong { color: var(--text-primary); }
+.cross-link-inner a {
+  font-size: 0.85rem; font-weight: 600; color: var(--accent);
+  text-decoration: none; padding: 0.5rem 1.1rem;
+  border: 1px solid var(--accent); border-radius: 100px;
+  transition: all var(--transition); white-space: nowrap;
+}
+.cross-link-inner a:hover { background: var(--accent); color: white; }
+
+/* ── FOOTER ── */
+.footer {
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  padding: 2.5rem 1.25rem;
+}
+.footer-inner {
+  max-width: var(--max-w); margin: 0 auto;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 2rem;
+}
+.footer-col h4 {
+  font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.05em; color: var(--text-tertiary); margin-bottom: 0.75rem;
+}
+.footer-col a {
+  display: block; font-size: 0.85rem; color: var(--text-secondary);
+  text-decoration: none; padding: 0.2rem 0; transition: color var(--transition);
+}
+.footer-col a:hover { color: var(--accent); }
+.footer-bottom {
+  max-width: var(--max-w); margin: 1.5rem auto 0;
+  padding-top: 1.5rem; border-top: 1px solid var(--border);
+  font-size: 0.78rem; color: var(--text-tertiary); line-height: 1.6;
+}
+.footer-bottom a { color: var(--text-tertiary); }
+
+/* ── STICKY RESULT BAR ── */
+.sticky-result {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: var(--surface); border-top: 1px solid var(--border);
+  box-shadow: 0 -2px 12px rgba(0,0,0,0.06);
+  z-index: 50; transform: translateY(100%);
+  transition: transform 0.3s ease;
+}
+.sticky-result.visible { transform: translateY(0); }
+.sticky-result-inner {
+  max-width: var(--max-w); margin: 0 auto;
+  padding: 0.75rem 1.25rem;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.sticky-result .sr-label { font-size: 0.8rem; color: var(--text-secondary); }
+.sticky-result .sr-value {
+  font-family: var(--font-display); font-weight: 500;
+  font-size: 1.15rem; color: var(--accent);
+}
+.sticky-result .sr-detail { font-size: 0.75rem; color: var(--text-tertiary); }
+</style>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "EmployerCalculator.co.uk",
+  "url": "{{ site_url }}"
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "EmployerCalculator.co.uk",
+  "url": "{{ site_url }}",
+  "description": "UK employer cost calculator hub. Calculate employer NI, total hiring cost and pension contributions for 2025/26.",
+  "sameAs": ["https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2025-to-2026"]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [{"@type": "ListItem", "position": 1, "name": "Home", "item": "{{ site_url }}/"}]
+}
+</script>
+{% if faq_items %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {% for item in faq_items %}
+    {
+      "@type": "Question",
+      "name": {{ item.q|tojson }},
+      "acceptedAnswer": {"@type": "Answer", "text": {{ item.a|tojson }} }
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ]
+}
+</script>
+{% endif %}
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="/" class="nav-brand">Employer<span>Calculator</span></a>
+    <div class="nav-links" id="navLinks">
+      <a href="#calculator" class="active">Calculator</a>
+      <a href="#tools">All Tools</a>
+      <a href="#costs">Cost Pages</a>
+      <a href="#guides">Guides</a>
+      <a href="/methodology">Methodology</a>
+    </div>
+    <button class="nav-mobile-toggle" onclick="document.getElementById('navLinks').classList.toggle('open')" aria-label="Toggle menu">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
+  </div>
+</nav>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="hero-badge">Updated for 2025/26</div>
+  <h1>UK employer calculators — NI, hiring costs and HR planning tools</h1>
+  <p>Calculate what employees actually cost your business. Updated for the April 2025 employer NI increase to 15% and the new £5,000 secondary threshold.</p>
+  <div class="hero-links">
+    <a href="#calculator">Employer NI calculator</a>
+    <a href="#tools">All calculators</a>
+    <a href="#costs">Cost-per-salary pages</a>
+    <a href="/sources">Sources</a>
+  </div>
+</header>
+
+<!-- MAIN CALCULATOR -->
+<section class="calc-section" id="calculator">
+  <div class="calc-card">
+    <div class="calc-header">
+      <h2>Employer NI &amp; Total Cost Calculator</h2>
+      <p>Enter an employee's gross salary to see your full employer cost for 2025/26.</p>
+    </div>
+    <div class="calc-body">
+      <div class="calc-grid">
+        <div class="field field-prefix">
+          <label for="salary">Annual gross salary</label>
+          <input type="text" id="salary" inputmode="numeric" value="35,000" placeholder="e.g. 35,000">
+          <div class="quick-amounts">
+            <button onclick="setSalary(25000)">£25k</button>
+            <button onclick="setSalary(30000)">£30k</button>
+            <button onclick="setSalary(35000)">£35k</button>
+            <button onclick="setSalary(45000)">£45k</button>
+            <button onclick="setSalary(55000)">£55k</button>
+            <button onclick="setSalary(75000)">£75k</button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="pension">Employer pension contribution</label>
+          <select id="pension">
+            <option value="0">0% (none)</option>
+            <option value="3" selected>3% (auto-enrolment minimum)</option>
+            <option value="4">4%</option>
+            <option value="5">5%</option>
+            <option value="6">6%</option>
+            <option value="8">8%</option>
+            <option value="10">10%</option>
+          </select>
+          <div class="field-hint">Qualifying earnings basis. Minimum employer contribution is 3%.</div>
+        </div>
+        <div class="field field-prefix">
+          <label for="overheads">Annual overhead per employee</label>
+          <input type="text" id="overheads" inputmode="numeric" value="3,000" placeholder="e.g. 3,000">
+          <div class="field-hint">Equipment, software, workspace, insurance, training, etc.</div>
+        </div>
+        <div class="field">
+          <label for="empAllowance">Employment Allowance</label>
+          <select id="empAllowance">
+            <option value="0" selected>Not eligible / not applying</option>
+            <option value="10500">Eligible — up to £10,500 offset</option>
+          </select>
+          <div class="field-hint">Most single-director companies cannot claim this.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RESULTS -->
+    <div class="results-panel" id="resultsPanel">
+      <div class="results-headline">
+        <span class="big-number" id="totalCostDisplay">£44,750</span>
+        <span class="label">total annual employer cost</span>
+      </div>
+      <div class="results-grid">
+        <div class="result-item highlight">
+          <div class="result-label">Total annual cost</div>
+          <div class="result-value" id="rTotalAnnual">£44,750</div>
+          <div class="result-detail"><span id="rTotalMonthly">£3,729</span> / month</div>
+        </div>
+        <div class="result-item warn">
+          <div class="result-label">Employer NI (15%)</div>
+          <div class="result-value" id="rEmployerNI">£4,500</div>
+          <div class="result-detail"><span id="rNIMonthly">£375</span> / month</div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">Pension contribution</div>
+          <div class="result-value" id="rPension">£1,050</div>
+          <div class="result-detail"><span id="rPensionMonthly">£88</span> / month</div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">Overhead costs</div>
+          <div class="result-value" id="rOverhead">£3,000</div>
+          <div class="result-detail"><span id="rOverheadMonthly">£250</span> / month</div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">Cost above salary</div>
+          <div class="result-value" id="rAboveSalary">£9,750</div>
+          <div class="result-detail"><span id="rAbovePercent">27.9%</span> above gross</div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">Employment Allowance saving</div>
+          <div class="result-value" id="rAllowance">£0</div>
+          <div class="result-detail">Applied against NI</div>
+        </div>
+      </div>
+
+      <details class="breakdown">
+        <summary>Full cost breakdown</summary>
+        <table class="breakdown-table">
+          <thead>
+            <tr><th>Item</th><th>Annual</th></tr>
+          </thead>
+          <tbody id="breakdownBody">
+          </tbody>
+        </table>
+      </details>
+
+      <details class="breakdown" style="margin-top:0.5rem">
+        <summary>Employer NI band breakdown</summary>
+        <table class="breakdown-table">
+          <thead>
+            <tr><th>Earnings band</th><th>Rate</th><th>NI due</th></tr>
+          </thead>
+          <tbody id="niBandsBody">
+          </tbody>
+        </table>
+      </details>
+
+      <div class="assumptions" id="assumptionsBlock"></div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW TO USE -->
+<section class="section">
+  <div class="section-label">How to use</div>
+  <h2>Three steps to your true hiring cost</h2>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">Step 1</div>
+      <h3>Enter the gross salary</h3>
+      <p>Set the annual salary you'll pay or are considering offering. Use the quick buttons for common bands.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">Step 2</div>
+      <h3>Set pension and overheads</h3>
+      <p>Choose your pension rate (3% minimum for auto-enrolment) and estimate per-employee overheads like equipment and software.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">Step 3</div>
+      <h3>Review the full cost</h3>
+      <p>See total annual and monthly employer cost, with NI band breakdown. Compare scenarios by changing the salary.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ALL CALCULATORS -->
+<section class="section" id="tools">
+  <div class="section-label">Calculators</div>
+  <h2>All employer calculators</h2>
+  <p>Every tool uses 2025/26 rates and thresholds. More calculators are added regularly.</p>
+  <div class="tools-grid">
+    <a href="/employer-ni-calculator" class="tool-card">
+      <h3>Employer NI Calculator</h3>
+      <p>Calculate employer National Insurance at 15% above the £5,000 secondary threshold for 2025/26.</p>
+      <div class="tool-tag">Live above ↑</div>
+    </a>
+    <a href="/cost-of-hiring-calculator" class="tool-card">
+      <h3>Cost of Hiring Calculator</h3>
+      <p>Salary + employer NI + pension + recruitment fees + onboarding. True cost per new hire.</p>
+      <div class="tool-tag">Coming soon</div>
+    </a>
+    <a href="/holiday-entitlement-calculator" class="tool-card">
+      <h3>Holiday Entitlement Calculator</h3>
+      <p>Statutory and contractual holiday for full-time, part-time and mid-year starters.</p>
+      <div class="tool-tag">Coming soon</div>
+    </a>
+    <a href="/redundancy-pay-calculator" class="tool-card">
+      <h3>Redundancy Pay Calculator</h3>
+      <p>Statutory redundancy by age, service years and weekly pay. Includes PILON and tax treatment.</p>
+      <div class="tool-tag">Coming soon</div>
+    </a>
+    <a href="/maternity-pay-calculator" class="tool-card">
+      <h3>Statutory Maternity Pay Calculator</h3>
+      <p>6-week higher rate + 33-week lower rate. Employer cost and SMP recovery.</p>
+      <div class="tool-tag">Coming soon</div>
+    </a>
+    <a href="/notice-period-calculator" class="tool-card">
+      <h3>Notice Period Calculator</h3>
+      <p>Statutory vs contractual notice, exact end dates, and payment in lieu of notice.</p>
+      <div class="tool-tag">Coming soon</div>
+    </a>
+    <a href="/settlement-agreement-calculator" class="tool-card">
+      <h3>Settlement Agreement Calculator</h3>
+      <p>Estimate settlement value including notice, redundancy, compensatory amounts and tax treatment.</p>
+      <div class="tool-tag">Coming soon</div>
+    </a>
+    <a href="/pro-rata-salary-calculator" class="tool-card">
+      <h3>Pro Rata Salary Calculator</h3>
+      <p>Convert full-time salary to part-time equivalent by days or hours per week.</p>
+      <div class="tool-tag">Coming soon</div>
+    </a>
+    <a href="/sick-pay-calculator" class="tool-card">
+      <h3>Statutory Sick Pay Calculator</h3>
+      <p>SSP eligibility, waiting days, weekly amounts and duration for 2025/26.</p>
+      <div class="tool-tag">Coming soon</div>
+    </a>
+    <a href="/pension-cost-calculator" class="tool-card">
+      <h3>Employer Pension Cost Calculator</h3>
+      <p>Auto-enrolment costs on qualifying earnings. Employer minimum, total minimum and opt-out rates.</p>
+      <div class="tool-tag">Coming soon</div>
+    </a>
+    <a href="/bradford-factor-calculator" class="tool-card">
+      <h3>Bradford Factor Calculator</h3>
+      <p>Absence scoring for HR teams. Input episodes and days to calculate Bradford Factor score.</p>
+      <div class="tool-tag">Coming soon</div>
+    </a>
+    <a href="/unfair-dismissal-calculator" class="tool-card">
+      <h3>Unfair Dismissal Compensation Calculator</h3>
+      <p>Basic award + compensatory award estimates. Updated for Employment Rights Act 2025 changes.</p>
+      <div class="tool-tag">Coming soon</div>
+    </a>
+  </div>
+</section>
+
+<!-- EMPLOYER COST PAGES -->
+<section class="section" id="costs">
+  <div class="section-label">Cost pages</div>
+  <h2>Employer cost by salary</h2>
+  <p>Server-rendered pages showing total employer cost at each salary level. Shareable, indexable, and updated for 2025/26.</p>
+  <div class="pill-grid">
+    <a href="/cost/20000" class="pill">£20,000</a>
+    <a href="/cost/22000" class="pill">£22,000</a>
+    <a href="/cost/24000" class="pill">£24,000</a>
+    <a href="/cost/25000" class="pill">£25,000</a>
+    <a href="/cost/26000" class="pill">£26,000</a>
+    <a href="/cost/27000" class="pill">£27,000</a>
+    <a href="/cost/28000" class="pill">£28,000</a>
+    <a href="/cost/29000" class="pill">£29,000</a>
+    <a href="/cost/30000" class="pill">£30,000</a>
+    <a href="/cost/32000" class="pill">£32,000</a>
+    <a href="/cost/33000" class="pill">£33,000</a>
+    <a href="/cost/34000" class="pill">£34,000</a>
+    <a href="/cost/35000" class="pill">£35,000</a>
+    <a href="/cost/36000" class="pill">£36,000</a>
+    <a href="/cost/37000" class="pill">£37,000</a>
+    <a href="/cost/38000" class="pill">£38,000</a>
+    <a href="/cost/40000" class="pill">£40,000</a>
+    <a href="/cost/42000" class="pill">£42,000</a>
+    <a href="/cost/45000" class="pill">£45,000</a>
+    <a href="/cost/48000" class="pill">£48,000</a>
+    <a href="/cost/50000" class="pill">£50,000</a>
+    <a href="/cost/55000" class="pill">£55,000</a>
+    <a href="/cost/60000" class="pill">£60,000</a>
+    <a href="/cost/65000" class="pill">£65,000</a>
+    <a href="/cost/70000" class="pill">£70,000</a>
+    <a href="/cost/75000" class="pill">£75,000</a>
+    <a href="/cost/80000" class="pill">£80,000</a>
+    <a href="/cost/85000" class="pill">£85,000</a>
+    <a href="/cost/90000" class="pill">£90,000</a>
+    <a href="/cost/100000" class="pill">£100,000</a>
+    <a href="/cost/120000" class="pill">£120,000</a>
+    <a href="/cost/150000" class="pill">£150,000</a>
+  </div>
+
+  <h3 style="font-size:0.95rem; margin-top:2rem; margin-bottom:0.5rem;">Employer NI on specific salaries</h3>
+  <div class="pill-grid">
+    <a href="/employer-ni/20000" class="pill">NI on £20k</a>
+    <a href="/employer-ni/25000" class="pill">NI on £25k</a>
+    <a href="/employer-ni/30000" class="pill">NI on £30k</a>
+    <a href="/employer-ni/35000" class="pill">NI on £35k</a>
+    <a href="/employer-ni/40000" class="pill">NI on £40k</a>
+    <a href="/employer-ni/45000" class="pill">NI on £45k</a>
+    <a href="/employer-ni/50000" class="pill">NI on £50k</a>
+    <a href="/employer-ni/60000" class="pill">NI on £60k</a>
+    <a href="/employer-ni/75000" class="pill">NI on £75k</a>
+    <a href="/employer-ni/100000" class="pill">NI on £100k</a>
+  </div>
+</section>
+
+<!-- GUIDES -->
+<section class="section" id="guides">
+  <div class="section-label">Guides</div>
+  <h2>Employer guides</h2>
+  <p>Practical guides for UK employers and HR teams. Written for decision-making, not theory.</p>
+  <div class="guides-grid">
+    <a href="/guides/employer-ni-changes-2025" class="guide-card">
+      <div class="guide-topic">Employer NI</div>
+      <h3>Employer NI increase April 2025 — what changed and what it costs</h3>
+      <p>15% rate, £5,000 threshold, Employment Allowance increase. Impact on your payroll.</p>
+    </a>
+    <a href="/guides/true-cost-of-hiring" class="guide-card">
+      <div class="guide-topic">Hiring</div>
+      <h3>The true cost of hiring an employee in the UK (2025/26)</h3>
+      <p>Beyond salary: NI, pension, recruitment, onboarding, equipment and hidden costs.</p>
+    </a>
+    <a href="/guides/employment-allowance-guide" class="guide-card">
+      <div class="guide-topic">Tax relief</div>
+      <h3>Employment Allowance 2025/26 — eligibility, claiming and examples</h3>
+      <p>£10,500 maximum. Who qualifies, how to claim, and common mistakes.</p>
+    </a>
+    <a href="/guides/auto-enrolment-pension-costs" class="guide-card">
+      <div class="guide-topic">Pensions</div>
+      <h3>Auto-enrolment pension costs for employers explained</h3>
+      <p>Minimum contributions, qualifying earnings, opt-out rates and cost modelling.</p>
+    </a>
+    <a href="/guides/redundancy-process-guide" class="guide-card">
+      <div class="guide-topic">Redundancy</div>
+      <h3>Redundancy process and costs — employer guide</h3>
+      <p>Statutory pay, consultation requirements, notice periods and settlement alternatives.</p>
+    </a>
+    <a href="/guides/employment-rights-act-2025" class="guide-card">
+      <div class="guide-topic">Legislation</div>
+      <h3>Employment Rights Act 2025 — what employers need to know</h3>
+      <p>Day-one rights, unfair dismissal changes, zero-hours reforms and implementation timeline.</p>
+    </a>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="section">
+  <h2>Frequently asked questions</h2>
+  <div class="faq-list">
+    <details class="faq-item">
+      <summary>What is the employer NI rate for 2025/26?</summary>
+      <div class="faq-answer">Employers pay 15% National Insurance on employee earnings above the secondary threshold of £5,000 per year (£96 per week, £416 per month). This rate increased from 13.8% in April 2025, and the threshold was reduced from £9,100 to £5,000 at the same time. The combined effect means significantly higher employer costs, particularly for lower-paid employees where the threshold reduction has proportionally more impact.</div>
+    </details>
+    <details class="faq-item">
+      <summary>What is Employment Allowance and can I claim it?</summary>
+      <div class="faq-answer">Employment Allowance lets eligible employers reduce their annual employer NI bill by up to £10,500 for 2025/26. This was increased from £5,000 in 2024/25. The previous £100,000 eligibility cap has been removed, so more businesses can now claim. However, companies with only one employee who is also a director cannot claim. You apply through your payroll software by ticking the Employment Allowance indicator on your Employer Payment Summary.</div>
+    </details>
+    <details class="faq-item">
+      <summary>How much does it really cost to employ someone on £35,000?</summary>
+      <div class="faq-answer">On a £35,000 salary, expect to pay approximately £4,500 in employer NI (15% on earnings above £5,000), plus at least £1,050 in auto-enrolment pension contributions (3% minimum), plus workplace overheads (equipment, software, workspace) typically £2,000–£5,000. Total cost is usually £42,000–£44,000 per year — roughly 20–28% above the headline salary. Use the calculator above with your specific pension and overhead figures to get a precise estimate.</div>
+    </details>
+    <details class="faq-item">
+      <summary>How is employer NI calculated?</summary>
+      <div class="faq-answer">Employer NI is charged at 15% on all employee earnings above the secondary threshold of £5,000 per year. There is no upper earnings limit for employer NI — unlike employee NI, which drops to 2% above £50,270, employers continue to pay 15% on all earnings above the threshold with no cap. This means high earners are proportionally more expensive in employer NI terms. Reduced rates apply for employees under 21 and apprentices under 25 (0% up to the upper secondary threshold of £50,270).</div>
+    </details>
+    <details class="faq-item">
+      <summary>What changed in April 2025 for employer costs?</summary>
+      <div class="faq-answer">Three changes took effect from 6 April 2025: the employer NI rate increased from 13.8% to 15%, the secondary threshold was cut from £9,100 to £5,000, and Employment Allowance rose from £5,000 to £10,500 (with the £100,000 eligibility cap removed). For an employee on £30,000, annual employer NI went from approximately £2,884 to £3,750 — an increase of about £866 per year. Smaller employers who can claim Employment Allowance may offset some or all of this increase.</div>
+    </details>
+  </div>
+</section>
+
+<!-- CROSS-LINKS -->
+<div class="cross-link">
+  <div class="cross-link-inner">
+    <p><strong>Employee take-home pay?</strong> Use AfterTaxSalary for PAYE, NI and student loan deductions from the employee's perspective.</p>
+    <a href="https://aftertaxsalary.co.uk" target="_blank" rel="noopener">AfterTaxSalary.co.uk →</a>
+  </div>
+</div>
+<div class="cross-link">
+  <div class="cross-link-inner">
+    <p><strong>Buying a home?</strong> Estimate stamp duty, conveyancing and total cash needed before setting your offer budget.</p>
+    <a href="https://homebuyingcosts.co.uk" target="_blank" rel="noopener">HomeBuyingCosts.co.uk →</a>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-col">
+      <h4>Calculators</h4>
+      <a href="/employer-ni-calculator">Employer NI Calculator</a>
+      <a href="/cost-of-hiring-calculator">Cost of Hiring</a>
+      <a href="/holiday-entitlement-calculator">Holiday Entitlement</a>
+      <a href="/redundancy-pay-calculator">Redundancy Pay</a>
+      <a href="/maternity-pay-calculator">Maternity Pay</a>
+      <a href="/notice-period-calculator">Notice Period</a>
+    </div>
+    <div class="footer-col">
+      <h4>Cost pages</h4>
+      <a href="/cost/25000">£25k employer cost</a>
+      <a href="/cost/30000">£30k employer cost</a>
+      <a href="/cost/35000">£35k employer cost</a>
+      <a href="/cost/45000">£45k employer cost</a>
+      <a href="/cost/50000">£50k employer cost</a>
+      <a href="/cost/75000">£75k employer cost</a>
+    </div>
+    <div class="footer-col">
+      <h4>Guides</h4>
+      <a href="/guides/employer-ni-changes-2025">Employer NI changes 2025</a>
+      <a href="/guides/true-cost-of-hiring">True cost of hiring</a>
+      <a href="/guides/employment-allowance-guide">Employment Allowance</a>
+      <a href="/guides/employment-rights-act-2025">Employment Rights Act 2025</a>
+    </div>
+    <div class="footer-col">
+      <h4>About &amp; Legal</h4>
+      <a href="/methodology">Methodology</a>
+      <a href="/editorial-standards">Editorial standards</a>
+      <a href="/sources">Sources</a>
+      <a href="/about">About</a>
+      <a href="/privacy">Privacy policy</a>
+      <a href="/terms">Terms of use</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    © 2026 EmployerCalculator.co.uk · Tax year 2025/26 · Estimates only — not financial or legal advice.<br>
+    Sources: <a href="https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2025-to-2026">HMRC Rates &amp; Thresholds</a> · <a href="https://www.gov.uk/national-insurance-rates-letters">NI Rates &amp; Letters</a> · <a href="https://www.gov.uk/employment-allowance">Employment Allowance</a>
+  </div>
+</footer>
+
+<!-- STICKY BAR -->
+<div class="sticky-result" id="stickyResult">
+  <div class="sticky-result-inner">
+    <div>
+      <div class="sr-label">Total employer cost</div>
+      <div class="sr-value" id="stickyValue">£44,750 / year</div>
+    </div>
+    <div style="text-align:right">
+      <div class="sr-detail" id="stickyDetail">£3,729 / month</div>
+      <div class="sr-detail" id="stickyAbove">27.9% above salary</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── 2025/26 EMPLOYER NI THRESHOLDS ──
+const NI_SECONDARY_THRESHOLD = 5000;  // annual
+const NI_RATE = 0.15;  // 15%
+
+function parseCurrency(str) {
+  return parseInt(String(str).replace(/[^0-9]/g, ''), 10) || 0;
+}
+
+function fmt(n) {
+  return '£' + Math.round(n).toLocaleString('en-GB');
+}
+
+function fmtDec(n) {
+  return '£' + n.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function calcEmployerNI(salary, allowance) {
+  const niable = Math.max(0, salary - NI_SECONDARY_THRESHOLD);
+  const grossNI = niable * NI_RATE;
+  const niAfterAllowance = Math.max(0, grossNI - allowance);
+  return { grossNI, niAfterAllowance, allowanceSaving: grossNI - niAfterAllowance, niable };
+}
+
+function calcPension(salary, rate) {
+  // Auto-enrolment qualifying earnings: £6,240 to £50,270 for 2025/26
+  const lowerQE = 6240;
+  const upperQE = 50270;
+  const qualifying = Math.max(0, Math.min(salary, upperQE) - lowerQE);
+  return qualifying * (rate / 100);
+}
+
+function calculate() {
+  const salary = parseCurrency(document.getElementById('salary').value);
+  const pensionRate = parseFloat(document.getElementById('pension').value);
+  const overheads = parseCurrency(document.getElementById('overheads').value);
+  const allowance = parseFloat(document.getElementById('empAllowance').value);
+
+  if (salary < 1) return;
+
+  const ni = calcEmployerNI(salary, allowance);
+  const pension = calcPension(salary, pensionRate);
+  const totalCost = salary + ni.niAfterAllowance + pension + overheads;
+  const aboveSalary = totalCost - salary;
+  const abovePercent = ((aboveSalary / salary) * 100).toFixed(1);
+
+  // Update results
+  document.getElementById('totalCostDisplay').textContent = fmt(totalCost);
+  document.getElementById('rTotalAnnual').textContent = fmt(totalCost);
+  document.getElementById('rTotalMonthly').textContent = fmt(totalCost / 12);
+  document.getElementById('rEmployerNI').textContent = fmt(ni.niAfterAllowance);
+  document.getElementById('rNIMonthly').textContent = fmt(ni.niAfterAllowance / 12);
+  document.getElementById('rPension').textContent = fmt(pension);
+  document.getElementById('rPensionMonthly').textContent = fmt(pension / 12);
+  document.getElementById('rOverhead').textContent = fmt(overheads);
+  document.getElementById('rOverheadMonthly').textContent = fmt(overheads / 12);
+  document.getElementById('rAboveSalary').textContent = fmt(aboveSalary);
+  document.getElementById('rAbovePercent').textContent = abovePercent + '%';
+  document.getElementById('rAllowance').textContent = fmt(ni.allowanceSaving);
+
+  // Breakdown table
+  const bd = document.getElementById('breakdownBody');
+  bd.innerHTML = `
+    <tr><td>Gross salary</td><td>${fmtDec(salary)}</td></tr>
+    <tr><td>Employer NI (15% above £5,000)</td><td>${fmtDec(ni.grossNI)}</td></tr>
+    ${ni.allowanceSaving > 0 ? `<tr><td>Employment Allowance offset</td><td>−${fmtDec(ni.allowanceSaving)}</td></tr>` : ''}
+    <tr><td>Employer pension (${pensionRate}% on qualifying earnings)</td><td>${fmtDec(pension)}</td></tr>
+    <tr><td>Overhead costs</td><td>${fmtDec(overheads)}</td></tr>
+    <tr><td>Total employer cost</td><td>${fmtDec(totalCost)}</td></tr>
+  `;
+
+  // NI bands
+  const nib = document.getElementById('niBandsBody');
+  const earningsUpToThreshold = Math.min(salary, NI_SECONDARY_THRESHOLD);
+  const earningsAboveThreshold = Math.max(0, salary - NI_SECONDARY_THRESHOLD);
+  nib.innerHTML = `
+    <tr><td>Up to £${NI_SECONDARY_THRESHOLD.toLocaleString()}</td><td>0%</td><td>${fmtDec(0)}</td></tr>
+    <tr><td>Above £${NI_SECONDARY_THRESHOLD.toLocaleString()}</td><td>15%</td><td>${fmtDec(earningsAboveThreshold * NI_RATE)}</td></tr>
+    <tr><td>Total employer NI</td><td></td><td>${fmtDec(ni.grossNI)}</td></tr>
+  `;
+
+  // Assumptions
+  document.getElementById('assumptionsBlock').innerHTML = `
+    <strong>Tax year:</strong> 2025/26 · <strong>Employer NI rate:</strong> 15% ·
+    <strong>Secondary threshold:</strong> £5,000/year ·
+    <strong>Pension:</strong> ${pensionRate}% on qualifying earnings (£6,240–£50,270) ·
+    <strong>Employment Allowance:</strong> ${allowance > 0 ? fmt(allowance) : 'Not applied'} ·
+    <strong>Overheads:</strong> ${fmt(overheads)}/year ·
+    Estimates only — not financial advice.
+  `;
+
+  // Sticky bar
+  document.getElementById('stickyValue').textContent = fmt(totalCost) + ' / year';
+  document.getElementById('stickyDetail').textContent = fmt(totalCost / 12) + ' / month';
+  document.getElementById('stickyAbove').textContent = abovePercent + '% above salary';
+}
+
+function setSalary(val) {
+  document.getElementById('salary').value = val.toLocaleString('en-GB');
+  calculate();
+}
+
+// Event listeners
+['salary', 'pension', 'overheads', 'empAllowance'].forEach(id => {
+  document.getElementById(id).addEventListener('input', calculate);
+  document.getElementById(id).addEventListener('change', calculate);
+});
+
+// Format salary on blur
+document.getElementById('salary').addEventListener('blur', function() {
+  const v = parseCurrency(this.value);
+  if (v > 0) this.value = v.toLocaleString('en-GB');
+});
+document.getElementById('overheads').addEventListener('blur', function() {
+  const v = parseCurrency(this.value);
+  if (v > 0) this.value = v.toLocaleString('en-GB');
+});
+
+// Sticky bar visibility
+const resultsPanel = document.getElementById('resultsPanel');
+const stickyResult = document.getElementById('stickyResult');
+const observer = new IntersectionObserver(([entry]) => {
+  stickyResult.classList.toggle('visible', !entry.isIntersecting);
+}, { threshold: 0.1 });
+observer.observe(resultsPanel);
+
+// Initial calculation
+calculate();
+</script>
+
+</body>
+</html>

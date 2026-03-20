@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="section">
+  <div class="badge">Calculators</div>
+  <h1>UK employer calculators ({{ tax_year }})</h1>
+  <p>{{ tools|length }} free employer calculator tools covering National Insurance, total hiring cost, payroll and HR obligations for the {{ tax_year }} tax year. All are aligned to the April 2025 NI changes: 15% rate and £5,000 secondary threshold.</p>
+
+  <div class="card" style="padding:1rem 1.1rem; margin-top:0.9rem;">
+    <h2 style="font-size:1.05rem; margin-bottom:0.55rem;">Popular calculator pages</h2>
+    <div class="pill-grid">
+      <a class="pill" href="/employer-total-cost-calculator">Employer total cost calculator</a>
+      <a class="pill" href="/employer-cost-calculator-uk">Employer cost calculator UK</a>
+      <a class="pill" href="/total-cost-to-employer-calculator-uk">Total cost to employer calculator UK</a>
+      <a class="pill" href="/ni-change-calculator">NI change calculator</a>
+      <a class="pill" href="/employer-ni-calculator-2025-26">Employer NI calculator 2025/26</a>
+      <a class="pill" href="/auto-enrolment-payroll-costs">Auto-enrolment payroll costs</a>
+    </div>
+  </div>
+
+  <div class="grid-3" style="margin-top:1rem;">
+    {% for tool in tools %}
+    <a class="tool-card{% if tool.tag == 'Live' %} tool-live{% endif %}" href="{{ tool.url }}">
+      <h3>{{ tool.title }}</h3>
+      <p>{{ tool.description }}</p>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

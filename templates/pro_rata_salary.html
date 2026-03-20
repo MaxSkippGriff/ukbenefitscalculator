@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+
+{% block title %}Pro Rata Salary Calculator 2025/26 | EmployerCalculator.co.uk{% endblock %}
+
+{% block meta_description %}Calculate pro-rata salary quickly for part-time employees. Enter full-time salary and working days or hours to get the proportional annual, monthly and weekly pay.{% endblock %}
+
+{% block jsonld %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Pro Rata Salary Calculator 2025/26",
+  "url": "{{ canonical_url }}",
+  "description": "Calculate pro-rata salary for part-time workers by days or hours per week. Free UK pro-rata salary converter.",
+  "applicationCategory": "FinanceApplication",
+  "operatingSystem": "Any",
+  "inLanguage": "en-GB",
+  "isAccessibleForFree": true,
+  "keywords": "pro rata salary calculator, part time salary calculator UK, pro rata pay calculator",
+  "offers": {"@type": "Offer", "price": "0", "priceCurrency": "GBP"},
+  "provider": {"@type": "Organization", "name": "EmployerCalculator.co.uk", "url": "{{ site_url }}"}
+}
+</script>
+{% endblock %}
+
+{% block head_extra %}
+<style>
+.calc-wrap { max-width: 980px; margin: 0 auto; padding: 2rem 1.25rem 3.5rem; }
+.calc-header { margin-bottom: 1.5rem; }
+.calc-header p { color: var(--text-secondary); font-size: 0.95rem; max-width: 620px; margin-top: 0.4rem; }
+.calc-grid { display: grid; grid-template-columns: minmax(280px,380px) 1fr; gap: 1rem; align-items: start; }
+@media (max-width: 720px) { .calc-grid { grid-template-columns: 1fr; } }
+.input-card { background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 1.2rem 1.4rem; }
+.input-card h2 { font-family: var(--font-display); font-size: 1rem; font-weight: 500; letter-spacing: -0.02em; margin-bottom: 1rem; }
+.field { margin-bottom: 0.9rem; }
+.field label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.35rem; }
+.field input, .field select { width: 100%; padding: 0.55rem 0.75rem; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-body); font-size: 0.95rem; background: var(--surface); color: var(--text-primary); outline: none; transition: border-color var(--transition), box-shadow var(--transition); box-sizing: border-box; }
+.field input:focus, .field select:focus { border-color: rgba(27,107,74,0.4); box-shadow: 0 0 0 4px rgba(27,107,74,0.10); }
+.result-card { background: var(--surface); border: 1.5px solid var(--border-strong); border-top: 3px solid var(--accent); border-radius: var(--radius); overflow: hidden; }
+.result-head { padding: 1.1rem 1.4rem 0.9rem; border-bottom: 1px solid var(--border); }
+.result-head-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent); margin-bottom: 0.3rem; }
+.result-primary { font-family: var(--font-display); font-size: clamp(1.8rem, 3.5vw, 2.3rem); font-weight: 500; color: var(--text-primary); letter-spacing: -0.02em; line-height: 1.1; }
+.result-sub { font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.25rem; }
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px,1fr)); gap: 0.5rem; padding: 0.9rem 1.4rem; }
+.kpi { background: var(--surface-alt); border-radius: var(--radius-sm); padding: 0.7rem 0.85rem; }
+.kpi-label { font-size: 0.72rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.2rem; }
+.kpi-value { font-family: var(--font-body); font-size: 1.1rem; font-weight: 600; color: var(--text-primary); letter-spacing: -0.01em; font-variant-numeric: tabular-nums lining-nums; font-feature-settings: 'tnum' 1, 'lnum' 1; }
+.result-note { padding: 0.7rem 1.4rem 1rem; font-size: 0.78rem; color: var(--text-tertiary); border-top: 1px solid var(--border); }
+.faq-section { margin-top: 1.5rem; background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 1.2rem 1.4rem; }
+.faq-section h2 { font-family: var(--font-display); font-size: 1.05rem; font-weight: 500; letter-spacing: -0.02em; margin-bottom: 1rem; }
+.faq-item { border-top: 1px solid var(--border); padding: 0.75rem 0; }
+.faq-item summary { font-size: 0.88rem; font-weight: 600; cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; color: var(--text-primary); }
+.faq-item summary::-webkit-details-marker { display: none; }
+.faq-item summary::after { content: '+'; font-size: 1.1rem; color: var(--text-tertiary); }
+.faq-item[open] summary::after { content: '−'; }
+.faq-answer { font-size: 0.85rem; color: var(--text-secondary); padding-top: 0.5rem; line-height: 1.6; }
+.cross-link { margin-top: 1.5rem; background: var(--accent-light); border: 1.5px solid rgba(27,107,74,0.2); border-radius: var(--radius); padding: 1rem 1.4rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.cross-link p { font-size: 0.88rem; color: var(--accent); font-weight: 500; margin: 0; }
+.cross-link a { font-size: 0.82rem; font-weight: 700; color: var(--accent); text-decoration: none; white-space: nowrap; padding: 0.4rem 0.9rem; border: 1.5px solid var(--accent); border-radius: var(--radius-sm); transition: all var(--transition); }
+.cross-link a:hover { background: var(--accent); color: #fff; }
+
+/* Mode toggle */
+.mode-toggle { display: flex; gap: 0; border: 1.5px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; margin-bottom: 1rem; }
+.mode-toggle button { flex: 1; padding: 0.5rem 0.6rem; font-family: var(--font-body); font-size: 0.82rem; font-weight: 600; border: none; background: var(--surface); color: var(--text-secondary); cursor: pointer; transition: background var(--transition), color var(--transition); }
+.mode-toggle button.active { background: var(--accent); color: #fff; }
+.mode-group { display: none; }
+.mode-group.visible { display: block; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="calc-wrap">
+  <div class="calc-header">
+    <h1>Pro Rata Salary Calculator 2025/26</h1>
+    <p>Calculate the proportional salary for a part-time employee based on days or hours worked per week.</p>
+  </div>
+
+  <div class="calc-grid">
+    <!-- Input card -->
+    <div class="input-card">
+      <h2>Enter Details</h2>
+
+      <div class="field">
+        <label for="ft-salary">Full-time annual salary</label>
+        <input type="text" id="ft-salary" value="£40,000" inputmode="numeric">
+      </div>
+
+      <div class="field">
+        <label>Calculation mode</label>
+        <div class="mode-toggle">
+          <button id="btn-days" class="active" type="button" onclick="setMode('days')">By days per week</button>
+          <button id="btn-hours" type="button" onclick="setMode('hours')">By hours per week</button>
+        </div>
+      </div>
+
+      <!-- Days mode -->
+      <div id="group-days" class="mode-group visible">
+        <div class="field">
+          <label for="ft-days">Full-time days per week</label>
+          <input type="number" id="ft-days" value="5" min="1" max="7" step="0.5">
+        </div>
+        <div class="field">
+          <label for="actual-days">Actual days per week</label>
+          <input type="number" id="actual-days" value="4" min="0.5" max="7" step="0.5">
+        </div>
+      </div>
+
+      <!-- Hours mode -->
+      <div id="group-hours" class="mode-group">
+        <div class="field">
+          <label for="ft-hours">Full-time hours per week</label>
+          <input type="number" id="ft-hours" value="40" min="1" max="168" step="0.5">
+        </div>
+        <div class="field">
+          <label for="actual-hours">Actual hours per week</label>
+          <input type="number" id="actual-hours" value="32" min="0.5" max="168" step="0.5">
+        </div>
+      </div>
+    </div>
+
+    <!-- Result card -->
+    <div>
+      <div class="result-card">
+        <div class="result-head">
+          <div class="result-head-label">Pro-rata annual salary</div>
+          <div class="result-primary" id="res-prorata">£32,000</div>
+          <div class="result-sub" id="res-sub">4 days / 5 days &times; £40,000</div>
+        </div>
+        <div class="kpi-grid">
+          <div class="kpi">
+            <div class="kpi-label">Full-time salary</div>
+            <div class="kpi-value" id="kpi-ftsalary">£40,000</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Pro-rata (annual)</div>
+            <div class="kpi-value" id="kpi-annual">£32,000</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Monthly</div>
+            <div class="kpi-value" id="kpi-monthly">£2,667</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Weekly</div>
+            <div class="kpi-value" id="kpi-weekly">£615</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">% of FTE</div>
+            <div class="kpi-value" id="kpi-pct">80.0%</div>
+          </div>
+        </div>
+        <div class="result-note">
+          Pro-rata calculation is proportional. Statutory benefits (pension, holiday) are also pro-rated.
+        </div>
+      </div>
+
+      <div class="cross-link">
+        <p>Calculate employer NI on the pro-rata salary</p>
+        <a href="/calculator">Employer NI Calculator &rarr;</a>
+      </div>
+
+      <div class="faq-section">
+        <h2>Frequently Asked Questions</h2>
+
+        <details class="faq-item">
+          <summary>How is pro-rata salary calculated?</summary>
+          <div class="faq-answer">
+            Pro-rata salary is calculated by dividing the full-time salary by the full-time working hours or days, then multiplying by the actual hours or days worked. For example, if a full-time salary is £40,000 for 5 days per week and an employee works 4 days, their pro-rata salary is £40,000 &times; (4 &divide; 5) = £32,000.
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary>Are statutory rights pro-rated for part-time workers?</summary>
+          <div class="faq-answer">
+            Yes. Part-time workers are entitled to the same statutory rights as full-time workers on a pro-rata basis. This includes holiday entitlement, sick pay, pension contributions and redundancy pay. The Part-time Workers (Prevention of Less Favourable Treatment) Regulations 2000 require equal treatment.
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary>How does pro-rata affect employer NI and pension?</summary>
+          <div class="faq-answer">
+            Employer NI and pension contributions are calculated on the pro-rata salary, not the full-time equivalent. This typically reduces employer costs proportionally, though the lower qualifying earnings threshold means some low part-time salaries may attract less NI as a percentage.
+          </div>
+        </details>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  function money(n) { return '£' + Math.round(n).toLocaleString('en-GB'); }
+  function num(n, dec) { return dec ? n.toFixed(dec) : Math.round(n).toLocaleString('en-GB'); }
+  function setText(id, v) { const el = document.getElementById(id); if (el) el.textContent = v; }
+  function parseMoney(v) { return parseFloat(String(v).replace(/[^0-9.]/g,'')) || 0; }
+
+  let currentMode = 'days';
+
+  window.setMode = function(mode) {
+    currentMode = mode;
+    document.getElementById('group-days').classList.toggle('visible', mode === 'days');
+    document.getElementById('group-hours').classList.toggle('visible', mode === 'hours');
+    document.getElementById('btn-days').classList.toggle('active', mode === 'days');
+    document.getElementById('btn-hours').classList.toggle('active', mode === 'hours');
+    calculate();
+  };
+
+  function calculate() {
+    const salary = parseMoney(document.getElementById('ft-salary').value);
+
+    let ratio = 0;
+    let subText = '';
+
+    if (currentMode === 'days') {
+      const ftDays = parseFloat(document.getElementById('ft-days').value) || 5;
+      const actualDays = parseFloat(document.getElementById('actual-days').value) || 4;
+      ratio = ftDays > 0 ? actualDays / ftDays : 0;
+      subText = actualDays + ' days / ' + ftDays + ' days \u00d7 ' + money(salary);
+    } else {
+      const ftHours = parseFloat(document.getElementById('ft-hours').value) || 40;
+      const actualHours = parseFloat(document.getElementById('actual-hours').value) || 32;
+      ratio = ftHours > 0 ? actualHours / ftHours : 0;
+      subText = actualHours + ' hrs / ' + ftHours + ' hrs \u00d7 ' + money(salary);
+    }
+
+    const proRata = salary * ratio;
+    const monthly = proRata / 12;
+    const weekly = proRata / 52;
+    const pct = ratio * 100;
+
+    setText('res-prorata', money(proRata));
+    setText('res-sub', subText);
+    setText('kpi-ftsalary', money(salary));
+    setText('kpi-annual', money(proRata));
+    setText('kpi-monthly', money(monthly));
+    setText('kpi-weekly', money(weekly));
+    setText('kpi-pct', pct.toFixed(1) + '%');
+  }
+
+  // Format salary input
+  const salaryInput = document.getElementById('ft-salary');
+  salaryInput.addEventListener('focus', function() {
+    this.value = String(parseMoney(this.value));
+  });
+  salaryInput.addEventListener('blur', function() {
+    const v = parseMoney(this.value);
+    this.value = v ? '\u00a3' + Math.round(v).toLocaleString('en-GB') : '';
+    calculate();
+  });
+  salaryInput.addEventListener('input', calculate);
+
+  // Wire all other inputs
+  ['ft-days','actual-days','ft-hours','actual-hours'].forEach(function(id) {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', calculate);
+  });
+
+  calculate();
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+{% block title %}Take-Home Pay in {{ city_name }} (2025/26) - Salary After Tax Examples{% endblock %}
+{% block meta_description %}Take-home pay guide for {{ city_name }}. Compare salary levels and monthly net pay after tax, NI, pension and student loan assumptions in 2025/26.{% endblock %}
+{% block canonical %}<link rel="canonical" href="{{ canonical_url }}">{% endblock %}
+
+{% block head_extra %}
+<meta property="og:type" content="website">
+<meta property="og:url" content="{{ canonical_url }}">
+<meta property="og:title" content="Take-Home Pay in {{ city_name }} (2025/26) – Salary After Tax Examples">
+<meta property="og:description" content="City-focused UK salary take-home pay page for {{ city_name }}.">
+<meta name="twitter:card" content="summary_large_image">
+{% if not city_indexable %}
+<meta name="robots" content="noindex,follow">
+{% endif %}
+{% endblock %}
+
+{% block jsonld %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {"@type": "ListItem", "position": 1, "name": "Home", "item": "{{ site_url }}/"},
+    {"@type": "ListItem", "position": 2, "name": "City", "item": "{{ site_url }}/sitemap#cities"},
+    {"@type": "ListItem", "position": 3, "name": "{{ city_name }}", "item": "{{ site_url }}/city/{{ city_slug }}/take-home-pay"}
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {% for item in city_faqs %}
+    {
+      "@type": "Question",
+      "name": {{ item.q|tojson }},
+      "acceptedAnswer": {"@type": "Answer", "text": {{ item.a|tojson }}}
+    }{% if not loop.last or city_salary_insights %},{% endif %}
+    {% endfor %}
+    {% for item in city_salary_insights %}
+    {
+      "@type": "Question",
+      "name": {{ item.q|tojson }},
+      "acceptedAnswer": {"@type": "Answer", "text": {{ item.a|tojson }}}
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<section class="max-w-6xl mx-auto px-4 sm:px-6 py-10">
+  <nav class="text-sm text-slate-500 mb-4"><a href="/" class="hover:text-blue-600">Home</a> / <span class="text-slate-700">{{ city_name }}</span></nav>
+  <h1 class="text-4xl font-extrabold text-slate-900">Take-home pay in {{ city_name }} (2025/26)</h1>
+
+  <p class="mt-4 text-slate-600">This page helps you sanity-check salary offers in {{ city_name }} using UK PAYE assumptions. The key figure for practical planning is monthly net pay after income tax, National Insurance, student loan and pension effects, not gross salary alone.</p>
+  <p class="mt-3 text-slate-600">For {{ city_name }}, common decisions are shaped by {{ city_context }}. That makes scenario testing important before committing to role changes or relocation. The salary table below is server-rendered with default assumptions so it is indexable and easy to compare.</p>
+  <p class="mt-3 text-sm font-semibold text-slate-700">Important: UK income tax does not vary by city. Only tax region, tax code and deduction settings change the calculation.</p>
+  {% if city_profile %}
+  <div class="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+    <p class="text-slate-700">{{ city_profile.planning }}</p>
+    <p class="text-slate-700 mt-2">{{ city_profile.comparison }}</p>
+  </div>
+  {% endif %}
+
+  <div class="grid md:grid-cols-3 gap-4 mt-8">
+    <div class="card p-5"><div class="text-xs text-slate-500">Default sample salary</div><div class="text-2xl font-bold">{{ sample.gross_salary|gbp }}</div></div>
+    <div class="card p-5"><div class="text-xs text-slate-500">Estimated annual take-home</div><div class="text-2xl font-bold text-emerald-700">{{ sample.take_home.annual|gbp2 }}</div></div>
+    <div class="card p-5"><div class="text-xs text-slate-500">Estimated monthly take-home</div><div class="text-2xl font-bold">{{ sample.take_home.monthly|gbp2 }}</div></div>
+  </div>
+
+  <div class="card p-6 mt-6">
+    <h2 class="text-2xl font-bold text-slate-900 mb-4">Common salary levels in {{ city_name }}</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-slate-200 text-slate-500">
+            <th class="text-left py-2">Gross salary</th>
+            <th class="text-right py-2">Net monthly</th>
+            <th class="text-right py-2">Net annual</th>
+            <th class="text-right py-2">Details</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          {% for row in city_salary_rows %}
+          <tr>
+            <td class="py-2 font-medium">£{{ "{:,}".format(row.salary) }}</td>
+            <td class="py-2 text-right tabular-nums">{{ row.monthly|gbp2 }}</td>
+            <td class="py-2 text-right tabular-nums">{{ row.annual|gbp2 }}</td>
+            <td class="py-2 text-right"><a class="text-blue-600 hover:underline" href="/salary/{{ row.salary }}/{{ city_region_slug }}">View page</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card p-6 mt-6">
+    <h2 class="text-2xl font-bold text-slate-900 mb-3">Is £X a good salary in {{ city_name }}?</h2>
+    <p class="text-slate-600 mb-4">Use these quick benchmarks as planning prompts. The key comparison number is monthly take-home pay after tax and deductions, not just gross salary.</p>
+    <div class="grid md:grid-cols-2 gap-4">
+      {% for item in city_salary_insights %}
+      <details class="rounded-xl border border-slate-200 p-4">
+        <summary class="cursor-pointer">
+          <span class="font-semibold text-slate-800">{{ item.q }}</span>
+          <div class="mt-2 text-sm text-slate-500">
+            Est. monthly net: <span class="font-semibold text-slate-700">{{ item.monthly|gbp2 }}</span>
+            · annual net: <span class="font-semibold text-slate-700">{{ item.annual|gbp2 }}</span>
+          </div>
+        </summary>
+        <p class="mt-3 text-slate-600">{{ item.a }}</p>
+        <a href="/salary/{{ item.salary }}/{{ city_region_slug }}" class="mt-3 inline-block text-blue-600 font-semibold hover:underline">View £{{ "{:,}".format(item.salary) }} salary page</a>
+      </details>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card p-6 mt-6">
+    <h2 class="text-2xl font-bold text-slate-900 mb-4">Compare regions at £{{ "{:,}".format(compare_salary) }}</h2>
+    <p class="text-slate-600 mb-4">Income tax region drives this difference. NI remains UK-wide for most employees, but Scottish income tax bands can shift net pay at the same gross salary.</p>
+    <div class="grid sm:grid-cols-2 gap-3 text-sm">
+      <div class="rounded-xl border border-slate-200 p-4">England/Wales/NI monthly net: <strong class="tabular-nums">{{ compare_ruk.take_home.monthly|gbp2 }}</strong></div>
+      <div class="rounded-xl border border-slate-200 p-4">Scotland monthly net: <strong class="tabular-nums">{{ compare_scot.take_home.monthly|gbp2 }}</strong></div>
+    </div>
+  </div>
+
+  <div class="card p-6 mt-6">
+    <h2 class="text-2xl font-bold text-slate-900 mb-3">City FAQ</h2>
+    <div class="space-y-3 text-slate-600">
+      {% for item in city_faqs %}
+      <details class="rounded-xl border border-slate-200 p-4">
+        <summary class="cursor-pointer font-semibold text-slate-800">{{ item.q }}</summary>
+        <p class="mt-2">{{ item.a }}</p>
+      </details>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="mt-8 grid md:grid-cols-2 gap-4">
+    <div>
+      <h3 class="font-bold text-slate-900 mb-3">Useful links</h3>
+      <div class="flex flex-wrap gap-3 text-sm">
+        <a href="/calculator" class="text-blue-600 font-semibold hover:underline">Open full calculator</a>
+        <a href="/salaries" class="text-blue-600 font-semibold hover:underline">Salary hub</a>
+        <a href="/salary/35000/{{ city_region_slug }}" class="text-blue-600 font-semibold hover:underline">£35,000 salary page</a>
+        <a href="/salary/50000/{{ city_region_slug }}" class="text-blue-600 font-semibold hover:underline">£50,000 salary page</a>
+      </div>
+    </div>
+    <div>
+      <h3 class="font-bold text-slate-900 mb-3">Related guides</h3>
+      <div class="flex flex-wrap gap-3 text-sm">
+        <a href="/guides/how-take-home-pay-is-calculated" class="text-blue-600 font-semibold hover:underline">How take-home is calculated</a>
+        <a href="/guides/scotland-vs-england-tax" class="text-blue-600 font-semibold hover:underline">Scotland vs England tax</a>
+        <a href="/guides/student-loan-repayment-explained" class="text-blue-600 font-semibold hover:underline">Student loan repayment guide</a>
+        <a href="/guides/salary-increase-after-tax-guide" class="text-blue-600 font-semibold hover:underline">Pay rise after tax guide</a>
+        {% if city_slug == "manchester" %}
+        <a href="/guides/average-salary-in-manchester-after-tax-guide" class="text-blue-600 font-semibold hover:underline">Average salary in Manchester after tax (guide)</a>
+        {% endif %}
+        <a href="/guides/how-to-read-your-uk-payslip" class="text-blue-600 font-semibold hover:underline">How to read your payslip</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="card p-6 mt-6">
+    <h2 class="text-2xl font-bold text-slate-900 mb-3">Popular salary pages for {{ city_name }}</h2>
+    <p class="text-slate-600 mb-3">These are common search salary bands for city-level take-home pay checks.</p>
+    <div class="flex flex-wrap gap-2.5 text-sm">
+      {% for row in city_salary_rows[:12] %}
+      <a href="/salary/{{ row.salary }}/{{ city_region_slug }}" class="px-3 py-1.5 rounded-full border border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-blue-300 hover:text-blue-700">£{{ "{:,}".format(row.salary) }} after tax</a>
+      {% endfor %}
+    </div>
+  </div>
+
+  {% if related_cities %}
+  <div class="card p-6 mt-6">
+    <h2 class="text-2xl font-bold text-slate-900 mb-3">Nearby and related city pages</h2>
+    <p class="text-slate-600 mb-3">Compare roles across nearby labour markets with the same salary assumptions.</p>
+    <div class="flex flex-wrap gap-2.5 text-sm">
+      {% for slug in related_cities %}
+      <a href="/city/{{ slug }}/take-home-pay" class="px-3 py-1.5 rounded-full border border-slate-300 text-slate-700 hover:bg-slate-50">{{ city_titles[slug] }}</a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+
+{% block title %}Statutory Sick Pay Calculator 2025/26 | EmployerCalculator.co.uk{% endblock %}
+
+{% block meta_description %}Calculate Statutory Sick Pay (SSP) for 2025/26. Enter weekly earnings, sick days and working pattern to find total SSP payable, daily rate and eligibility.{% endblock %}
+
+{% block jsonld %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Statutory Sick Pay Calculator 2025/26",
+  "url": "{{ canonical_url }}",
+  "description": "Calculate SSP at £116.75 per week for 2025/26. Check eligibility, waiting days, daily rate and total sick pay due.",
+  "applicationCategory": "FinanceApplication",
+  "operatingSystem": "Any",
+  "inLanguage": "en-GB",
+  "isAccessibleForFree": true,
+  "keywords": "statutory sick pay calculator, SSP calculator UK, sick pay calculator 2025",
+  "offers": {"@type": "Offer", "price": "0", "priceCurrency": "GBP"},
+  "provider": {"@type": "Organization", "name": "EmployerCalculator.co.uk", "url": "{{ site_url }}"}
+}
+</script>
+{% endblock %}
+
+{% block head_extra %}
+<style>
+.calc-wrap { max-width: 980px; margin: 0 auto; padding: 2rem 1.25rem 3.5rem; }
+.calc-header { margin-bottom: 1.5rem; }
+.calc-header p { color: var(--text-secondary); font-size: 0.95rem; max-width: 620px; margin-top: 0.4rem; }
+.calc-grid { display: grid; grid-template-columns: minmax(280px,380px) 1fr; gap: 1rem; align-items: start; }
+@media (max-width: 720px) { .calc-grid { grid-template-columns: 1fr; } }
+.input-card { background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 1.2rem 1.4rem; }
+.input-card h2 { font-family: var(--font-display); font-size: 1rem; font-weight: 500; letter-spacing: -0.02em; margin-bottom: 1rem; }
+.field { margin-bottom: 0.9rem; }
+.field label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.35rem; }
+.field input, .field select { width: 100%; padding: 0.55rem 0.75rem; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-body); font-size: 0.95rem; background: var(--surface); color: var(--text-primary); outline: none; transition: border-color var(--transition), box-shadow var(--transition); box-sizing: border-box; }
+.field input:focus, .field select:focus { border-color: rgba(27,107,74,0.4); box-shadow: 0 0 0 4px rgba(27,107,74,0.10); }
+.result-card { background: var(--surface); border: 1.5px solid var(--border-strong); border-top: 3px solid var(--accent); border-radius: var(--radius); overflow: hidden; }
+.result-card.ineligible { border-top-color: #B91C1C; }
+.result-head { padding: 1.1rem 1.4rem 0.9rem; border-bottom: 1px solid var(--border); }
+.result-head-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent); margin-bottom: 0.3rem; }
+.result-head-label.ineligible-label { color: #B91C1C; }
+.result-primary { font-family: var(--font-display); font-size: clamp(1.8rem, 3.5vw, 2.3rem); font-weight: 500; color: var(--text-primary); letter-spacing: -0.02em; line-height: 1.1; }
+.result-sub { font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.25rem; }
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px,1fr)); gap: 0.5rem; padding: 0.9rem 1.4rem; }
+.kpi { background: var(--surface-alt); border-radius: var(--radius-sm); padding: 0.7rem 0.85rem; }
+.kpi-label { font-size: 0.72rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.2rem; }
+.kpi-value { font-family: var(--font-body); font-size: 1.1rem; font-weight: 600; color: var(--text-primary); letter-spacing: -0.01em; font-variant-numeric: tabular-nums lining-nums; font-feature-settings: 'tnum' 1, 'lnum' 1; }
+.result-note { padding: 0.7rem 1.4rem 1rem; font-size: 0.78rem; color: var(--text-tertiary); border-top: 1px solid var(--border); }
+.faq-section { margin-top: 1.5rem; background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 1.2rem 1.4rem; }
+.faq-section h2 { font-family: var(--font-display); font-size: 1.05rem; font-weight: 500; letter-spacing: -0.02em; margin-bottom: 1rem; }
+.faq-item { border-top: 1px solid var(--border); padding: 0.75rem 0; }
+.faq-item summary { font-size: 0.88rem; font-weight: 600; cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; color: var(--text-primary); }
+.faq-item summary::-webkit-details-marker { display: none; }
+.faq-item summary::after { content: '+'; font-size: 1.1rem; color: var(--text-tertiary); }
+.faq-item[open] summary::after { content: '−'; }
+.faq-answer { font-size: 0.85rem; color: var(--text-secondary); padding-top: 0.5rem; line-height: 1.6; }
+.cross-link { margin-top: 1.5rem; background: var(--accent-light); border: 1.5px solid rgba(27,107,74,0.2); border-radius: var(--radius); padding: 1rem 1.4rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.cross-link p { font-size: 0.88rem; color: var(--accent); font-weight: 500; margin: 0; }
+.cross-link a { font-size: 0.82rem; font-weight: 700; color: var(--accent); text-decoration: none; white-space: nowrap; padding: 0.4rem 0.9rem; border: 1.5px solid var(--accent); border-radius: var(--radius-sm); transition: all var(--transition); }
+.cross-link a:hover { background: var(--accent); color: #fff; }
+
+/* Ineligible notice */
+.ineligible-notice { padding: 1rem 1.4rem; background: #FEF2F2; border-radius: 0; }
+.ineligible-notice p { font-size: 0.88rem; color: #B91C1C; margin: 0; font-weight: 500; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="calc-wrap">
+  <div class="calc-header">
+    <h1>Statutory Sick Pay Calculator 2025/26</h1>
+    <p>Calculate SSP entitlement based on 2025/26 rates. SSP is £116.75 per week for up to 28 weeks.</p>
+  </div>
+
+  <div class="calc-grid">
+    <!-- Input card -->
+    <div class="input-card">
+      <h2>Enter Details</h2>
+
+      <div class="field">
+        <label for="weekly-earnings">Weekly earnings (gross)</label>
+        <input type="text" id="weekly-earnings" value="£500" inputmode="numeric">
+      </div>
+
+      <div class="field">
+        <label for="sick-days">Number of sick days</label>
+        <input type="number" id="sick-days" value="10" min="1" max="140">
+      </div>
+
+      <div class="field">
+        <label for="working-days">Working days per week</label>
+        <select id="working-days">
+          <option value="5" selected>5 days per week</option>
+          <option value="4">4 days per week</option>
+          <option value="3">3 days per week</option>
+          <option value="2">2 days per week</option>
+        </select>
+      </div>
+
+      <div style="margin-top: 1rem; padding: 0.7rem 0.85rem; background: var(--surface-alt); border-radius: var(--radius-sm); font-size: 0.78rem; color: var(--text-secondary);">
+        <strong>2025/26 rates:</strong> SSP £116.75/week &bull; LEL £123/week &bull; Max 28 weeks
+      </div>
+    </div>
+
+    <!-- Result card -->
+    <div>
+      <div class="result-card" id="result-card">
+        <div class="result-head">
+          <div class="result-head-label" id="res-label">Total SSP payable</div>
+          <div class="result-primary" id="res-primary">£233.50</div>
+          <div class="result-sub" id="res-sub">7 payable sick days at £23.35/day</div>
+        </div>
+        <div id="ineligible-notice" class="ineligible-notice" style="display:none;">
+          <p id="ineligible-text"></p>
+        </div>
+        <div class="kpi-grid" id="kpi-section">
+          <div class="kpi">
+            <div class="kpi-label">Eligible</div>
+            <div class="kpi-value" id="kpi-eligible">Yes</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Waiting days deducted</div>
+            <div class="kpi-value" id="kpi-waiting">3</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Payable sick days</div>
+            <div class="kpi-value" id="kpi-payable-days">7</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Daily SSP rate</div>
+            <div class="kpi-value" id="kpi-daily">£23.35</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Weeks payable</div>
+            <div class="kpi-value" id="kpi-weeks">1.4</div>
+          </div>
+        </div>
+        <div class="result-note">
+          SSP is paid at £116.75 per week for 2025/26 for up to 28 weeks. Employers cannot recover SSP from HMRC (recovery scheme ended in 2014).
+        </div>
+      </div>
+
+      <div class="cross-link">
+        <p>Calculate full employer cost including NI and pension</p>
+        <a href="/calculator">Employer Cost Calculator &rarr;</a>
+      </div>
+
+      <div class="faq-section">
+        <h2>Frequently Asked Questions</h2>
+
+        <details class="faq-item">
+          <summary>Who qualifies for statutory sick pay?</summary>
+          <div class="faq-answer">
+            Employees who earn at least £123 per week (the lower earnings limit for 2025/26), have been ill for at least 4 consecutive days (including non-working days), and are under State Pension age qualify for SSP. Agency workers and those on zero-hours contracts may also qualify if they meet the earnings threshold.
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary>Is there a waiting period for SSP?</summary>
+          <div class="faq-answer">
+            Yes. The first 3 qualifying days of sickness are called waiting days and are not paid as SSP. SSP starts from the 4th qualifying day of illness. A qualifying day is a day when the employee would normally work.
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary>Can employers reclaim SSP from HMRC?</summary>
+          <div class="faq-answer">
+            No. The SSP Recovery Scheme ended in April 2014. Employers must fund SSP themselves. There is no government rebate for standard SSP payments. This makes comprehensive occupational sick pay schemes or income protection insurance relevant for employers with high absence rates.
+          </div>
+        </details>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  var SSP_WEEKLY = 116.75;
+  var LEL = 123;
+  var MAX_WEEKS = 28;
+
+  function moneyDec(n) { return '\u00a3' + n.toLocaleString('en-GB', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+  function setText(id, v) { var el = document.getElementById(id); if (el) el.textContent = v; }
+  function parseMoney(v) { return parseFloat(String(v).replace(/[^0-9.]/g,'')) || 0; }
+
+  function calculate() {
+    var weeklyEarnings = parseMoney(document.getElementById('weekly-earnings').value);
+    var sickDays = parseInt(document.getElementById('sick-days').value) || 0;
+    var workingDays = parseInt(document.getElementById('working-days').value) || 5;
+
+    var resultCard = document.getElementById('result-card');
+    var resLabel = document.getElementById('res-label');
+    var ineligibleNotice = document.getElementById('ineligible-notice');
+    var kpiSection = document.getElementById('kpi-section');
+    var ineligibleText = document.getElementById('ineligible-text');
+
+    var eligible = weeklyEarnings >= LEL;
+
+    if (!eligible) {
+      resultCard.classList.add('ineligible');
+      resLabel.classList.add('ineligible-label');
+      resLabel.textContent = 'Not eligible for SSP';
+      setText('res-primary', 'Not eligible');
+      setText('res-sub', 'Earnings below the Lower Earnings Limit');
+      ineligibleNotice.style.display = 'block';
+      ineligibleText.textContent =
+        'Weekly earnings of ' + moneyDec(weeklyEarnings) +
+        ' are below the Lower Earnings Limit of \u00a3123.00 per week for 2025/26. ' +
+        'SSP is only payable to employees earning at least \u00a3123 per week.';
+      setText('kpi-eligible', 'No');
+      setText('kpi-waiting', '3');
+      setText('kpi-payable-days', '0');
+      setText('kpi-daily', moneyDec(SSP_WEEKLY / workingDays));
+      setText('kpi-weeks', '0');
+      return;
+    }
+
+    resultCard.classList.remove('ineligible');
+    resLabel.classList.remove('ineligible-label');
+    resLabel.textContent = 'Total SSP payable';
+    ineligibleNotice.style.display = 'none';
+
+    var maxPayableDays = MAX_WEEKS * workingDays;
+    var waitingDays = 3;
+    var payableDays = Math.max(0, sickDays - waitingDays);
+    payableDays = Math.min(payableDays, maxPayableDays);
+
+    var dailyRate = SSP_WEEKLY / workingDays;
+    var totalSSP = payableDays * dailyRate;
+    var weeksPayable = payableDays / workingDays;
+
+    setText('res-primary', moneyDec(totalSSP));
+    setText('res-sub', payableDays + ' payable sick day' + (payableDays !== 1 ? 's' : '') + ' at ' + moneyDec(dailyRate) + '/day');
+    setText('kpi-eligible', 'Yes');
+    setText('kpi-waiting', waitingDays);
+    setText('kpi-payable-days', payableDays);
+    setText('kpi-daily', moneyDec(dailyRate));
+    setText('kpi-weeks', weeksPayable.toFixed(1));
+  }
+
+  // Format salary input
+  var earningsInput = document.getElementById('weekly-earnings');
+  earningsInput.addEventListener('focus', function() {
+    this.value = String(parseMoney(this.value));
+  });
+  earningsInput.addEventListener('blur', function() {
+    var v = parseMoney(this.value);
+    this.value = v ? '\u00a3' + v.toLocaleString('en-GB', {minimumFractionDigits:2, maximumFractionDigits:2}) : '';
+    calculate();
+  });
+  earningsInput.addEventListener('input', calculate);
+
+  document.getElementById('sick-days').addEventListener('input', calculate);
+  document.getElementById('working-days').addEventListener('change', calculate);
+
+  calculate();
+})();
+</script>
+{% endblock %}

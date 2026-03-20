@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="section">
+  <div class="badge">{{ page.title }}</div>
+  <h1>{{ page.title }}</h1>
+  {% for paragraph in page.content %}
+  <p>{{ paragraph }}</p>
+  {% endfor %}
+  {% if page.links %}
+  <div class="card" style="padding:1rem 1.1rem; margin-top:0.9rem;">
+    <h2 style="font-size:1.1rem;">Official links</h2>
+    <div class="pill-grid" style="margin-top:0.5rem;">
+      {% for label, url in page.links %}
+      <a class="pill" href="{{ url }}" rel="noopener" target="_blank">{{ label }}</a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

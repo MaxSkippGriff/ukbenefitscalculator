@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block title %}{{ region_label }} salary pages (2025/26) – after tax pay by salary band{% endblock %}
+{% block meta_description %}Browse {{ region_label }} after-tax salary pages by pay band. Check monthly and annual take-home pay with Income Tax and National Insurance breakdowns for 2025/26.{% endblock %}
+{% block canonical %}<link rel="canonical" href="{{ region_canonical_url or canonical_url }}">{% endblock %}
+
+{% block head_extra %}
+<meta property="og:type" content="website">
+<meta property="og:url" content="{{ canonical_url }}">
+<meta property="og:title" content="{{ region_label }} salary pages (2025/26) – after tax pay by salary band">
+<meta property="og:description" content="Browse {{ region_label }} after-tax salary pages and compare nearby salary bands with shareable links.">
+{% endblock %}
+
+{% block jsonld %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  "name": "{{ region_label }} salary pages",
+  "description": "Salary after-tax index pages for {{ region_label }} with links to salary bands and comparison tools.",
+  "url": "{{ region_canonical_url or canonical_url }}"
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {% for name, path in breadcrumb_items %}
+    {"@type":"ListItem","position":{{ loop.index }},"name":"{{ name }}","item":"{{ site_url }}{{ path }}"}{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {% for faq in hub_faqs %}
+    {"@type":"Question","name":"{{ faq.q }}","acceptedAnswer":{"@type":"Answer","text":"{{ faq.a }}"}}{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<section class="max-w-6xl mx-auto px-4 sm:px-6 pt-12 pb-8">
+  <nav class="text-sm text-slate-500 mb-4">
+    <a href="/" class="hover:text-blue-600">Home</a> /
+    <a href="/salaries" class="hover:text-blue-600">Salaries</a> /
+    <span class="text-slate-700">{{ region_label }}</span>
+  </nav>
+  <h1 class="text-4xl sm:text-5xl font-extrabold text-slate-900">{{ region_label }} salary pages (2025/26)</h1>
+  <p class="mt-4 text-lg text-slate-600 max-w-4xl">Use this salary index to open {{ region_label }} take-home pay pages by salary band, compare nearby values, and move into the full calculator only when you need deeper assumptions.</p>
+  <div class="mt-4 flex flex-wrap gap-2">
+    <a href="/calculator?region={{ region_slug }}" class="rounded-full border border-slate-300 px-3 py-1.5 text-sm font-semibold hover:bg-slate-50">Open calculator ({{ region_label }})</a>
+    <a href="/compare-salaries" class="rounded-full border border-slate-300 px-3 py-1.5 text-sm font-semibold hover:bg-slate-50">Compare salaries</a>
+    <a href="/target-take-home?region={{ region_slug }}" class="rounded-full border border-slate-300 px-3 py-1.5 text-sm font-semibold hover:bg-slate-50">Target take-home</a>
+    <a href="/regions{% if region_slug == 'scotland' %}/scotland{% else %}/england-wales-ni{% endif %}" class="rounded-full border border-slate-300 px-3 py-1.5 text-sm font-semibold hover:bg-slate-50">Region guide</a>
+  </div>
+</section>
+
+<section class="max-w-6xl mx-auto px-4 sm:px-6 pb-8">
+  <div class="card p-6">
+    <h2 class="text-2xl font-bold text-slate-900">How to use these {{ region_label }} salary pages</h2>
+    <div class="mt-3 space-y-4 text-slate-700 leading-relaxed">
+      {% for p in intro_paragraphs %}
+      <p>{{ p }}</p>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="max-w-6xl mx-auto px-4 sm:px-6 pb-8">
+  <div class="card p-6">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <h2 class="text-2xl font-bold text-slate-900">Salary bands (page {{ page }} of {{ total_pages }})</h2>
+      <div class="text-sm text-slate-500">{{ total_count }} salary pages total</div>
+    </div>
+    <p class="mt-2 text-slate-600">Each page includes monthly and annual net pay, tax and NI breakdowns, FAQs and nearby salary links.</p>
+    <div class="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      {% for salary in salary_values %}
+      <a href="/salary/{{ salary }}/{{ region_slug }}" class="rounded-xl border border-slate-200 p-3 bg-slate-50 hover:bg-white hover:border-slate-300 transition">
+        <div class="text-sm font-semibold text-slate-900">&pound;{{ "{:,}".format(salary) }}</div>
+        <div class="mt-1 text-xs text-slate-500">After tax {{ region_label }}</div>
+      </a>
+      {% endfor %}
+    </div>
+    {% if total_pages > 1 %}
+    <div class="mt-5 flex flex-wrap items-center gap-2">
+      {% if page > 1 %}
+      <a href="/salaries/{{ region_slug }}{% if page - 1 > 1 %}?page={{ page - 1 }}{% endif %}" class="rounded-full border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50">Previous page</a>
+      {% endif %}
+      {% for p in range(1, total_pages + 1) %}
+        {% if p == page %}
+        <span class="rounded-full bg-blue-600 text-white px-3 py-1.5 text-sm font-semibold">{{ p }}</span>
+        {% else %}
+        <a href="/salaries/{{ region_slug }}{% if p > 1 %}?page={{ p }}{% endif %}" class="rounded-full border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50">{{ p }}</a>
+        {% endif %}
+      {% endfor %}
+      {% if page < total_pages %}
+      <a href="/salaries/{{ region_slug }}?page={{ page + 1 }}" class="rounded-full border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50">Next page</a>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</section>
+
+<section class="max-w-6xl mx-auto px-4 sm:px-6 pb-8 grid gap-6 lg:grid-cols-2">
+  <div class="card p-6">
+    <h2 class="text-2xl font-bold text-slate-900">Related comparisons</h2>
+    <div class="mt-3 flex flex-wrap gap-2">
+      {% for salary_a, salary_b, region in compare_presets %}
+        {% if region == region_slug or (region_slug in ['england','wales','northern-ireland'] and region == 'england') %}
+        <a href="/compare/{{ salary_a }}-vs-{{ salary_b }}/{{ region }}" class="rounded-full border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50">&pound;{{ "{:,}".format(salary_a) }} vs &pound;{{ "{:,}".format(salary_b) }}</a>
+        {% endif %}
+      {% endfor %}
+      {% if region_slug == 'scotland' %}
+      <a href="/compare/scotland-vs-england-on-50000" class="rounded-full border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50">Scotland vs England on &pound;50k</a>
+      {% endif %}
+    </div>
+  </div>
+  <div class="card p-6">
+    <h2 class="text-2xl font-bold text-slate-900">City pages in this region</h2>
+    <p class="mt-2 text-slate-600">Use city pages for local salary context and links to common salary bands. Tax does not vary by city, but job and budgeting context does.</p>
+    <div class="mt-3 flex flex-wrap gap-2">
+      {% for slug in featured_cities %}
+      <a href="/city/{{ slug }}/take-home-pay" class="rounded-full border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50">{{ city_titles[slug] }}</a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="max-w-6xl mx-auto px-4 sm:px-6 pb-20">
+  <div class="card p-6">
+    <h2 class="text-2xl font-bold text-slate-900">FAQs</h2>
+    <div class="mt-4 space-y-3">
+      {% for faq in hub_faqs %}
+      <details class="rounded-xl border border-slate-200 p-4">
+        <summary class="cursor-pointer text-sm font-semibold text-slate-800">{{ faq.q }}</summary>
+        <p class="mt-2 text-sm text-slate-600">{{ faq.a }}</p>
+      </details>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}

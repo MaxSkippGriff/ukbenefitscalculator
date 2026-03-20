@@ -1,0 +1,310 @@
+{% extends "base.html" %}
+{% set salary_fmt = "£{:,}".format(salary) %}
+{% block title %}{{ salary_fmt }} after tax {{ region_name }} (2025/26) - monthly take-home pay{% endblock %}
+{% block meta_description %}See {{ salary_fmt }} after tax in {{ region_name }} for 2025/26. View monthly and annual take-home pay with tax, NI, pension and student loan scenarios.{% endblock %}
+{% block canonical %}<link rel="canonical" href="{{ canonical_url }}">{% endblock %}
+
+{% block head_extra %}
+<meta property="og:type" content="website">
+<meta property="og:url" content="{{ canonical_url }}">
+<meta property="og:title" content="{{ salary_fmt }} after tax {{ region_name }} (2025/26) - monthly take-home pay">
+<meta property="og:description" content="Server-rendered UK salary page with tax bands, NI and scenario variants for {{ salary_fmt }}.">
+<meta name="twitter:card" content="summary_large_image">
+<script>
+  window.dataLayer = window.dataLayer || [];
+  window.dataLayer.push({
+    event: 'salary_page_view',
+    page_type: 'salary_region',
+    salary: {{ salary }},
+    region: '{{ region_slug }}'
+  });
+</script>
+{% endblock %}
+
+{% block jsonld %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {"@type": "ListItem", "position": 1, "name": "Home", "item": "{{ site_url }}/"},
+    {"@type": "ListItem", "position": 2, "name": "Salary", "item": "{{ site_url }}/salary/{{ salary }}"},
+    {"@type": "ListItem", "position": 3, "name": "{{ region_name }}", "item": "{{ site_url }}/salary/{{ salary }}/{{ region_slug }}"}
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What is take-home pay on {{ salary_fmt }} in {{ region_name }}?",
+      "acceptedAnswer": {"@type":"Answer","text":"Estimated take-home pay is {{ result.take_home.annual|gbp2 }} per year and {{ result.take_home.monthly|gbp2 }} per month using default assumptions."}
+    },
+    {
+      "@type": "Question",
+      "name": "How much income tax is paid on {{ salary_fmt }}?",
+      "acceptedAnswer": {"@type":"Answer","text":"Estimated income tax is {{ result.income_tax.total_tax|gbp2 }} in the 2025/26 tax year, with tax applied by band."}
+    },
+    {
+      "@type": "Question",
+      "name": "Does this include student loan and pension by default?",
+      "acceptedAnswer": {"@type":"Answer","text":"This base page uses no student loan and no pension contribution. Scenario variants below show how those settings alter monthly net pay."}
+    }
+  ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<section class="max-w-6xl mx-auto px-4 sm:px-6 py-10">
+  <nav class="text-sm text-slate-500 mb-4">
+    <a href="/" class="hover:text-blue-600">Home</a> /
+    <a href="/salary/{{ salary }}" class="hover:text-blue-600">{{ salary_fmt }}</a> /
+    <span class="text-slate-700">{{ region_name }}</span>
+  </nav>
+
+  <h1 class="text-4xl font-extrabold text-slate-900">{{ salary_fmt }} after tax {{ region_name }} (2025/26)</h1>
+  <p class="mt-4 text-slate-600 max-w-4xl">At {{ salary_fmt }} gross salary, estimated net pay is <strong>{{ result.take_home.monthly|gbp2 }} per month</strong> and <strong>{{ result.take_home.annual|gbp2 }} per year</strong> under default assumptions (tax code 1257L, NI category A, no student loan, no pension). This page is server-rendered so the headline result and breakdown are indexable and shareable.</p>
+
+  <div class="grid sm:grid-cols-2 lg:grid-cols-5 gap-4 mt-8">
+    <div class="card p-4">
+      <div class="text-xs text-slate-500">Gross monthly</div>
+      <div class="text-2xl font-bold text-slate-900">{{ (salary / 12)|round(2)|gbp2 }}</div>
+    </div>
+    <div class="card p-4">
+      <div class="text-xs text-slate-500">Gross weekly</div>
+      <div class="text-2xl font-bold text-slate-900">{{ (salary / 52)|round(2)|gbp2 }}</div>
+    </div>
+    <div class="card p-4">
+      <div class="text-xs text-slate-500">Monthly take-home</div>
+      <div class="text-2xl font-bold text-slate-900">{{ result.take_home.monthly|gbp2 }}</div>
+    </div>
+    <div class="card p-4">
+      <div class="text-xs text-slate-500">Annual take-home</div>
+      <div class="text-2xl font-bold text-emerald-700">{{ result.take_home.annual|gbp2 }}</div>
+    </div>
+    <div class="card p-4">
+      <div class="text-xs text-slate-500">Net pay / gross</div>
+      <div class="text-2xl font-bold text-slate-900">{{ (100 - result.effective_tax_rate)|pct }}</div>
+      <div class="mt-1 text-xs text-slate-500">Deductions {{ result.effective_tax_rate|pct }}</div>
+    </div>
+  </div>
+
+  <div class="card p-6 mt-6">
+    <h2 class="text-2xl font-bold text-slate-900 mb-4">Summary</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <tbody class="divide-y divide-slate-100">
+          <tr><td class="py-2 text-slate-500">Gross annual salary</td><td class="py-2 text-right font-semibold tabular-nums">{{ salary|gbp }}</td></tr>
+          <tr><td class="py-2 text-slate-500">Gross monthly salary</td><td class="py-2 text-right font-semibold tabular-nums">{{ (salary / 12)|round(2)|gbp2 }}</td></tr>
+          <tr><td class="py-2 text-slate-500">Gross weekly salary</td><td class="py-2 text-right font-semibold tabular-nums">{{ (salary / 52)|round(2)|gbp2 }}</td></tr>
+          <tr><td class="py-2 text-slate-500">Net annual pay</td><td class="py-2 text-right font-semibold tabular-nums text-emerald-700">{{ result.take_home.annual|gbp2 }}</td></tr>
+          <tr><td class="py-2 text-slate-500">Net monthly pay</td><td class="py-2 text-right font-semibold tabular-nums">{{ result.take_home.monthly|gbp2 }}</td></tr>
+          <tr><td class="py-2 text-slate-500">Net weekly pay</td><td class="py-2 text-right font-semibold tabular-nums">{{ result.take_home.weekly|gbp2 }}</td></tr>
+          <tr><td class="py-2 text-slate-500">Income Tax</td><td class="py-2 text-right font-semibold tabular-nums">{{ result.income_tax.total_tax|gbp2 }}</td></tr>
+          <tr><td class="py-2 text-slate-500">National Insurance</td><td class="py-2 text-right font-semibold tabular-nums">{{ result.national_insurance.total_ni|gbp2 }}</td></tr>
+          <tr><td class="py-2 text-slate-500">Take-home % of gross</td><td class="py-2 text-right font-semibold tabular-nums">{{ (100 - result.effective_tax_rate)|pct }}</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card p-6 mt-6">
+    <h2 class="text-2xl font-bold text-slate-900 mb-4">Band breakdown</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-slate-200 text-slate-500">
+            <th class="text-left py-2">Band</th>
+            <th class="text-right py-2">Rate</th>
+            <th class="text-right py-2">Taxable amount</th>
+            <th class="text-right py-2">Tax paid</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          {% for b in result.income_tax.bands %}
+          <tr>
+            <td class="py-2">{{ b.band }}</td>
+            <td class="py-2 text-right">{{ (b.rate * 100)|round|int }}%</td>
+            <td class="py-2 text-right tabular-nums">{{ b.taxable|gbp2 }}</td>
+            <td class="py-2 text-right tabular-nums">{{ b.tax|gbp2 }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="mt-4 grid sm:grid-cols-2 gap-3 text-sm text-slate-600">
+      <div class="rounded-xl border border-slate-200 p-3">National Insurance: <strong class="tabular-nums">{{ result.national_insurance.total_ni|gbp2 }}</strong></div>
+      <div class="rounded-xl border border-slate-200 p-3">Total deductions: <strong class="tabular-nums">{{ (result.income_tax.total_tax + result.national_insurance.total_ni + result.student_loan.annual + result.pension.annual)|gbp2 }}</strong></div>
+    </div>
+  </div>
+
+  <div class="card p-6 mt-6">
+    <h2 class="text-2xl font-bold text-slate-900 mb-3">What changes around this salary?</h2>
+    <p class="text-slate-600 mb-3">Threshold effects matter more than most people expect. The first part of earnings is protected by your personal allowance and lower rates, while slices above thresholds are taxed at higher marginal rates. At this salary level, small gross increases do not translate one-for-one into net monthly pay because higher-rate slices, NI, and any student loan deductions apply simultaneously.</p>
+    <p class="text-slate-600">If your long-term income moves toward six figures, personal allowance taper becomes relevant and net progression changes again. For decisions around pay rises or role changes, compare scenarios using matched assumptions rather than headline salary only.</p>
+  </div>
+
+  {% if salary in [25000, 35000, 42000, 69000, 112000, 114000, 140000, 173000, 200000] %}
+  <div class="card p-6 mt-6">
+    {% if salary == 25000 %}
+    <h2 class="text-2xl font-bold text-slate-900 mb-3">At £25,000: why small deduction changes matter</h2>
+    <p class="text-slate-600 mb-3">At {{ salary_fmt }}, the difference between a baseline estimate and a real payslip often comes from assumptions rather than tax complexity. Student loan repayments and pension contributions can move monthly take-home enough to change budgeting decisions even when gross pay looks straightforward.</p>
+    <p class="text-slate-600">If you are searching for “25k gross to net” or “25k after tax UK”, the best approach is to start with the baseline here and then test your actual deductions in the full calculator. That gives a more useful answer than relying on a single headline figure.</p>
+    {% elif salary == 35000 %}
+    <h2 class="text-2xl font-bold text-slate-900 mb-3">At £35,000: a common comparison salary band</h2>
+    <p class="text-slate-600 mb-3">{{ salary_fmt }} is one of the most common salary bands for role comparisons, which is why searches like “salary 35k” and “35k after tax” show up frequently. The useful decision metric is monthly take-home after loan and pension settings, not just gross annual pay.</p>
+    <p class="text-slate-600">Use this page as a baseline, then compare nearby salaries and a pension or student-loan variant. That gives a realistic view of how much extra cashflow a pay rise would actually create.</p>
+    {% elif salary == 42000 %}
+    <h2 class="text-2xl font-bold text-slate-900 mb-3">At £42,000: compare monthly net, not just the headline salary</h2>
+    <p class="text-slate-600 mb-3">{{ salary_fmt }} sits in a common offer-comparison range where a small gross change can still matter for monthly budgeting. If you are searching for “42000 after tax UK” or “42k salary after tax”, the practical answer is your net monthly pay under the same loan, pension and tax code assumptions.</p>
+    <p class="text-slate-600">Use this page for the baseline figure, then compare nearby salaries (for example £40k and £45k) using matched settings. That gives a better decision view than a single gross-to-net snapshot.</p>
+    {% elif salary == 69000 %}
+    <h2 class="text-2xl font-bold text-slate-900 mb-3">At £69,000: package details can move monthly take-home more than expected</h2>
+    <p class="text-slate-600 mb-3">Searches for “69000 after tax” are often offer-comparison queries rather than pure tax questions. At this level, pension contribution and student loan settings can materially change the monthly net figure, so the baseline number is only the starting point.</p>
+    <p class="text-slate-600">Model your likely deductions and compare nearby salaries such as £65k and £70k under identical assumptions. The monthly net delta is the metric that helps with real decisions.</p>
+    {% elif salary in [112000, 114000] %}
+    <h2 class="text-2xl font-bold text-slate-900 mb-3">At {{ salary_fmt }}: small gross increases can produce underwhelming net changes</h2>
+    <p class="text-slate-600 mb-3">Searches around {{ salary_fmt }} usually reflect high-earner threshold questions: “why does the monthly difference feel smaller than expected?” The best way to answer that is to compare monthly net across matched assumptions rather than relying on a single annual estimate.</p>
+    <p class="text-slate-600">If you are deciding between nearby offers (for example £112k vs £114k), compare the two salaries with the same region, tax code, pension and student loan settings. That shows the real change in take-home pay.</p>
+    {% elif salary == 140000 %}
+    <h2 class="text-2xl font-bold text-slate-900 mb-3">At £140,000: threshold effects change the story</h2>
+    <p class="text-slate-600 mb-3">At {{ salary_fmt }}, personal allowance taper and higher-rate taxation make gross-to-net intuition less reliable. This is why searches like “140000 after tax UK” often need more than a single number: the effective deduction profile can feel much heavier than expected.</p>
+    <p class="text-slate-600">For planning, compare monthly net outcomes with and without pension changes, and use matched assumptions if you are deciding between offers. A structured comparison is much more useful than headline salary alone at this level.</p>
+    {% elif salary == 173000 %}
+    <h2 class="text-2xl font-bold text-slate-900 mb-3">At £173,000: use scenario planning, not just one net-pay number</h2>
+    <p class="text-slate-600 mb-3">At {{ salary_fmt }}, high-earner salary decisions are usually about dependable monthly cashflow rather than a headline annual number. Pension treatment, region settings and package structure can all shift what actually reaches your account each month.</p>
+    <p class="text-slate-600">Use this page as the baseline, then test one or two realistic variants in the calculator. That gives a better planning answer than a single static gross-to-net estimate.</p>
+    {% elif salary == 200000 %}
+    <h2 class="text-2xl font-bold text-slate-900 mb-3">At £200,000: answer the monthly question, not just the annual one</h2>
+    <p class="text-slate-600 mb-3">Most searches around {{ salary_fmt }} are really asking “how much lands in my bank account each month?” not just “what is the annual tax amount?”. At this level, pension treatment, tax code and region assumptions can materially change dependable monthly cashflow.</p>
+    <p class="text-slate-600">Use this page for the baseline result, then test scenarios in the calculator and compare tool before making decisions on a new role, promotion or compensation change. This is the most reliable way to turn a headline salary into a practical budget number.</p>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <div class="card p-6 mt-6">
+    <h2 class="text-2xl font-bold text-slate-900 mb-3">How we calculated this</h2>
+    <p class="text-slate-600">This page uses current 2025/26 tax year assumptions with a default PAYE setup (tax code 1257L, NI category A, no student loan and no pension contribution) to produce an indexable server-rendered estimate. Use it as a planning baseline, then compare variants if your deductions differ.</p>
+    <div class="mt-4 flex flex-wrap gap-3 text-sm">
+      <a class="text-blue-600 font-semibold hover:underline" href="/methodology">Methodology and assumptions</a>
+      <a class="text-blue-600 font-semibold hover:underline" href="/guides/how-take-home-pay-is-calculated">How take-home pay is calculated</a>
+      <a class="text-blue-600 font-semibold hover:underline" href="/guides/tax-code-1257l-explained">Tax code 1257L explained</a>
+    </div>
+  </div>
+
+  <div class="card p-6 mt-6">
+    <h2 class="text-2xl font-bold text-slate-900 mb-4">Scenario variants</h2>
+    <div class="grid md:grid-cols-3 gap-4 text-sm">
+      <div class="rounded-xl border border-slate-200 p-4">
+        <div class="text-slate-500">Base assumptions</div>
+        <div class="font-bold text-slate-900 mt-1">{{ result.take_home.monthly|gbp2 }} / month</div>
+        <div class="text-slate-600 mt-2">No student loan, no pension contribution.</div>
+      </div>
+      <div class="rounded-xl border border-slate-200 p-4">
+        <div class="text-slate-500">Plan 2 student loan</div>
+        <div class="font-bold text-slate-900 mt-1">{{ scenario_plan2.take_home.monthly|gbp2 }} / month</div>
+        <div class="text-slate-600 mt-2">Annual loan repayment: {{ scenario_plan2.student_loan.annual|gbp2 }}.</div>
+      </div>
+      <div class="rounded-xl border border-slate-200 p-4">
+        <div class="text-slate-500">5% pension contribution</div>
+        <div class="font-bold text-slate-900 mt-1">{{ scenario_pension5.take_home.monthly|gbp2 }} / month</div>
+        <div class="text-slate-600 mt-2">Annual pension contribution: {{ scenario_pension5.pension.annual|gbp2 }}.</div>
+      </div>
+    </div>
+
+    <h3 class="text-xl font-bold text-slate-900 mt-6 mb-3">Region comparison at {{ salary_fmt }}</h3>
+    <div class="grid sm:grid-cols-2 gap-3 text-sm">
+      <div class="rounded-xl border border-slate-200 p-4">England/Wales/NI net monthly: <strong class="tabular-nums">{{ compare_england.take_home.monthly|gbp2 }}</strong></div>
+      <div class="rounded-xl border border-slate-200 p-4">Scotland net monthly: <strong class="tabular-nums">{{ compare_scotland.take_home.monthly|gbp2 }}</strong></div>
+    </div>
+  </div>
+
+  <div class="card p-6 mt-6">
+    <h2 class="text-2xl font-bold text-slate-900 mb-3">FAQ</h2>
+    <div class="space-y-3 text-slate-600">
+      <details class="rounded-xl border border-slate-200 p-4">
+        <summary class="cursor-pointer font-semibold text-slate-800">{{ salary_fmt }} after tax {{ region_name }} per month — how much is it?</summary>
+        <p class="mt-2">Using the default assumptions on this page, estimated take-home pay is <strong>{{ result.take_home.monthly|gbp2 }} per month</strong> and <strong>{{ result.take_home.annual|gbp2 }} per year</strong>. Change assumptions in the calculator if your tax code, pension or student loan setup differs.</p>
+      </details>
+      <details class="rounded-xl border border-slate-200 p-4">
+        <summary class="cursor-pointer font-semibold text-slate-800">How much tax do you pay on {{ salary_fmt }} in {{ region_name }}?</summary>
+        <p class="mt-2">Estimated Income Tax is <strong>{{ result.income_tax.total_tax|gbp2 }}</strong> for the year, and estimated National Insurance is <strong>{{ result.national_insurance.total_ni|gbp2 }}</strong>. The exact mix depends on the tax bands and thresholds applied to each slice of income.</p>
+      </details>
+      <details class="rounded-xl border border-slate-200 p-4">
+        <summary class="cursor-pointer font-semibold text-slate-800">Is this exactly what will hit my bank account?</summary>
+        <p class="mt-2">It is an estimate using current published tax and NI rules. Real payroll may differ slightly because of timing, tax code changes, benefits in kind, bonus handling, and cumulative calculations. Use this page for planning, then reconcile with your payslip settings.</p>
+      </details>
+      <details class="rounded-xl border border-slate-200 p-4">
+        <summary class="cursor-pointer font-semibold text-slate-800">Why is net pay lower than expected at this salary?</summary>
+        <p class="mt-2">Most overestimates come from ignoring student loan or pension deductions, or assuming the whole salary is taxed at one rate. PAYE works by thresholds and slices. The combination of tax, NI and other deductions can materially reduce the monthly figure.</p>
+      </details>
+      <details class="rounded-xl border border-slate-200 p-4">
+        <summary class="cursor-pointer font-semibold text-slate-800">How can I compare nearby salaries quickly?</summary>
+        <p class="mt-2">Use the nearby salary links below, then open the interactive calculator with matched assumptions. That lets you compare true monthly deltas around this level without changing multiple settings each time.</p>
+      </details>
+      {% if region_slug == "scotland" %}
+      <details class="rounded-xl border border-slate-200 p-4">
+        <summary class="cursor-pointer font-semibold text-slate-800">Why is the Scotland result different from England at the same salary?</summary>
+        <p class="mt-2">Scottish income tax rates and thresholds differ from rUK (England, Wales and Northern Ireland). National Insurance is largely the same for most employees, but Scottish tax bands can change the monthly net pay outcome at the same gross salary.</p>
+      </details>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="mt-8">
+    <h3 class="font-bold text-slate-900 mb-3">Nearby salary pages</h3>
+    <div class="flex flex-wrap gap-3">
+      {% for n in neighbours %}
+      <a href="/salary/{{ n }}/{{ region_slug }}" class="px-4 py-2 rounded-xl bg-white border border-slate-200 hover:border-blue-300 hover:text-blue-600">£{{ "{:,}".format(n) }}</a>
+      {% endfor %}
+    </div>
+    <div class="flex flex-wrap gap-4 text-sm mt-4">
+      <a class="text-blue-600 font-semibold hover:underline" href="/calculator?salary={{ salary }}&region={{ region_slug }}">Open full calculator for this salary</a>
+      <a class="text-blue-600 font-semibold hover:underline" href="/compare-salaries?salary={{ salary }}&region={{ region_slug }}&salary_b={{ salary + 5000 }}&region_b={{ region_slug }}">Compare with +£5k offer</a>
+      <a class="text-blue-600 font-semibold hover:underline" href="/salary/{{ salary }}-after-tax">Intent page: {{ salary_fmt }} after tax</a>
+      <a class="text-blue-600 font-semibold hover:underline" href="/target-take-home?target_monthly={{ result.take_home.monthly|round|int }}&region={{ region_slug }}">Target this monthly net</a>
+      <a class="text-blue-600 font-semibold hover:underline" href="/city/london/take-home-pay">City pages</a>
+      <a class="text-blue-600 font-semibold hover:underline" href="/guides">Guides</a>
+    </div>
+  </div>
+
+  <div class="card p-6 mt-6">
+    <h2 class="text-2xl font-bold text-slate-900 mb-3">Same salary in other UK nations</h2>
+    <p class="text-slate-600 mb-4">Tax region changes the result even when gross salary stays the same. Use these pages to compare the same {{ salary_fmt }} salary across UK tax settings.</p>
+    <div class="flex flex-wrap gap-3">
+      {% for item in same_salary_regions %}
+      <a href="/salary/{{ salary }}/{{ item.slug }}" class="px-4 py-2 rounded-xl bg-white border border-slate-200 hover:border-blue-300 hover:text-blue-600">{{ salary_fmt }} in {{ item.label }}</a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card p-6 mt-6">
+    <h2 class="text-2xl font-bold text-slate-900 mb-3">Related guides</h2>
+    <p class="text-slate-600 mb-4">Use these to understand threshold effects, deductions and how to compare offers properly.</p>
+    <div class="grid sm:grid-cols-2 gap-3">
+      {% for g in guide_links %}
+      <a href="{{ g.href }}" class="rounded-xl border border-slate-200 p-4 hover:border-blue-300 hover:bg-slate-50">
+        <div class="font-semibold text-slate-900">{{ g.label }}</div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card p-6 mt-6">
+    <h2 class="text-2xl font-bold text-slate-900 mb-3">Popular after-tax checks</h2>
+    <p class="text-slate-600 mb-3">Quick links for common UK searches and comparison intents.</p>
+    <div class="flex flex-wrap gap-2 text-sm">
+      <a href="/salary/200000/england" class="rounded-full border border-slate-300 px-3 py-1.5 hover:bg-slate-50">£200k after tax (England)</a>
+      <a href="/salary/60000/scotland" class="rounded-full border border-slate-300 px-3 py-1.5 hover:bg-slate-50">£60k after tax (Scotland)</a>
+      <a href="/salary/47000/england" class="rounded-full border border-slate-300 px-3 py-1.5 hover:bg-slate-50">£47k after tax (UK)</a>
+      <a href="/guides/200k-after-tax-uk-guide" class="rounded-full border border-slate-300 px-3 py-1.5 hover:bg-slate-50">Guide: £200k after tax</a>
+      <a href="/guides/60000-after-tax-scotland-guide" class="rounded-full border border-slate-300 px-3 py-1.5 hover:bg-slate-50">Guide: £60k Scotland</a>
+      <a href="/guides/salary-increase-after-tax-guide" class="rounded-full border border-slate-300 px-3 py-1.5 hover:bg-slate-50">Guide: pay rise after tax</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

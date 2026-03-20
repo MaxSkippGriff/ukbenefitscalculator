@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}{{ heading }} | {{ tax_year }}{% endblock %}
+{% block meta_description %}{{ intro }} Updated for {{ tax_year }} with practical examples and links to the full calculator.{% endblock %}
+{% block canonical %}<link rel="canonical" href="{{ site_url }}/regions/{{ region_key }}">{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+  <nav class="text-sm text-gray-400 mb-6">
+    <a href="/" class="hover:text-brand-600 transition-colors">Home</a>
+    <span class="mx-1.5">/</span>
+    <a href="/regions" class="hover:text-brand-600 transition-colors">Regions</a>
+    <span class="mx-1.5">/</span>
+    <span class="text-gray-600">{{ heading }}</span>
+  </nav>
+
+  <h1 class="text-3xl sm:text-4xl font-extrabold text-gray-900">{{ heading }}</h1>
+  <p class="mt-3 text-lg text-gray-600">{{ intro }}</p>
+
+  <section class="mt-8 rounded-2xl border border-slate-200 bg-white p-6">
+    <h2 class="text-xl font-bold text-slate-900">Worked example at £50,000</h2>
+    <div class="mt-4 grid sm:grid-cols-2 gap-5">
+      <div class="rounded-xl bg-slate-50 border border-slate-200 p-4">
+        <p class="text-xs uppercase tracking-wide text-slate-500">Selected region</p>
+        <p class="mt-1 font-semibold text-slate-900">Income tax: {{ sample.income_tax.total_tax|gbp2 }}</p>
+        <p class="text-slate-700">National Insurance: {{ sample.national_insurance.total_ni|gbp2 }}</p>
+        <p class="mt-2 font-bold text-blue-700">Take-home: {{ sample.take_home.annual|gbp }}</p>
+      </div>
+      <div class="rounded-xl bg-slate-50 border border-slate-200 p-4">
+        <p class="text-xs uppercase tracking-wide text-slate-500">Comparison region</p>
+        <p class="mt-1 font-semibold text-slate-900">Income tax: {{ compare.income_tax.total_tax|gbp2 }}</p>
+        <p class="text-slate-700">National Insurance: {{ compare.national_insurance.total_ni|gbp2 }}</p>
+        <p class="mt-2 font-bold text-slate-900">Take-home: {{ compare.take_home.annual|gbp }}</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="mt-6 rounded-2xl border border-slate-200 bg-white p-6">
+    <h2 class="text-xl font-bold text-slate-900">Practical checks before accepting an offer</h2>
+    <ul class="mt-3 list-disc pl-5 space-y-2 text-slate-700">
+      <li>Compare monthly take-home, not just headline gross salary.</li>
+      <li>Apply your real student loan plan and pension percentage.</li>
+      <li>Use the same assumptions across both regions for a fair comparison.</li>
+      <li>Re-check tax code and NI category before relying on the final figure.</li>
+    </ul>
+    <div class="mt-5 flex flex-wrap gap-3">
+      <a href="/calculator" class="inline-flex items-center px-4 py-2 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700">Open calculator</a>
+      <a href="/compare-salaries" class="inline-flex items-center px-4 py-2 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50">Compare two salaries</a>
+      <a href="/regions" class="inline-flex items-center px-4 py-2 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50">Back to regions</a>
+    </div>
+  </section>
+</div>
+{% endblock %}

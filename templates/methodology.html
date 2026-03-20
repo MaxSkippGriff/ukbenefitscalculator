@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Methodology{% endblock %}
+{% block meta_description %}How AfterTaxSalary calculates UK take-home pay, including tax bands, National Insurance, student loans and pension assumptions.{% endblock %}
+{% block canonical %}<link rel="canonical" href="{{ site_url }}/methodology">{% endblock %}
+{% block content %}
+<section class="max-w-4xl mx-auto px-4 sm:px-6 py-12">
+  <h1 class="text-4xl font-extrabold text-slate-900">Methodology</h1>
+  <p class="mt-4 text-slate-600 leading-relaxed">This calculator uses deterministic formulas based on published UK rates for {{ tax_year }}. It estimates PAYE income tax, employee National Insurance, student loan repayments and pension deductions for planning and salary comparison. It is not payroll software and it is not financial advice.</p>
+  <div id="tax-bands" class="card p-6 mt-6 text-slate-600">
+    <h2 class="text-2xl font-bold text-slate-900 mb-3">What we apply</h2>
+    <ul class="list-disc pl-6 space-y-1">
+      <li>Region-specific income tax bands (rUK and Scotland)</li>
+      <li>Employee NI Category A assumptions (unless specified otherwise)</li>
+      <li>Student loan plan thresholds and repayment rates</li>
+      <li>Pension contribution effects including salary sacrifice toggle</li>
+      <li>Tax code allowance parsing with taper effects where applicable</li>
+    </ul>
+  </div>
+  <div class="card p-6 mt-6 text-slate-600">
+    <h2 class="text-2xl font-bold text-slate-900 mb-3">Calculation sequence (simplified)</h2>
+    <ol class="list-decimal pl-6 space-y-2">
+      <li>Start with gross annual salary and convert to a clean annual basis for calculation.</li>
+      <li>Apply the selected region’s income tax bands and rates, using tax-code allowances where relevant.</li>
+      <li>Calculate employee National Insurance using the selected NI category assumptions.</li>
+      <li>Apply student loan repayment thresholds and rates for the selected plan (if any).</li>
+      <li>Apply pension deductions based on contribution percentage and salary sacrifice setting.</li>
+      <li>Derive annual, monthly, weekly and daily take-home outputs for planning use.</li>
+    </ol>
+    <p class="mt-4 text-sm">This sequence is designed to produce a practical planning estimate. Employer payroll systems may differ in presentation and timing.</p>
+  </div>
+  <div class="card p-6 mt-6 text-slate-600">
+    <h2 class="text-2xl font-bold text-slate-900 mb-3">How to improve estimate quality</h2>
+    <ul class="list-disc pl-6 space-y-2">
+      <li>Use the correct UK nation (Scotland uses different income tax bands).</li>
+      <li>Select the correct student loan plan; using the wrong plan can materially change monthly net pay.</li>
+      <li>Match your pension setting and salary sacrifice option to your real employment setup.</li>
+      <li>Check your tax code from a recent payslip if you are using this for budgeting or offer comparison.</li>
+      <li>For side-by-side comparisons, keep all assumptions constant and change only salary or region.</li>
+    </ul>
+  </div>
+  <div class="card p-6 mt-6 text-slate-600">
+    <h2 class="text-2xl font-bold text-slate-900 mb-3">Known limitations</h2>
+    <ul class="list-disc pl-6 space-y-1">
+      <li>Does not model every payroll edge case or employer-specific setup</li>
+      <li>Does not include benefits-in-kind and all one-off deductions</li>
+      <li>Multi-employment and cumulative code situations may vary from estimate</li>
+    </ul>
+  </div>
+  <div class="card p-6 mt-6 text-slate-600">
+    <h2 class="text-2xl font-bold text-slate-900 mb-3">Reference sources and update process</h2>
+    <p class="leading-relaxed">We review published HMRC and UK government guidance when tax-year assumptions change and update calculator inputs accordingly. We also review related guide content so page explanations stay aligned with the active calculation logic.</p>
+    <ul class="list-disc pl-6 space-y-2 mt-4">
+      <li><a href="https://www.gov.uk/income-tax-rates" class="text-blue-600 font-semibold hover:underline" rel="noopener noreferrer" target="_blank">GOV.UK: Income Tax rates and bands</a></li>
+      <li><a href="https://www.gov.uk/national-insurance-rates-letters" class="text-blue-600 font-semibold hover:underline" rel="noopener noreferrer" target="_blank">GOV.UK: National Insurance rates and categories</a></li>
+      <li><a href="https://www.gov.uk/repaying-your-student-loan/what-you-pay" class="text-blue-600 font-semibold hover:underline" rel="noopener noreferrer" target="_blank">GOV.UK: Student loan repayment thresholds and rates</a></li>
+      <li><a href="/editorial-standards" class="text-blue-600 font-semibold hover:underline">Editorial standards</a> and <a href="/about" class="text-blue-600 font-semibold hover:underline">About AfterTaxSalary</a> for content and corrections policy</li>
+    </ul>
+  </div>
+</section>
+{% endblock %}

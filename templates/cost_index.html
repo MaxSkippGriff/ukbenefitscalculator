@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% block head_extra %}
+<style>
+@media (max-width: 640px) {
+  .cost-playbook-grid { grid-template-columns: 1fr !important; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="section">
+  <div class="badge">Cost of employing</div>
+  <h1>Cost of employing someone by salary ({{ tax_year }})</h1>
+  <p>For {{ tax_year }}, total employer cost combines salary, <strong>employer NI at 15%</strong> above £5,000, and <strong>minimum employer pension at 3%</strong> of qualifying earnings. Select a salary for full annual and monthly totals.</p>
+
+  <div class="card" style="padding:1rem 1.1rem; margin-top:1rem; overflow-x:auto;">
+    <h2 style="font-size:1.1rem; margin-bottom:0.6rem;">Employer cost quick reference ({{ tax_year }})</h2>
+    <table style="width:100%; border-collapse:collapse;">
+      <tr>
+        <th style="text-align:left; border-bottom:1px solid var(--border); padding:0.45rem 0.2rem; font-size:0.72rem; text-transform:uppercase; color:var(--text-tertiary);">Salary</th>
+        <th style="text-align:right; border-bottom:1px solid var(--border); padding:0.45rem 0.2rem; font-size:0.72rem; text-transform:uppercase; color:var(--text-tertiary);">Employer NI</th>
+        <th style="text-align:right; border-bottom:1px solid var(--border); padding:0.45rem 0.2rem; font-size:0.72rem; text-transform:uppercase; color:var(--text-tertiary);">Pension (3%)</th>
+        <th style="text-align:right; border-bottom:1px solid var(--border); padding:0.45rem 0.2rem; font-size:0.72rem; text-transform:uppercase; color:var(--text-tertiary);">Total cost</th>
+        <th style="text-align:right; border-bottom:1px solid var(--border); padding:0.45rem 0.2rem; font-size:0.72rem; text-transform:uppercase; color:var(--text-tertiary);">% above salary</th>
+      </tr>
+      {% set sample_amounts = [20000, 25000, 30000, 35000, 40000, 50000, 60000, 75000, 100000] %}
+      {% for amt in sample_amounts %}
+      {% if amt in amounts %}
+      {% set ni = (amt - 5000) * 0.15 %}
+      {% set pension_qe = [([amt, 50270]|min) - 6240, 0]|max %}
+      {% set pension = pension_qe * 0.03 %}
+      {% set total = amt + ni + pension %}
+      {% set pct = ((total / amt) - 1) * 100 %}
+      <tr>
+        <td style="padding:0.4rem 0.2rem; border-bottom:1px solid var(--border);"><a href="/cost/{{ amt }}" style="color:var(--accent);">£{{ "{:,}".format(amt) }}</a></td>
+        <td style="padding:0.4rem 0.2rem; border-bottom:1px solid var(--border); text-align:right; color:var(--text-secondary);">£{{ "{:,.0f}".format(ni) }}</td>
+        <td style="padding:0.4rem 0.2rem; border-bottom:1px solid var(--border); text-align:right; color:var(--text-secondary);">£{{ "{:,.0f}".format(pension) }}</td>
+        <td style="padding:0.4rem 0.2rem; border-bottom:1px solid var(--border); text-align:right; font-weight:500;">£{{ "{:,.0f}".format(total) }}</td>
+        <td style="padding:0.4rem 0.2rem; border-bottom:1px solid var(--border); text-align:right; color:var(--accent-warm);">+{{ "{:.1f}".format(pct) }}%</td>
+      </tr>
+      {% endif %}
+      {% endfor %}
+    </table>
+    <p style="margin:0.6rem 0 0; font-size:0.8rem; color:var(--text-tertiary);">Employer NI: 15% above £5,000. Pension: 3% of qualifying earnings (£6,240–£50,270). No Employment Allowance applied.</p>
+  </div>
+
+  <div style="margin-top:1rem;">
+    <div style="font-size:0.72rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.35rem;">How it works</div>
+    <div style="display:grid;gap:0.7rem;grid-template-columns:repeat(3,1fr);" class="cost-quick-grid">
+      <div class="card" style="padding:0.8rem 0.9rem;">
+        <h3 style="font-size:0.9rem;margin:0 0 0.15rem;">1. Choose salary</h3>
+        <p style="font-size:0.82rem;line-height:1.55;margin:0;">Open a salary page to get baseline statutory employer cost.</p>
+      </div>
+      <div class="card" style="padding:0.8rem 0.9rem;">
+        <h3 style="font-size:0.9rem;margin:0 0 0.15rem;">2. Review NI + pension</h3>
+        <p style="font-size:0.82rem;line-height:1.55;margin:0;">Check each component separately before looking at the all-in total.</p>
+      </div>
+      <div class="card" style="padding:0.8rem 0.9rem;">
+        <h3 style="font-size:0.9rem;margin:0 0 0.15rem;">3. Move to full calculator</h3>
+        <p style="font-size:0.82rem;line-height:1.55;margin:0;">Add overheads and allowance to convert baseline into hiring budget reality.</p>
+      </div>
+    </div>
+    <style>@media(max-width:640px){.cost-quick-grid{grid-template-columns:1fr!important;}}</style>
+  </div>
+
+  <div class="pill-grid" style="margin-top:1.25rem;">
+    {% for amount in amounts %}
+    <a class="pill" href="/cost/{{ amount }}">£{{ "{:,}".format(amount) }}</a>
+    {% endfor %}
+  </div>
+
+  <div style="margin-top:1.25rem;">
+    <p style="font-size:0.9rem; color:var(--text-secondary);">Need a salary not listed? Use the <a href="/calculator" style="color:var(--accent);">full employer cost calculator</a> for any amount. Also see <a href="/employer-ni" style="color:var(--accent);">employer NI by salary</a> for NI-only breakdowns.</p>
+  </div>
+
+  <div class="card" style="padding:1rem 1.1rem; margin-top:1rem;">
+    <h2 style="font-size:1.05rem; margin-bottom:0.45rem;">Hiring cost playbook for 2025/26 budgets</h2>
+    <p style="font-size:0.88rem;color:var(--text-secondary);line-height:1.7;margin:0 0 0.7rem;">For ranking pages to be useful, they need to answer the decision question, not just the formula. Use this framework when reviewing offers or headcount requests: baseline statutory cost first, then realistic overhead assumptions, then allowance eligibility.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.65rem;" class="cost-playbook-grid">
+      <div style="background:var(--surface-alt);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.75rem 0.85rem;">
+        <div style="font-size:0.72rem;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.25rem;">Step 1: Statutory floor</div>
+        <p style="font-size:0.84rem;color:var(--text-secondary);line-height:1.65;margin:0;">Calculate salary + employer NI + minimum pension. This is the minimum compliant recurring cost before local policy or benefits.</p>
+      </div>
+      <div style="background:var(--surface-alt);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.75rem 0.85rem;">
+        <div style="font-size:0.72rem;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.25rem;">Step 2: Operational reality</div>
+        <p style="font-size:0.84rem;color:var(--text-secondary);line-height:1.65;margin:0;">Layer software, equipment, training and workspace. This is where “£35k salary” often becomes £43k+ total employer spend.</p>
+      </div>
+      <div style="background:var(--surface-alt);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.75rem 0.85rem;">
+        <div style="font-size:0.72rem;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.25rem;">Step 3: NI rise impact</div>
+        <p style="font-size:0.84rem;color:var(--text-secondary);line-height:1.65;margin:0;">Compare against 2024/25 assumptions to quantify budget drift caused by the April 2025 NI rate and threshold changes.</p>
+      </div>
+      <div style="background:var(--surface-alt);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.75rem 0.85rem;">
+        <div style="font-size:0.72rem;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.25rem;">Step 4: Allowance check</div>
+        <p style="font-size:0.84rem;color:var(--text-secondary);line-height:1.65;margin:0;">Apply Employment Allowance where eligible. For smaller employers this can materially reduce the net NI increase.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- HOW EMPLOYER COST IS CALCULATED -->
+  <div style="margin-top:2rem;">
+    <div style="font-size:0.72rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem;">How it works</div>
+    <h2 style="font-family:var(--font-display);font-size:clamp(1.25rem,2.5vw,1.6rem);font-weight:500;letter-spacing:-0.02em;color:var(--text-primary);margin:0 0 0.75rem;">What goes into the true cost of employing someone</h2>
+    <div style="display:grid;gap:0.85rem;grid-template-columns:1fr 1fr;" class="cost-grid">
+      <div class="card" style="padding:1rem 1.1rem;">
+        <h3 style="font-family:var(--font-display);font-size:0.95rem;font-weight:500;letter-spacing:-0.01em;margin-bottom:0.5rem;">The formula</h3>
+        <p style="font-size:0.88rem;color:var(--text-secondary);line-height:1.65;margin:0;">Total employer cost = salary + employer NI + employer pension. Employer NI is 15% of earnings above the £5,000 secondary threshold. Employer pension is 3% of qualifying earnings between £6,240 and £50,270 under auto-enrolment rules. No upper earnings limit applies to employer NI.</p>
+      </div>
+      <div class="card" style="padding:1rem 1.1rem;">
+        <h3 style="font-family:var(--font-display);font-size:0.95rem;font-weight:500;letter-spacing:-0.01em;margin-bottom:0.5rem;">What changed in April 2025</h3>
+        <p style="font-size:0.88rem;color:var(--text-secondary);line-height:1.65;margin:0;">The employer NI rate rose from 13.8% to 15% and the secondary threshold dropped from £9,100 to £5,000 — adding up to £1,500 per employee per year for many employers. Employment Allowance rose from £5,000 to £10,500 (with the £100,000 eligibility cap removed) to partially offset costs for eligible small employers.</p>
+      </div>
+      <div class="card" style="padding:1rem 1.1rem;">
+        <h3 style="font-family:var(--font-display);font-size:0.95rem;font-weight:500;letter-spacing:-0.01em;margin-bottom:0.5rem;">Employment Allowance</h3>
+        <p style="font-size:0.88rem;color:var(--text-secondary);line-height:1.65;margin:0;">Eligible employers can claim up to £10,500 off their employer NI bill per year (2025/26). Most limited companies with at least one employee who is not a sole director qualify. This effectively reduces employer NI to zero for smaller employers up to a certain payroll size.</p>
+      </div>
+      <div class="card" style="padding:1rem 1.1rem;">
+        <h3 style="font-family:var(--font-display);font-size:0.95rem;font-weight:500;letter-spacing:-0.01em;margin-bottom:0.5rem;">Other employer costs</h3>
+        <p style="font-size:0.88rem;color:var(--text-secondary);line-height:1.65;margin:0;">Beyond NI and pension, real employer costs include recruitment (typically £2,000–£5,000 per hire), training, equipment, workspace, and benefits such as health insurance or enhanced pension. The <a href="/calculator" style="color:var(--accent);">full calculator</a> focuses on the statutory minimums — the guaranteed floor of what each employee costs.</p>
+      </div>
+    </div>
+    <style>@media(max-width:620px){.cost-grid{grid-template-columns:1fr!important;}}</style>
+  </div>
+
+  <!-- FAQ -->
+  {% if faq_items %}
+  <div style="margin-top:2rem;">
+    <div style="font-size:0.72rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem;">FAQ</div>
+    <h2 style="font-family:var(--font-display);font-size:clamp(1.25rem,2.5vw,1.6rem);font-weight:500;letter-spacing:-0.02em;color:var(--text-primary);margin:0 0 0.85rem;">Cost of employing someone — frequently asked questions</h2>
+    <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);overflow:hidden;">
+      {% for item in faq_items %}
+      <details style="border-top:{% if loop.first %}none{% else %}1px solid var(--border){% endif %};padding:0.85rem 1.25rem;">
+        <summary style="font-size:0.9rem;font-weight:600;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;color:var(--text-primary);gap:1rem;">
+          {{ item.q }}
+          <span style="font-size:1.1rem;color:var(--text-tertiary);flex-shrink:0;font-weight:400;">+</span>
+        </summary>
+        <p style="font-size:0.88rem;color:var(--text-secondary);line-height:1.7;margin:0.6rem 0 0.1rem;padding-right:1.5rem;">{{ item.a }}</p>
+      </details>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <section class="card" style="padding:1rem 1.25rem; margin-top:1.5rem;">
+    <h2 style="font-size:1rem; margin-bottom:0.6rem;">Related guides</h2>
+    <div class="pill-grid">
+      <a class="pill" href="/guides/employer-ni-changes-2025">Employer NI changes April 2025</a>
+      <a class="pill" href="/guides/employment-allowance-guide">Employment Allowance 2025/26</a>
+      <a class="pill" href="/guides/true-cost-of-hiring">True cost of hiring</a>
+    </div>
+  </section>
+</section>
+{% endblock %}

@@ -1,0 +1,328 @@
+{% extends "base.html" %}
+
+{% block jsonld %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Settlement Agreement Calculator 2025/26",
+  "url": "{{ canonical_url }}",
+  "description": "Estimate settlement agreement value including notice pay, redundancy, compensatory amounts and tax-free threshold up to £30,000.",
+  "applicationCategory": "FinanceApplication",
+  "operatingSystem": "Any",
+  "inLanguage": "en-GB",
+  "isAccessibleForFree": true,
+  "keywords": "settlement agreement calculator, compromise agreement UK, employment settlement calculator",
+  "offers": {"@type": "Offer", "price": "0", "priceCurrency": "GBP"},
+  "provider": {"@type": "Organization", "name": "EmployerCalculator.co.uk", "url": "{{ site_url }}"}
+}
+</script>
+{% endblock %}
+
+{% block head_extra %}
+<style>
+  .calc-wrap { max-width: 980px; margin: 0 auto; padding: 2rem 1.25rem 3.5rem; }
+  .calc-header { margin-bottom: 1.5rem; }
+  .calc-header p { color: var(--text-secondary); font-size: 0.95rem; max-width: 620px; margin-top: 0.4rem; }
+  .calc-grid { display: grid; grid-template-columns: minmax(280px,380px) 1fr; gap: 1rem; align-items: start; }
+  @media (max-width: 720px) { .calc-grid { grid-template-columns: 1fr; } }
+  .input-card { background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 1.2rem 1.4rem; }
+  .input-card h2 { font-family: var(--font-display); font-size: 1rem; font-weight: 500; letter-spacing: -0.02em; margin-bottom: 1rem; }
+  .field { margin-bottom: 0.9rem; }
+  .field label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.35rem; }
+  .field input, .field select { width: 100%; padding: 0.55rem 0.75rem; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-body); font-size: 0.95rem; background: var(--surface); color: var(--text-primary); outline: none; transition: border-color var(--transition), box-shadow var(--transition); }
+  .field input:focus, .field select:focus { border-color: rgba(27,107,74,0.4); box-shadow: 0 0 0 4px rgba(27,107,74,0.10); }
+  .field-prefix { position: relative; }
+  .field-prefix::before { content: '£'; position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: var(--text-tertiary); font-size: 0.95rem; pointer-events: none; }
+  .field-prefix input { padding-left: 1.5rem; }
+  .hint { font-size: 0.75rem; color: var(--text-tertiary); margin-top: 0.25rem; }
+  .result-card { background: var(--surface); border: 1.5px solid var(--border-strong); border-top: 3px solid var(--accent); border-radius: var(--radius); overflow: hidden; }
+  .result-head { padding: 1.1rem 1.4rem 0.9rem; border-bottom: 1px solid var(--border); }
+  .result-head-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent); margin-bottom: 0.3rem; }
+  .result-primary { font-family: var(--font-display); font-size: clamp(1.8rem, 3.5vw, 2.3rem); font-weight: 500; color: var(--text-primary); letter-spacing: -0.02em; line-height: 1.1; }
+  .result-sub { font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.25rem; }
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px,1fr)); gap: 0.5rem; padding: 0.9rem 1.4rem; }
+  .kpi { background: var(--surface-alt); border-radius: var(--radius-sm); padding: 0.7rem 0.85rem; }
+  .kpi-label { font-size: 0.72rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.2rem; }
+  .kpi-value { font-family: var(--font-body); font-size: 1.1rem; font-weight: 600; color: var(--text-primary); letter-spacing: -0.01em; font-variant-numeric: tabular-nums lining-nums; font-feature-settings: 'tnum' 1, 'lnum' 1; }
+  .result-note { padding: 0.7rem 1.4rem 1rem; font-size: 0.78rem; color: var(--text-tertiary); border-top: 1px solid var(--border); line-height: 1.55; }
+  .breakdown-section { padding: 0 1.4rem 1rem; border-top: 1px solid var(--border); padding-top: 0.9rem; }
+  .breakdown-section h3 { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-tertiary); margin: 0 0 0.6rem; }
+  .breakdown-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+  .breakdown-table th { text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-tertiary); font-weight: 700; padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--border); }
+  .breakdown-table td { padding: 0.45rem 0.5rem; border-bottom: 1px solid var(--border); color: var(--text-secondary); vertical-align: top; }
+  .breakdown-table td:last-child { text-align: right; font-variant-numeric: tabular-nums; color: var(--text-primary); font-weight: 500; white-space: nowrap; }
+  .breakdown-table tr:last-child td { border-bottom: none; font-weight: 700; color: var(--text-primary); }
+  .warning-note { margin: 0.9rem 1.4rem; background: #FFF9EC; border: 1.5px solid #E8C97A; border-radius: var(--radius-sm); padding: 0.75rem 0.9rem; font-size: 0.8rem; color: #7A5C00; line-height: 1.55; }
+  .warning-note strong { color: #5C4500; }
+  .faq-section { margin-top: 1.5rem; background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 1.2rem 1.4rem; }
+  .faq-section h2 { font-family: var(--font-display); font-size: 1.05rem; font-weight: 500; letter-spacing: -0.02em; margin-bottom: 1rem; }
+  .faq-item { border-top: 1px solid var(--border); padding: 0.75rem 0; }
+  .faq-item summary { font-size: 0.88rem; font-weight: 600; cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; color: var(--text-primary); }
+  .faq-item summary::after { content: '+'; font-size: 1.1rem; color: var(--text-tertiary); }
+  .faq-item[open] summary::after { content: '−'; }
+  .faq-answer { font-size: 0.85rem; color: var(--text-secondary); padding-top: 0.5rem; line-height: 1.6; }
+  .cross-link { margin-top: 1.5rem; background: var(--accent-light); border: 1.5px solid rgba(27,107,74,0.2); border-radius: var(--radius); padding: 1rem 1.4rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+  .cross-link p { font-size: 0.88rem; color: var(--accent); font-weight: 500; margin: 0; }
+  .cross-link a { font-size: 0.82rem; font-weight: 700; color: var(--accent); text-decoration: none; white-space: nowrap; padding: 0.4rem 0.9rem; border: 1.5px solid var(--accent); border-radius: var(--radius-sm); transition: all var(--transition); }
+  .cross-link a:hover { background: var(--accent); color: #fff; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="calc-wrap">
+  <div class="calc-header">
+    <div class="badge">Settlement agreement calculator</div>
+    <h1>Settlement Agreement Calculator 2025/26</h1>
+    <p>Estimate a settlement agreement value based on statutory redundancy, notice pay and a compensatory element for claims waived. Results update live. Estimates only — obtain legal advice.</p>
+  </div>
+
+  <div class="calc-grid">
+    <!-- Input panel -->
+    <div class="input-card">
+      <h2>Your details</h2>
+
+      <div class="field field-prefix">
+        <label for="salary">Annual salary</label>
+        <input type="number" id="salary" value="45000" min="0" max="9999999" step="1000" inputmode="numeric">
+      </div>
+
+      <div class="field">
+        <label for="age">Age at termination</label>
+        <input type="number" id="age" value="38" min="18" max="80">
+      </div>
+
+      <div class="field">
+        <label for="service">Years of continuous service</label>
+        <input type="number" id="service" value="5" min="0" max="50">
+      </div>
+
+      <div class="field">
+        <label for="noticePeriod">Notice period remaining</label>
+        <select id="noticePeriod">
+          <option value="0">0 weeks</option>
+          <option value="4">4 weeks (1 month)</option>
+          <option value="8">8 weeks (2 months)</option>
+          <option value="12" selected>12 weeks (3 months)</option>
+          <option value="26">26 weeks (6 months)</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="claimType">Claim type</label>
+        <select id="claimType">
+          <option value="none">No claim / commercial exit</option>
+          <option value="unfair">Unfair dismissal claim</option>
+          <option value="discrimination">Discrimination claim</option>
+        </select>
+        <div class="hint">Compensatory element is a midpoint estimate based on typical tribunal awards.</div>
+      </div>
+    </div>
+
+    <!-- Result panel -->
+    <div class="result-card">
+      <div class="result-head">
+        <div class="result-head-label">Estimated settlement value</div>
+        <div class="result-primary" id="resultPrimary">£19,327</div>
+        <div class="result-sub" id="resultSub">Redundancy + notice pay + compensatory element</div>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi">
+          <div class="kpi-label">Notice pay</div>
+          <div class="kpi-value" id="kpiNoticePay">£10,385</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Statutory redundancy</div>
+          <div class="kpi-value" id="kpiRedundancy">£3,500</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Compensatory element</div>
+          <div class="kpi-value" id="kpiCompensatory">£0</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Tax-free portion</div>
+          <div class="kpi-value" id="kpiTaxFree">£19,327</div>
+        </div>
+      </div>
+
+      <div class="breakdown-section">
+        <h3>Full breakdown</h3>
+        <table class="breakdown-table">
+          <thead>
+            <tr><th>Component</th><th>Basis</th><th>Amount</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Notice pay</td>
+              <td id="bNoticeBasis">12 weeks × £865.38/wk</td>
+              <td id="bNoticePay">£10,384.62</td>
+            </tr>
+            <tr>
+              <td>Statutory redundancy</td>
+              <td id="bRedundancyBasis">5 years service, age 38</td>
+              <td id="bRedundancy">£3,500.00</td>
+            </tr>
+            <tr>
+              <td>Compensatory element</td>
+              <td id="bCompensatoryBasis">No claim</td>
+              <td id="bCompensatory">£0.00</td>
+            </tr>
+            <tr>
+              <td>Total estimate</td>
+              <td></td>
+              <td id="bTotal">£13,884.62</td>
+            </tr>
+            <tr>
+              <td>Tax-free element (up to £30k)</td>
+              <td></td>
+              <td id="bTaxFree">£13,884.62</td>
+            </tr>
+            <tr>
+              <td>Est. tax saving (20% basic rate)</td>
+              <td></td>
+              <td id="bTaxSaving">£2,776.92</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="warning-note">
+        <strong>Estimates only.</strong> Settlement amounts depend heavily on individual circumstances, claims strength and negotiation. Obtain legal advice before accepting or offering any settlement.
+      </div>
+
+      <div class="result-note">
+        The first £30,000 of a termination payment is generally exempt from income tax and National Insurance. Amounts above £30,000 are taxable; employer NI applies to the excess from April 2020.
+      </div>
+    </div>
+  </div>
+
+  <!-- FAQ -->
+  <div class="faq-section">
+    <h2>Frequently asked questions</h2>
+
+    <details class="faq-item">
+      <summary>What makes up a settlement agreement payment?</summary>
+      <div class="faq-answer">A settlement agreement typically includes notice pay, statutory redundancy pay (or enhanced redundancy), and a compensatory element for claims waived. The compensatory amount reflects the strength of any employment claims and the commercial context of the exit.</div>
+    </details>
+
+    <details class="faq-item">
+      <summary>How much of a settlement is tax-free?</summary>
+      <div class="faq-answer">The first £30,000 of a termination payment is generally exempt from income tax and National Insurance, provided it relates to the termination of employment and is not contractual income. Amounts above £30,000 are subject to income tax, and the employer pays National Insurance on the excess from April 2020.</div>
+    </details>
+
+    <details class="faq-item">
+      <summary>Do I need a solicitor for a settlement agreement?</summary>
+      <div class="faq-answer">Yes. A settlement agreement is only legally binding if the employee has received independent legal advice from a qualified adviser, who must sign a certificate confirming this. Employers typically contribute to the employee's legal costs as part of the settlement.</div>
+    </details>
+  </div>
+
+  <!-- Cross-link -->
+  <div class="cross-link">
+    <p>Calculate employer NI and total hiring cost</p>
+    <a href="/calculator">Employer cost calculator &rarr;</a>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function money(n) { return '£' + Math.round(n).toLocaleString('en-GB'); }
+  function moneyDec(n) { return '£' + n.toLocaleString('en-GB', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+  function num(n) { return Math.round(n).toLocaleString('en-GB'); }
+  function setText(id, v) { const el = document.getElementById(id); if (el) el.textContent = v; }
+  function parseMoney(v) { return parseFloat(String(v).replace(/[^0-9.]/g,'')) || 0; }
+
+  const WEEKLY_PAY_CAP = 700;
+  const MAX_YEARS = 20;
+  const TAX_FREE_LIMIT = 30000;
+  const BASIC_RATE = 0.20;
+
+  function calcRedundancy(age, service, weeklyPay) {
+    const wp = Math.min(weeklyPay, WEEKLY_PAY_CAP);
+    const years = Math.min(service, MAX_YEARS);
+    let total = 0;
+    for (let y = 1; y <= years; y++) {
+      const ageAtYear = age - y + 1;
+      let multiplier;
+      if (ageAtYear < 22) multiplier = 0.5;
+      else if (ageAtYear <= 40) multiplier = 1.0;
+      else multiplier = 1.5;
+      total += multiplier * wp;
+    }
+    return total;
+  }
+
+  function calculate() {
+    const salary = parseFloat(document.getElementById('salary').value) || 45000;
+    const age = parseInt(document.getElementById('age').value) || 38;
+    const service = parseInt(document.getElementById('service').value) || 5;
+    const noticeWeeks = parseFloat(document.getElementById('noticePeriod').value) || 0;
+    const claimType = document.getElementById('claimType').value;
+
+    const weeklyPay = salary / 52;
+
+    // Notice pay
+    const noticePay = noticeWeeks * weeklyPay;
+
+    // Statutory redundancy
+    const redundancy = calcRedundancy(age, service, weeklyPay);
+
+    // Compensatory element
+    let compensatory = 0;
+    let compensatoryBasis = 'No claim';
+    if (claimType === 'unfair') {
+      compensatory = salary * (4.5 / 12);
+      compensatoryBasis = 'Unfair dismissal (midpoint 4.5 months)';
+    } else if (claimType === 'discrimination') {
+      compensatory = salary * 1.0;
+      compensatoryBasis = 'Discrimination (midpoint 12 months)';
+    }
+
+    const total = redundancy + noticePay + compensatory;
+    const taxFreeElement = Math.min(total, TAX_FREE_LIMIT);
+    const estimatedTaxSaving = taxFreeElement * BASIC_RATE;
+
+    // Primary result
+    setText('resultPrimary', money(total));
+
+    const parts = [];
+    if (noticePay > 0) parts.push('notice pay');
+    parts.push('redundancy');
+    if (compensatory > 0) parts.push('compensatory element');
+    setText('resultSub', parts.join(' + ').charAt(0).toUpperCase() + parts.join(' + ').slice(1));
+
+    // KPIs
+    setText('kpiNoticePay', money(noticePay));
+    setText('kpiRedundancy', money(redundancy));
+    setText('kpiCompensatory', money(compensatory));
+    setText('kpiTaxFree', money(taxFreeElement));
+
+    // Breakdown table
+    const weeksLabel = noticeWeeks === 1 ? '1 week' : noticeWeeks + ' weeks';
+    setText('bNoticeBasis', weeksLabel + ' \u00d7 ' + moneyDec(weeklyPay) + '/wk');
+    setText('bNoticePay', moneyDec(noticePay));
+
+    const yearsLabel = Math.min(service, MAX_YEARS) + ' year' + (Math.min(service, MAX_YEARS) !== 1 ? 's' : '') + ' service, age ' + age;
+    setText('bRedundancyBasis', yearsLabel);
+    setText('bRedundancy', moneyDec(redundancy));
+
+    setText('bCompensatoryBasis', compensatoryBasis);
+    setText('bCompensatory', moneyDec(compensatory));
+
+    setText('bTotal', moneyDec(total));
+    setText('bTaxFree', moneyDec(taxFreeElement) + (total > TAX_FREE_LIMIT ? ' (capped at £30k)' : ''));
+    setText('bTaxSaving', moneyDec(estimatedTaxSaving));
+  }
+
+  ['salary', 'age', 'service', 'noticePeriod', 'claimType'].forEach(function(id) {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('input', calculate);
+      el.addEventListener('change', calculate);
+    }
+  });
+
+  calculate();
+</script>
+{% endblock %}

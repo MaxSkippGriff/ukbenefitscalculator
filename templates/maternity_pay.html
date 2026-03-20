@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+
+{% block jsonld %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Statutory Maternity Pay Calculator 2025/26",
+  "url": "{{ canonical_url }}",
+  "description": "Calculate SMP schedule: 6 weeks at 90% AWE plus 33 weeks at the flat rate. Includes employer HMRC recovery at 92%.",
+  "applicationCategory": "FinanceApplication",
+  "operatingSystem": "Any",
+  "inLanguage": "en-GB",
+  "isAccessibleForFree": true,
+  "keywords": "statutory maternity pay calculator, SMP calculator UK, maternity pay 2025",
+  "offers": {"@type": "Offer", "price": "0", "priceCurrency": "GBP"},
+  "provider": {"@type": "Organization", "name": "EmployerCalculator.co.uk", "url": "{{ site_url }}"}
+}
+</script>
+{% endblock %}
+
+{% block head_extra %}
+<style>
+  .calc-wrap { max-width: 980px; margin: 0 auto; padding: 2rem 1.25rem 3.5rem; }
+  .calc-header { margin-bottom: 1.5rem; }
+  .calc-header p { color: var(--text-secondary); font-size: 0.95rem; max-width: 620px; margin-top: 0.4rem; }
+  .calc-grid { display: grid; grid-template-columns: minmax(280px,380px) 1fr; gap: 1rem; align-items: start; }
+  @media (max-width: 720px) { .calc-grid { grid-template-columns: 1fr; } }
+  .input-card { background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 1.2rem 1.4rem; }
+  .input-card h2 { font-family: var(--font-display); font-size: 1rem; font-weight: 500; letter-spacing: -0.02em; margin-bottom: 1rem; }
+  .field { margin-bottom: 0.9rem; }
+  .field label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.35rem; }
+  .field input, .field select { width: 100%; padding: 0.55rem 0.75rem; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-body); font-size: 0.95rem; background: var(--surface); color: var(--text-primary); outline: none; transition: border-color var(--transition), box-shadow var(--transition); }
+  .field input:focus, .field select:focus { border-color: rgba(27,107,74,0.4); box-shadow: 0 0 0 4px rgba(27,107,74,0.10); }
+  .field-prefix { position: relative; }
+  .field-prefix::before { content: '£'; position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: var(--text-tertiary); font-size: 0.95rem; pointer-events: none; }
+  .field-prefix input { padding-left: 1.5rem; }
+  .hint { font-size: 0.75rem; color: var(--text-tertiary); margin-top: 0.25rem; }
+  .result-card { background: var(--surface); border: 1.5px solid var(--border-strong); border-top: 3px solid var(--accent); border-radius: var(--radius); overflow: hidden; }
+  .result-head { padding: 1.1rem 1.4rem 0.9rem; border-bottom: 1px solid var(--border); }
+  .result-head-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent); margin-bottom: 0.3rem; }
+  .result-primary { font-family: var(--font-display); font-size: clamp(1.8rem, 3.5vw, 2.3rem); font-weight: 500; color: var(--text-primary); letter-spacing: -0.02em; line-height: 1.1; }
+  .result-sub { font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.25rem; }
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px,1fr)); gap: 0.5rem; padding: 0.9rem 1.4rem; }
+  .kpi { background: var(--surface-alt); border-radius: var(--radius-sm); padding: 0.7rem 0.85rem; }
+  .kpi-label { font-size: 0.72rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.2rem; }
+  .kpi-value { font-family: var(--font-body); font-size: 1.1rem; font-weight: 600; color: var(--text-primary); letter-spacing: -0.01em; font-variant-numeric: tabular-nums lining-nums; font-feature-settings: 'tnum' 1, 'lnum' 1; }
+  .result-note { padding: 0.7rem 1.4rem 1rem; font-size: 0.78rem; color: var(--text-tertiary); border-top: 1px solid var(--border); }
+  .breakdown-section { padding: 0 1.4rem 1rem; border-top: 1px solid var(--border); padding-top: 0.9rem; }
+  .breakdown-section h3 { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-tertiary); margin: 0 0 0.6rem; }
+  .breakdown-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+  .breakdown-table th { text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-tertiary); font-weight: 700; padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--border); }
+  .breakdown-table td { padding: 0.45rem 0.5rem; border-bottom: 1px solid var(--border); color: var(--text-secondary); }
+  .breakdown-table td:last-child { text-align: right; font-variant-numeric: tabular-nums; color: var(--text-primary); font-weight: 500; }
+  .breakdown-table tr:last-child td { border-bottom: none; font-weight: 700; color: var(--text-primary); }
+  .net-cost-positive { color: var(--accent) !important; }
+  .net-cost-negative { color: #C53030 !important; }
+  .faq-section { margin-top: 1.5rem; background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 1.2rem 1.4rem; }
+  .faq-section h2 { font-family: var(--font-display); font-size: 1.05rem; font-weight: 500; letter-spacing: -0.02em; margin-bottom: 1rem; }
+  .faq-item { border-top: 1px solid var(--border); padding: 0.75rem 0; }
+  .faq-item summary { font-size: 0.88rem; font-weight: 600; cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; color: var(--text-primary); }
+  .faq-item summary::after { content: '+'; font-size: 1.1rem; color: var(--text-tertiary); }
+  .faq-item[open] summary::after { content: '−'; }
+  .faq-answer { font-size: 0.85rem; color: var(--text-secondary); padding-top: 0.5rem; line-height: 1.6; }
+  .cross-link { margin-top: 1.5rem; background: var(--accent-light); border: 1.5px solid rgba(27,107,74,0.2); border-radius: var(--radius); padding: 1rem 1.4rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+  .cross-link p { font-size: 0.88rem; color: var(--accent); font-weight: 500; margin: 0; }
+  .cross-link a { font-size: 0.82rem; font-weight: 700; color: var(--accent); text-decoration: none; white-space: nowrap; padding: 0.4rem 0.9rem; border: 1.5px solid var(--accent); border-radius: var(--radius-sm); transition: all var(--transition); }
+  .cross-link a:hover { background: var(--accent); color: #fff; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="calc-wrap">
+  <div class="calc-header">
+    <div class="badge">Maternity pay calculator</div>
+    <h1>Statutory Maternity Pay Calculator 2025/26</h1>
+    <p>Calculate total SMP payable over 39 weeks, the HMRC recovery amount, and the net cost to the employer. Uses the 2025/26 statutory flat rate of £184.03/week. Results update live.</p>
+  </div>
+
+  <div class="calc-grid">
+    <!-- Input panel -->
+    <div class="input-card">
+      <h2>Your details</h2>
+
+      <div class="field field-prefix">
+        <label for="awe">Average weekly earnings (AWE)</label>
+        <input type="number" id="awe" value="600" min="0" max="99999" step="1" inputmode="numeric">
+        <div class="hint">Average over the 8 weeks before the 15th week before the expected week of childbirth.</div>
+      </div>
+
+      <div class="field">
+        <label for="employerType">Employer type</label>
+        <select id="employerType">
+          <option value="standard">Standard employer (recover 92%)</option>
+          <option value="small">Small employer (recover 103%)</option>
+        </select>
+        <div class="hint">Small employer = annual Class 1 NI bill of £45,000 or less.</div>
+      </div>
+    </div>
+
+    <!-- Result panel -->
+    <div class="result-card">
+      <div class="result-head">
+        <div class="result-head-label">Total SMP payable (39 weeks)</div>
+        <div class="result-primary" id="resultPrimary">£11,483</div>
+        <div class="result-sub" id="resultSub">Weeks 1–6: 90% of AWE · Weeks 7–39: £184.03/week flat rate</div>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi">
+          <div class="kpi-label">Weeks 1–6 rate</div>
+          <div class="kpi-value" id="kpiWeeks1to6">£540.00/wk</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Weeks 7–39 rate</div>
+          <div class="kpi-value" id="kpiWeeks7to39">£184.03/wk</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">HMRC recovery</div>
+          <div class="kpi-value" id="kpiRecovery">£10,565</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Net employer cost</div>
+          <div class="kpi-value" id="kpiNetCost">£918</div>
+        </div>
+      </div>
+
+      <div class="breakdown-section">
+        <h3>Full breakdown</h3>
+        <table class="breakdown-table">
+          <thead>
+            <tr><th>Item</th><th>Amount</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Weeks 1–6 (90% of AWE × 6)</td><td id="bWeeks1to6">£3,240.00</td></tr>
+            <tr><td>Weeks 7–39 (flat rate × 33)</td><td id="bWeeks7to39">£6,072.99</td></tr>
+            <tr><td>Total SMP payable</td><td id="bTotalSmp">£9,312.99</td></tr>
+            <tr><td id="bRecoveryLabel">HMRC recovery (92%)</td><td id="bRecovery">−£8,568.00</td></tr>
+            <tr><td>Net employer cost</td><td id="bNetCost">£744.99</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="result-note" id="resultNote">
+        SMP is recovered through payroll — most employers reduce their PAYE/NI payments. Small employers qualifying for 103% recovery recoup more than they paid.
+      </div>
+    </div>
+  </div>
+
+  <!-- FAQ -->
+  <div class="faq-section">
+    <h2>Frequently asked questions</h2>
+
+    <details class="faq-item">
+      <summary>How long does statutory maternity pay last?</summary>
+      <div class="faq-answer">SMP is paid for up to 39 weeks. The first 6 weeks are paid at 90% of the employee's average weekly earnings. The remaining 33 weeks are paid at the statutory flat rate of £184.03 per week (or 90% of AWE, whichever is lower) for 2025/26.</div>
+    </details>
+
+    <details class="faq-item">
+      <summary>How does SMP recovery work?</summary>
+      <div class="faq-answer">Employers recover SMP by reducing their PAYE and National Insurance payments to HMRC. Standard employers can reclaim 92% of total SMP paid. Small employers — those with an annual Class 1 NI bill of £45,000 or less — can reclaim 103%, effectively receiving a small compensation payment.</div>
+    </details>
+
+    <details class="faq-item">
+      <summary>Do you need to pay SMP if the employee doesn't return?</summary>
+      <div class="faq-answer">Yes. SMP is a statutory entitlement independent of whether the employee returns to work. It cannot be reclaimed from the employee if they resign during or after maternity leave, except in limited circumstances involving contractual enhanced maternity pay.</div>
+    </details>
+  </div>
+
+  <!-- Cross-link -->
+  <div class="cross-link">
+    <p>Calculate full employer NI and pension cost</p>
+    <a href="/calculator">Employer cost calculator &rarr;</a>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function money(n) { return '£' + Math.round(n).toLocaleString('en-GB'); }
+  function moneyDec(n) { return '£' + n.toLocaleString('en-GB', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+  function num(n) { return Math.round(n).toLocaleString('en-GB'); }
+  function setText(id, v) { const el = document.getElementById(id); if (el) el.textContent = v; }
+  function parseMoney(v) { return parseFloat(String(v).replace(/[^0-9.]/g,'')) || 0; }
+
+  const SMP_FLAT_RATE = 184.03;
+
+  function calculate() {
+    const awe = parseFloat(document.getElementById('awe').value) || 600;
+    const employerType = document.getElementById('employerType').value;
+    const recoveryRate = employerType === 'small' ? 1.03 : 0.92;
+    const recoveryPct = employerType === 'small' ? 103 : 92;
+
+    // Weeks 1-6: 90% of AWE
+    const weeks1to6Rate = awe * 0.9;
+    const weeks1to6Total = weeks1to6Rate * 6;
+
+    // Weeks 7-39: min(SMP_FLAT_RATE, 90% of AWE)
+    const weeks7to39Rate = Math.min(SMP_FLAT_RATE, awe * 0.9);
+    const weeks7to39Total = weeks7to39Rate * 33;
+
+    const totalSmp = weeks1to6Total + weeks7to39Total;
+    const recovery = totalSmp * recoveryRate;
+    const netCost = totalSmp - recovery; // negative means HMRC pays employer back
+
+    setText('resultPrimary', moneyDec(totalSmp));
+
+    const rateLabel = weeks7to39Rate >= SMP_FLAT_RATE
+      ? '£' + SMP_FLAT_RATE.toFixed(2) + '/week flat rate'
+      : moneyDec(weeks7to39Rate) + '/week (90% AWE — below flat rate)';
+    setText('resultSub', 'Weeks 1–6: 90% of AWE · Weeks 7–39: ' + rateLabel);
+
+    setText('kpiWeeks1to6', moneyDec(weeks1to6Rate) + '/wk');
+    setText('kpiWeeks7to39', moneyDec(weeks7to39Rate) + '/wk');
+    setText('kpiRecovery', moneyDec(recovery));
+
+    const netCostEl = document.getElementById('kpiNetCost');
+    if (netCostEl) {
+      if (netCost <= 0) {
+        netCostEl.textContent = moneyDec(Math.abs(netCost)) + ' received';
+        netCostEl.className = 'kpi-value net-cost-positive';
+      } else {
+        netCostEl.textContent = moneyDec(netCost);
+        netCostEl.className = 'kpi-value';
+      }
+    }
+
+    setText('bWeeks1to6', moneyDec(weeks1to6Total));
+    setText('bWeeks7to39', moneyDec(weeks7to39Total));
+    setText('bTotalSmp', moneyDec(totalSmp));
+    setText('bRecoveryLabel', 'HMRC recovery (' + recoveryPct + '%)');
+    setText('bRecovery', '−' + moneyDec(recovery));
+
+    const netCostCell = document.getElementById('bNetCost');
+    if (netCostCell) {
+      if (netCost <= 0) {
+        netCostCell.textContent = moneyDec(Math.abs(netCost)) + ' (HMRC pays employer)';
+        netCostCell.className = 'net-cost-positive';
+      } else {
+        netCostCell.textContent = moneyDec(netCost);
+        netCostCell.className = '';
+      }
+    }
+  }
+
+  ['awe', 'employerType'].forEach(function(id) {
+    document.getElementById(id).addEventListener('input', calculate);
+    document.getElementById(id).addEventListener('change', calculate);
+  });
+
+  calculate();
+</script>
+{% endblock %}

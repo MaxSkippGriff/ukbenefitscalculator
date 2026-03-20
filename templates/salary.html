@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+{% set salary_fmt = "£{:,}".format(salary) %}
+{% block title %}{{ salary_fmt }} After Tax {{ tax_year }} — Take Home Pay{% endblock %}
+{% block meta_description %}On a {{ salary_fmt }} salary in {{ tax_year }}, your take-home pay is {{ result.take_home.annual|gbp }} per year ({{ result.take_home.monthly|gbp2 }}/month). See the full income tax, NI and deductions breakdown.{% endblock %}
+{% block canonical %}<link rel="canonical" href="{{ site_url }}/take-home-pay/{{ salary }}">{% endblock %}
+
+{% block jsonld %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What is the take-home pay on a {{ salary_fmt }} salary in {{ tax_year }}?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "On a {{ salary_fmt }} salary, your take-home pay is approximately {{ result.take_home.annual|gbp }} per year or {{ result.take_home.monthly|gbp2 }} per month after income tax and National Insurance."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How much income tax do you pay on {{ salary_fmt }}?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "On a {{ salary_fmt }} salary, you pay {{ result.income_tax.total_tax|gbp2 }} in income tax for {{ tax_year }}. Your personal allowance is {{ result.income_tax.personal_allowance|gbp }}."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How much National Insurance do you pay on {{ salary_fmt }}?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Employee National Insurance on a {{ salary_fmt }} salary is {{ result.national_insurance.total_ni|gbp2 }} per year in {{ tax_year }}."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is the effective tax rate on {{ salary_fmt }}?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The combined effective tax rate (income tax + NI) on {{ salary_fmt }} is {{ result.effective_tax_rate }}%. The marginal rate is {{ result.marginal_tax_rate }}%."
+      }
+    }
+  ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+
+  <!-- Breadcrumb -->
+  <nav class="text-sm text-gray-400 mb-6">
+    <a href="/" class="hover:text-brand-600 transition-colors">Home</a>
+    <span class="mx-1.5">/</span>
+    <a href="/calculator" class="hover:text-brand-600 transition-colors">Calculator</a>
+    <span class="mx-1.5">/</span>
+    <span class="text-gray-600">{{ salary_fmt }}</span>
+  </nav>
+
+  <!-- H1 -->
+  <div class="animate-fade-in">
+    <h1 class="text-3xl sm:text-4xl font-extrabold text-gray-900">
+      {{ salary_fmt }} Salary After Tax <span class="text-brand-600">{{ tax_year }}</span>
+    </h1>
+    <p class="mt-3 text-lg text-gray-500">
+      On a {{ salary_fmt }} salary in the {{ tax_year }} tax year, you take home
+      <strong class="text-brand-700">{{ result.take_home.annual|gbp }}</strong> per year —
+      that's <strong>{{ result.take_home.monthly|gbp2 }}</strong> per month or
+      <strong>{{ result.take_home.weekly|gbp2 }}</strong> per week.
+      Your effective tax rate is {{ result.effective_tax_rate }}% and marginal rate is {{ result.marginal_tax_rate }}%.
+    </p>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-8 animate-slide-up">
+    <div class="bg-white rounded-2xl card-shadow p-5 text-center">
+      <p class="text-xs text-gray-400 mb-1">Annual</p>
+      <p class="text-xl font-extrabold text-brand-700">{{ result.take_home.annual|gbp }}</p>
+    </div>
+    <div class="bg-white rounded-2xl card-shadow p-5 text-center">
+      <p class="text-xs text-gray-400 mb-1">Monthly</p>
+      <p class="text-xl font-bold text-gray-900">{{ result.take_home.monthly|gbp2 }}</p>
+    </div>
+    <div class="bg-white rounded-2xl card-shadow p-5 text-center">
+      <p class="text-xs text-gray-400 mb-1">Weekly</p>
+      <p class="text-xl font-bold text-gray-900">{{ result.take_home.weekly|gbp2 }}</p>
+    </div>
+    <div class="bg-white rounded-2xl card-shadow p-5 text-center">
+      <p class="text-xs text-gray-400 mb-1">Daily</p>
+      <p class="text-xl font-bold text-gray-900">{{ result.take_home.daily|gbp2 }}</p>
+    </div>
+  </div>
+
+  <!-- Visual bar: take-home vs deductions -->
+  {% set th_pct = (result.take_home.annual / salary * 100) if salary > 0 else 0 %}
+  <div class="mt-8 bg-white rounded-2xl card-shadow p-6 animate-slide-up stagger-1">
+    <h2 class="font-bold text-gray-900 mb-3">Take-home vs Deductions</h2>
+    <div class="w-full h-8 bg-gray-100 rounded-full overflow-hidden flex">
+      <div class="bg-brand-500 h-full rounded-l-full transition-all duration-700 flex items-center justify-center text-xs text-white font-semibold" style="width:{{ th_pct|round(1) }}%">
+        {% if th_pct > 15 %}{{ th_pct|round(1) }}%{% endif %}
+      </div>
+      <div class="bg-red-400 h-full flex items-center justify-center text-xs text-white font-semibold" style="width:{{ (100 - th_pct)|round(1) }}%">
+        {% if (100 - th_pct) > 10 %}{{ (100 - th_pct)|round(1) }}%{% endif %}
+      </div>
+    </div>
+    <div class="flex justify-between text-xs mt-2 text-gray-500">
+      <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-brand-500 inline-block"></span> Take-home: {{ result.take_home.annual|gbp }}</span>
+      <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-red-400 inline-block"></span> Deductions: {{ result.total_deductions|gbp }}</span>
+    </div>
+  </div>
+
+  <!-- Breakdown Table -->
+  <div class="mt-6 bg-white rounded-2xl card-shadow p-6 animate-slide-up stagger-2">
+    <h2 class="font-bold text-gray-900 mb-4">Deductions breakdown</h2>
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-gray-100 text-gray-500 text-left">
+          <th class="pb-3 font-medium">Item</th>
+          <th class="pb-3 font-medium text-right">Annual</th>
+          <th class="pb-3 font-medium text-right">Monthly</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-50">
+        <tr>
+          <td class="py-3 font-semibold text-gray-900">Gross salary</td>
+          <td class="py-3 text-right font-semibold">{{ salary|gbp }}</td>
+          <td class="py-3 text-right font-semibold">{{ (salary / 12)|gbp2 }}</td>
+        </tr>
+        <tr>
+          <td class="py-3 text-gray-600">Personal allowance</td>
+          <td class="py-3 text-right text-gray-600">{{ result.income_tax.personal_allowance|gbp }}</td>
+          <td class="py-3 text-right text-gray-600">{{ (result.income_tax.personal_allowance / 12)|gbp2 }}</td>
+        </tr>
+        <tr>
+          <td class="py-3 text-red-600">Income tax</td>
+          <td class="py-3 text-right text-red-600">{{ result.income_tax.total_tax|gbp2 }}</td>
+          <td class="py-3 text-right text-red-600">{{ (result.income_tax.total_tax / 12)|gbp2 }}</td>
+        </tr>
+        <tr>
+          <td class="py-3 text-orange-600">National Insurance</td>
+          <td class="py-3 text-right text-orange-600">{{ result.national_insurance.total_ni|gbp2 }}</td>
+          <td class="py-3 text-right text-orange-600">{{ (result.national_insurance.total_ni / 12)|gbp2 }}</td>
+        </tr>
+        <tr class="border-t-2 border-gray-200">
+          <td class="py-3 font-bold text-brand-700 text-base">Take-home pay</td>
+          <td class="py-3 text-right font-bold text-brand-700 text-base">{{ result.take_home.annual|gbp }}</td>
+          <td class="py-3 text-right font-bold text-brand-700 text-base">{{ result.take_home.monthly|gbp2 }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Tax bands -->
+  <div class="mt-6 bg-white rounded-2xl card-shadow p-6 animate-slide-up stagger-3">
+    <h2 class="font-bold text-gray-900 mb-4">Income tax bands (rUK)</h2>
+    <div class="space-y-3">
+      {% for band in result.income_tax.bands %}
+      {% if band.taxable > 0 %}
+      <div class="flex items-center gap-3 text-sm">
+        <span class="w-36 text-gray-600 flex-shrink-0">{{ band.band }} ({{ (band.rate * 100)|int }}%)</span>
+        {% set pct = (band.taxable / result.income_tax.taxable_income * 100) if result.income_tax.taxable_income > 0 else 0 %}
+        <div class="flex-1 bg-gray-100 rounded-full h-3 overflow-hidden">
+          <div class="bg-brand-500 h-full rounded-full" style="width:{{ pct|round(1) }}%"></div>
+        </div>
+        <span class="w-20 text-right text-gray-700 font-medium">{{ band.tax|gbp2 }}</span>
+      </div>
+      {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Scotland comparison -->
+  <div class="mt-6 bg-white rounded-2xl card-shadow p-6 animate-slide-up stagger-4">
+    <h2 class="font-bold text-gray-900 mb-4">Scotland comparison</h2>
+    <p class="text-sm text-gray-500 mb-4">
+      In Scotland, the same {{ salary_fmt }} salary gives you
+      <strong class="text-gray-900">{{ result_scot.take_home.annual|gbp }}</strong> take-home
+      ({{ (result.take_home.annual - result_scot.take_home.annual)|gbp2 }}
+      {{ "less" if result_scot.take_home.annual < result.take_home.annual else "more" }} than rUK).
+    </p>
+    <a href="/regions" class="text-sm text-brand-600 font-medium hover:underline">Learn more about regional differences &rarr;</a>
+  </div>
+
+  <!-- Ad placement mid-page -->
+  {% if enable_ads %}
+  <div class="mt-6 adsense-slot" data-slot="salary-page-mid">
+    {% include "partials/adsense_snippet.html" %}
+  </div>
+  {% endif %}
+
+  <!-- Unique SEO text -->
+  <div class="mt-6 bg-white rounded-2xl card-shadow p-6">
+    <h2 class="font-bold text-gray-900 mb-3">Understanding your {{ salary_fmt }} salary</h2>
+    <div class="prose prose-sm text-gray-600 max-w-none">
+      <p>
+        Earning {{ salary_fmt }} per year in the {{ tax_year }} tax year means you pay
+        {{ result.income_tax.total_tax|gbp2 }} in income tax and
+        {{ result.national_insurance.total_ni|gbp2 }} in National Insurance contributions.
+        {% if result.income_tax.personal_allowance < 12570 %}
+        Because your salary exceeds £100,000, your Personal Allowance is reduced to
+        {{ result.income_tax.personal_allowance|gbp }}, which means more of your income is taxed.
+        This creates an effective marginal rate of {{ result.marginal_tax_rate }}% in this band.
+        {% else %}
+        You receive the full Personal Allowance of {{ result.income_tax.personal_allowance|gbp }},
+        meaning you pay no tax on the first £12,570 of your earnings.
+        {% endif %}
+      </p>
+      <p>
+        After all deductions, you take home {{ result.take_home.annual|gbp }} annually —
+        equivalent to {{ result.take_home.monthly|gbp2 }} per month or {{ result.take_home.daily|gbp2 }} per working day.
+        Your combined effective tax rate is {{ result.effective_tax_rate }}%.
+        {% if salary >= 50270 %}
+        As a higher earner, the National Insurance rate drops from 8% to 2% on earnings above £50,270.
+        {% endif %}
+      </p>
+      <p class="text-xs text-gray-400">
+        This estimate is based on HMRC {{ tax_year }} rates and assumes no student loan, pension
+        contributions, or other deductions.
+        <a href="/calculator?salary={{ salary }}" class="text-brand-600 hover:underline">Use the full calculator</a>
+        to customise for your situation. Source:
+        <a href="https://www.gov.uk/income-tax-rates" class="text-brand-600 hover:underline" rel="nofollow">gov.uk/income-tax-rates</a>.
+      </p>
+    </div>
+  </div>
+
+  <!-- Open in calculator -->
+  <div class="mt-6 text-center">
+    <a href="/calculator?salary={{ salary }}" class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-brand-600 text-white font-semibold hover:bg-brand-700 transition-all hover:shadow-lg hover:shadow-brand-200 active:scale-[0.98]">
+      Open {{ salary_fmt }} in calculator &rarr;
+    </a>
+  </div>
+
+  <!-- Nearby salaries -->
+  <div class="mt-10">
+    <h2 class="font-bold text-gray-900 mb-4">Explore nearby salaries</h2>
+    <div class="flex flex-wrap gap-3">
+      {% for n in neighbours %}
+      <a href="/take-home-pay/{{ n }}" class="px-4 py-2 bg-white rounded-xl card-shadow text-sm font-medium text-gray-700 hover:text-brand-600 hover:border-brand-200 transition-colors card-hover">
+        {{ "£{:,}".format(n) }}
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

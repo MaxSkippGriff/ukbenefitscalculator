@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}UK Tax Glossary (2025/26) | AfterTaxSalary{% endblock %}
+{% block meta_description %}UK tax glossary for salary planning: clear definitions of PAYE, personal allowance, marginal rate, salary sacrifice, NI and student loan terms.{% endblock %}
+{% block canonical %}<link rel="canonical" href="{{ canonical_url }}">{% endblock %}
+
+{% block head_extra %}
+<meta property="og:type" content="website">
+<meta property="og:url" content="{{ canonical_url }}">
+<meta property="og:title" content="UK Tax Glossary (2025/26) | AfterTaxSalary">
+<meta property="og:description" content="Clear definitions of core UK salary and tax terms.">
+<meta name="twitter:card" content="summary_large_image">
+{% endblock %}
+
+{% block jsonld %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {"@type": "ListItem", "position": 1, "name": "Home", "item": "{{ site_url }}/"},
+    {"@type": "ListItem", "position": 2, "name": "Tax Glossary", "item": "{{ site_url }}/tax-glossary"}
+  ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<section class="max-w-4xl mx-auto px-4 sm:px-6 py-12">
+  <nav class="text-sm text-slate-500 mb-4"><a href="/" class="hover:text-blue-600">Home</a> / <span class="text-slate-700">Tax Glossary</span></nav>
+  <h1 class="text-4xl sm:text-5xl font-extrabold text-slate-900">UK Tax Glossary (2025/26)</h1>
+  <p class="mt-4 text-slate-600">A practical glossary for salary planning and offer comparisons. Definitions are written for employees using PAYE in the UK.</p>
+
+  <div class="space-y-4 mt-8">
+    <details class="card p-5" open><summary class="font-semibold text-slate-900 cursor-pointer">PAYE (Pay As You Earn)</summary><p class="mt-2 text-slate-700">PAYE is the payroll system used to deduct income tax from employee earnings throughout the year. Employers calculate tax each pay period using your tax code and HMRC rules.</p></details>
+    <details class="card p-5"><summary class="font-semibold text-slate-900 cursor-pointer">Personal allowance</summary><p class="mt-2 text-slate-700">The amount of income you can earn before paying income tax, subject to taper rules at higher incomes. It is one of the biggest drivers of effective tax outcomes.</p></details>
+    <details class="card p-5"><summary class="font-semibold text-slate-900 cursor-pointer">Marginal tax rate</summary><p class="mt-2 text-slate-700">The tax rate applied to your next pound of income. It is not the same as your overall effective deduction rate and is best used for pay-rise planning.</p></details>
+    <details class="card p-5"><summary class="font-semibold text-slate-900 cursor-pointer">Effective deduction rate</summary><p class="mt-2 text-slate-700">Total annual deductions divided by gross annual salary. This rate helps with budgeting because it reflects the full deduction burden across all components.</p></details>
+    <details class="card p-5"><summary class="font-semibold text-slate-900 cursor-pointer">Salary sacrifice</summary><p class="mt-2 text-slate-700">A payroll arrangement where part of salary is exchanged before tax and NI calculations, often for pension contributions. It can improve net-pay efficiency depending on employer setup.</p></details>
+    <details class="card p-5"><summary class="font-semibold text-slate-900 cursor-pointer">National Insurance (NI)</summary><p class="mt-2 text-slate-700">A separate deduction from income tax with its own thresholds and rates. NI calculations can differ from tax-band intuition, especially around threshold boundaries.</p></details>
+    <details class="card p-5"><summary class="font-semibold text-slate-900 cursor-pointer">Student loan plan (Plan 1/2/4/5/Postgraduate)</summary><p class="mt-2 text-slate-700">Repayment rules vary by plan threshold and rate. Correct plan selection is critical for realistic monthly net-pay estimates.</p></details>
+    <details class="card p-5"><summary class="font-semibold text-slate-900 cursor-pointer">Tax code (e.g., 1257L)</summary><p class="mt-2 text-slate-700">A code used by payroll to apply allowances and adjustments. If your tax code is wrong, your net pay estimate and payslip can diverge materially.</p></details>
+  </div>
+
+  <div class="card p-5 mt-8">
+    <h2 class="font-bold text-slate-900 mb-2">Useful next steps</h2>
+    <div class="flex flex-wrap gap-3 text-sm">
+      <a href="/calculator" class="text-blue-600 font-semibold hover:underline">Open full calculator</a>
+      <a href="/guides" class="text-blue-600 font-semibold hover:underline">Read UK salary guides</a>
+      <a href="/salary/50000/england" class="text-blue-600 font-semibold hover:underline">See a worked salary page</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

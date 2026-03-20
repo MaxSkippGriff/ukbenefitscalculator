@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block head_extra %}
+<style>
+@media (max-width: 640px) {
+  .eni-insight-grid { grid-template-columns: 1fr !important; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="section">
+  <div class="badge">Employer NI calculator</div>
+  <h1>Employer NI calculator by salary ({{ tax_year }})</h1>
+  <p>For {{ tax_year }}, employer National Insurance is charged at <strong>15%</strong> on earnings above the <strong>£5,000 secondary threshold</strong>. Select a salary to see exact annual and monthly NI plus a direct 2024/25 comparison.</p>
+
+  <div class="card" style="padding:1rem 1.1rem; margin-top:1rem; overflow-x:auto;">
+    <h2 style="font-size:1.1rem; margin-bottom:0.6rem;">Employer NI quick reference ({{ tax_year }})</h2>
+    <table style="width:100%; border-collapse:collapse;">
+      <tr>
+        <th style="text-align:left; border-bottom:1px solid var(--border); padding:0.45rem 0.2rem; font-size:0.72rem; text-transform:uppercase; color:var(--text-tertiary);">Salary</th>
+        <th style="text-align:right; border-bottom:1px solid var(--border); padding:0.45rem 0.2rem; font-size:0.72rem; text-transform:uppercase; color:var(--text-tertiary);">Employer NI / year</th>
+        <th style="text-align:right; border-bottom:1px solid var(--border); padding:0.45rem 0.2rem; font-size:0.72rem; text-transform:uppercase; color:var(--text-tertiary);">Per month</th>
+        <th style="text-align:right; border-bottom:1px solid var(--border); padding:0.45rem 0.2rem; font-size:0.72rem; text-transform:uppercase; color:var(--text-tertiary);">Rise vs 2024/25</th>
+      </tr>
+      {% set sample_amounts = [20000, 25000, 30000, 35000, 40000, 50000, 60000, 75000, 100000] %}
+      {% for amt in sample_amounts %}
+      {% if amt in amounts %}
+      {% set ni_2025 = (amt - 5000) * 0.15 %}
+      {% set ni_2024 = (amt - 9100) * 0.138 if amt > 9100 else 0 %}
+      <tr>
+        <td style="padding:0.4rem 0.2rem; border-bottom:1px solid var(--border);"><a href="/employer-ni/{{ amt }}" style="color:var(--accent);">£{{ "{:,}".format(amt) }}</a></td>
+        <td style="padding:0.4rem 0.2rem; border-bottom:1px solid var(--border); text-align:right; font-weight:500;">£{{ "{:,.0f}".format(ni_2025) }}</td>
+        <td style="padding:0.4rem 0.2rem; border-bottom:1px solid var(--border); text-align:right; color:var(--text-secondary);">£{{ "{:,.0f}".format(ni_2025 / 12) }}</td>
+        <td style="padding:0.4rem 0.2rem; border-bottom:1px solid var(--border); text-align:right; color:var(--accent-warm);">+£{{ "{:,.0f}".format(ni_2025 - ni_2024) }}</td>
+      </tr>
+      {% endif %}
+      {% endfor %}
+    </table>
+    <p style="margin:0.6rem 0 0; font-size:0.8rem; color:var(--text-tertiary);">2025/26: 15% above the £5,000 secondary threshold. 2024/25: 13.8% above £9,100. No Employment Allowance applied.</p>
+  </div>
+
+  <div style="margin-top:1rem;">
+    <div style="font-size:0.72rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.35rem;">How it works</div>
+    <div style="display:grid;gap:0.7rem;grid-template-columns:repeat(3,1fr);" class="eni-quick-grid">
+      <div class="card" style="padding:0.8rem 0.9rem;">
+        <h3 style="font-size:0.9rem;margin:0 0 0.15rem;">1. Pick salary</h3>
+        <p style="font-size:0.82rem;line-height:1.55;margin:0;">Choose the nearest salary page to open a full NI breakdown.</p>
+      </div>
+      <div class="card" style="padding:0.8rem 0.9rem;">
+        <h3 style="font-size:0.9rem;margin:0 0 0.15rem;">2. Read NI due</h3>
+        <p style="font-size:0.82rem;line-height:1.55;margin:0;">See annual and monthly NI using the current 15% / £5,000 rule set.</p>
+      </div>
+      <div class="card" style="padding:0.8rem 0.9rem;">
+        <h3 style="font-size:0.9rem;margin:0 0 0.15rem;">3. Compare years</h3>
+        <p style="font-size:0.82rem;line-height:1.55;margin:0;">Check the same salary against 2024/25 assumptions for budget planning.</p>
+      </div>
+    </div>
+    <style>@media(max-width:640px){.eni-quick-grid{grid-template-columns:1fr!important;}}</style>
+  </div>
+
+  <div class="pill-grid" style="margin-top:1.25rem;">
+    {% for amount in amounts %}
+    <a class="pill" href="/employer-ni/{{ amount }}">£{{ "{:,}".format(amount) }}</a>
+    {% endfor %}
+  </div>
+
+  <div style="margin-top:1.25rem;">
+    <p style="font-size:0.9rem; color:var(--text-secondary);">For total employer cost including pension and overheads, see <a href="/cost-of-employing" style="color:var(--accent);">employer cost by salary</a> or use the <a href="/calculator" style="color:var(--accent);">full employer NI and cost calculator</a>.</p>
+  </div>
+
+  <div class="card" style="padding:1rem 1.1rem; margin-top:1rem;">
+    <h2 style="font-size:1.05rem; margin-bottom:0.45rem;">NI rise calculator insight: 2024/25 vs 2025/26</h2>
+    <p style="font-size:0.88rem;color:var(--text-secondary);line-height:1.7;margin:0 0 0.65rem;">The 2025/26 NI rise has two moving parts: a higher rate and a lower threshold. That means cost pressure is not only a high-salary issue. For many SMEs, the threshold change creates a larger percentage jump on lower and mid salaries than teams expect.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.65rem;" class="eni-insight-grid">
+      <div style="background:var(--surface-alt);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.7rem 0.8rem;">
+        <div style="font-size:0.72rem;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.04em;">£30,000 salary</div>
+        <div style="font-size:0.84rem;color:var(--text-secondary);margin-top:0.2rem;line-height:1.6;">2025/26 employer NI: <strong style="color:var(--text-primary);">£3,750</strong><br>2024/25 employer NI: <strong style="color:var(--text-primary);">£2,884</strong><br>Increase: <strong style="color:var(--accent-warm);">+£866/year</strong></div>
+      </div>
+      <div style="background:var(--surface-alt);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.7rem 0.8rem;">
+        <div style="font-size:0.72rem;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.04em;">£50,000 salary</div>
+        <div style="font-size:0.84rem;color:var(--text-secondary);margin-top:0.2rem;line-height:1.6;">2025/26 employer NI: <strong style="color:var(--text-primary);">£6,750</strong><br>2024/25 employer NI: <strong style="color:var(--text-primary);">£5,644</strong><br>Increase: <strong style="color:var(--accent-warm);">+£1,106/year</strong></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HOW EMPLOYER NI IS CALCULATED -->
+  <div style="margin-top:2rem;">
+    <div style="font-size:0.72rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem;">How it works</div>
+    <h2 style="font-family:var(--font-display);font-size:clamp(1.25rem,2.5vw,1.6rem);font-weight:500;letter-spacing:-0.02em;color:var(--text-primary);margin:0 0 0.75rem;">How employer NI is calculated for 2025/26</h2>
+    <div style="display:grid;gap:0.85rem;grid-template-columns:1fr 1fr;" class="eni-grid">
+      <div class="card" style="padding:1rem 1.1rem;">
+        <h3 style="font-family:var(--font-display);font-size:0.95rem;font-weight:500;letter-spacing:-0.01em;margin-bottom:0.5rem;">The formula</h3>
+        <p style="font-size:0.88rem;color:var(--text-secondary);line-height:1.65;margin:0;">Employer NI = (gross salary − £5,000) × 15%. There is no upper cap — the 15% rate continues on all earnings above the threshold, regardless of how high the salary is. Reduced rates (0%) apply up to £50,270 for employees aged under 21 and apprentices aged under 25.</p>
+      </div>
+      <div class="card" style="padding:1rem 1.1rem;">
+        <h3 style="font-family:var(--font-display);font-size:0.95rem;font-weight:500;letter-spacing:-0.01em;margin-bottom:0.5rem;">What changed in April 2025</h3>
+        <p style="font-size:0.88rem;color:var(--text-secondary);line-height:1.65;margin:0;">The employer NI rate rose from 13.8% to 15% and the secondary threshold was cut from £9,100 to £5,000. Employment Allowance increased from £5,000 to £10,500 (with the £100,000 eligibility cap removed) to partially offset the rise for smaller employers.</p>
+      </div>
+    </div>
+    <style>@media(max-width:620px){.eni-grid{grid-template-columns:1fr!important;}}</style>
+  </div>
+
+  <!-- FAQ -->
+  {% if faq_items %}
+  <div style="margin-top:2rem;">
+    <div style="font-size:0.72rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem;">FAQ</div>
+    <h2 style="font-family:var(--font-display);font-size:clamp(1.25rem,2.5vw,1.6rem);font-weight:500;letter-spacing:-0.02em;color:var(--text-primary);margin:0 0 0.85rem;">Employer NI — frequently asked questions</h2>
+    <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);overflow:hidden;">
+      {% for item in faq_items %}
+      <details style="border-top:{% if loop.first %}none{% else %}1px solid var(--border){% endif %};padding:0.85rem 1.25rem;">
+        <summary style="font-size:0.9rem;font-weight:600;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;color:var(--text-primary);gap:1rem;">
+          {{ item.q }}
+          <span style="font-size:1.1rem;color:var(--text-tertiary);flex-shrink:0;font-weight:400;">+</span>
+        </summary>
+        <p style="font-size:0.88rem;color:var(--text-secondary);line-height:1.7;margin:0.6rem 0 0.1rem;padding-right:1.5rem;">{{ item.a }}</p>
+      </details>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <section class="card" style="padding:1rem 1.25rem; margin-top:1.5rem;">
+    <h2 style="font-size:1rem; margin-bottom:0.6rem;">Related guides</h2>
+    <div class="pill-grid">
+      <a class="pill" href="/guides/employer-ni-changes-2025">Employer NI changes April 2025</a>
+      <a class="pill" href="/guides/employment-allowance-guide">Employment Allowance 2025/26</a>
+      <a class="pill" href="/guides/true-cost-of-hiring">True cost of hiring</a>
+    </div>
+  </section>
+</section>
+{% endblock %}

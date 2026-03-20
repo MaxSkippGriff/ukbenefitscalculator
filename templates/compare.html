@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Compare Two Salaries — Pro{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+  <h1 class="text-3xl font-extrabold text-gray-900 mb-2 animate-fade-in">Compare Salaries <span class="text-brand-600">Pro</span></h1>
+  <p class="text-gray-500 mb-8">See two salaries side by side with full breakdowns</p>
+
+  <div class="grid sm:grid-cols-2 gap-6 mb-8">
+    <div class="bg-white rounded-2xl card-shadow p-6">
+      <label class="block text-sm font-medium text-gray-600 mb-1.5">Salary A</label>
+      <div class="relative">
+        <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 font-semibold">&pound;</span>
+        <input id="salA" type="text" inputmode="numeric" value="35,000" class="w-full pl-9 pr-4 py-3 text-xl font-bold bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none" autocomplete="off">
+      </div>
+    </div>
+    <div class="bg-white rounded-2xl card-shadow p-6">
+      <label class="block text-sm font-medium text-gray-600 mb-1.5">Salary B</label>
+      <div class="relative">
+        <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 font-semibold">&pound;</span>
+        <input id="salB" type="text" inputmode="numeric" value="50,000" class="w-full pl-9 pr-4 py-3 text-xl font-bold bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none" autocomplete="off">
+      </div>
+    </div>
+  </div>
+
+  <div class="grid sm:grid-cols-2 gap-6" id="compare-results">
+    <div id="resA" class="bg-white rounded-2xl card-shadow p-6"></div>
+    <div id="resB" class="bg-white rounded-2xl card-shadow p-6"></div>
+  </div>
+  <div id="compare-diff" class="mt-6 bg-navy-50 rounded-2xl p-6 border border-navy-200/50 text-center text-gray-700 hidden"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function(){
+  const fmt = n => '£' + Math.round(n).toLocaleString('en-GB');
+  const parse = s => parseInt(s.replace(/[^0-9]/g,''),10) || 0;
+
+  function renderResult(el, d, label) {
+    el.innerHTML = `
+      <h3 class="font-bold text-gray-900 mb-3">${label}: ${fmt(d.gross_salary)}</h3>
+      <div class="space-y-2 text-sm">
+        <div class="flex justify-between"><span class="text-gray-500">Income tax</span><span class="text-red-600 font-medium">${fmt(d.income_tax.total_tax)}</span></div>
+        <div class="flex justify-between"><span class="text-gray-500">National Insurance</span><span class="text-orange-600 font-medium">${fmt(d.national_insurance.total_ni)}</span></div>
+        <div class="flex justify-between border-t pt-2"><span class="font-bold text-brand-700">Take-home</span><span class="font-bold text-brand-700">${fmt(d.take_home.annual)}</span></div>
+        <div class="flex justify-between"><span class="text-gray-500">Monthly</span><span class="font-medium">${fmt(d.take_home.monthly)}</span></div>
+        <div class="flex justify-between"><span class="text-gray-500">Effective rate</span><span class="font-medium">${d.effective_tax_rate}%</span></div>
+      </div>`;
+  }
+
+  async function compare(){
+    const a = parse(document.getElementById('salA').value);
+    const b = parse(document.getElementById('salB').value);
+    if(a<1 || b<1) return;
+    document.getElementById('salA').value = a.toLocaleString('en-GB');
+    document.getElementById('salB').value = b.toLocaleString('en-GB');
+    const [rA, rB] = await Promise.all([
+      fetch('/api/takehome?salary='+a).then(r=>r.json()),
+      fetch('/api/takehome?salary='+b).then(r=>r.json()),
+    ]);
+    renderResult(document.getElementById('resA'), rA, 'Salary A');
+    renderResult(document.getElementById('resB'), rB, 'Salary B');
+    const diff = rB.take_home.annual - rA.take_home.annual;
+    const diffEl = document.getElementById('compare-diff');
+    diffEl.classList.remove('hidden');
+    diffEl.innerHTML = `Salary B takes home <strong>${fmt(Math.abs(diff))}</strong> ${diff>=0?'more':'less'} per year than Salary A (${fmt(Math.abs(diff/12))}/month).`;
+  }
+
+  let t;
+  const debounced = () => { clearTimeout(t); t = setTimeout(compare, 400); };
+  document.getElementById('salA').addEventListener('input', debounced);
+  document.getElementById('salB').addEventListener('input', debounced);
+  compare();
+})();
+</script>
+{% endblock %}

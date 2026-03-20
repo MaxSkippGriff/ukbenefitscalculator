@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="section">
+  <div class="badge">Guides</div>
+  <h1>Employer guides</h1>
+  <p>Practical UK employer guides. Written by EmployerCalculator Editorial. Reviewed against official UK sources.</p>
+  <div class="grid-3" style="margin-top:1rem;">
+    {% for slug, guide in guide_items.items() %}
+    <a class="tool-card" href="/guides/{{ slug }}">
+      <div class="tool-tag" style="margin-bottom:0.35rem; color:var(--accent-warm);">{{ guide.topic }}</div>
+      <h3>{{ guide.title }}</h3>
+      <p>{{ guide.description }}</p>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

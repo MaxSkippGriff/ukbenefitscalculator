@@ -1,0 +1,295 @@
+{% extends "base.html" %}
+
+{% block title %}Unfair Dismissal Compensation Calculator 2025/26 | EmployerCalculator.co.uk{% endblock %}
+
+{% block meta_description %}Estimate unfair dismissal compensation for 2025/26. Calculates basic award (statutory redundancy method) and compensatory award using the £700/week cap and £105,707 compensatory limit.{% endblock %}
+
+{% block jsonld %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Unfair Dismissal Compensation Calculator 2025/26",
+  "url": "{{ canonical_url }}",
+  "description": "Estimate unfair dismissal compensation: basic award plus compensatory award. Updated for Employment Rights Act 2025 changes.",
+  "applicationCategory": "FinanceApplication",
+  "operatingSystem": "Any",
+  "inLanguage": "en-GB",
+  "isAccessibleForFree": true,
+  "keywords": "unfair dismissal calculator, unfair dismissal compensation UK, employment tribunal calculator 2025",
+  "offers": {"@type": "Offer", "price": "0", "priceCurrency": "GBP"},
+  "provider": {"@type": "Organization", "name": "EmployerCalculator.co.uk", "url": "{{ site_url }}"}
+}
+</script>
+{% endblock %}
+
+{% block head_extra %}
+<style>
+.calc-wrap { max-width: 980px; margin: 0 auto; padding: 2rem 1.25rem 3.5rem; }
+.calc-header { margin-bottom: 1.5rem; }
+.calc-header p { color: var(--text-secondary); font-size: 0.95rem; max-width: 620px; margin-top: 0.4rem; }
+.calc-grid { display: grid; grid-template-columns: minmax(280px,380px) 1fr; gap: 1rem; align-items: start; }
+@media (max-width: 720px) { .calc-grid { grid-template-columns: 1fr; } }
+.input-card { background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 1.2rem 1.4rem; }
+.input-card h2 { font-family: var(--font-display); font-size: 1rem; font-weight: 500; letter-spacing: -0.02em; margin-bottom: 1rem; }
+.field { margin-bottom: 0.9rem; }
+.field label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.35rem; }
+.field input, .field select { width: 100%; padding: 0.55rem 0.75rem; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-body); font-size: 0.95rem; background: var(--surface); color: var(--text-primary); outline: none; transition: border-color var(--transition), box-shadow var(--transition); box-sizing: border-box; }
+.field input:focus, .field select:focus { border-color: rgba(27,107,74,0.4); box-shadow: 0 0 0 4px rgba(27,107,74,0.10); }
+.result-card { background: var(--surface); border: 1.5px solid var(--border-strong); border-top: 3px solid var(--accent); border-radius: var(--radius); overflow: hidden; }
+.result-head { padding: 1.1rem 1.4rem 0.9rem; border-bottom: 1px solid var(--border); }
+.result-head-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent); margin-bottom: 0.3rem; }
+.result-primary { font-family: var(--font-display); font-size: clamp(1.8rem, 3.5vw, 2.3rem); font-weight: 500; color: var(--text-primary); letter-spacing: -0.02em; line-height: 1.1; }
+.result-sub { font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.25rem; }
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px,1fr)); gap: 0.5rem; padding: 0.9rem 1.4rem; }
+.kpi { background: var(--surface-alt); border-radius: var(--radius-sm); padding: 0.7rem 0.85rem; }
+.kpi-label { font-size: 0.72rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.2rem; }
+.kpi-value { font-family: var(--font-body); font-size: 1.1rem; font-weight: 600; color: var(--text-primary); letter-spacing: -0.01em; font-variant-numeric: tabular-nums lining-nums; font-feature-settings: 'tnum' 1, 'lnum' 1; }
+.result-note { padding: 0.7rem 1.4rem 1rem; font-size: 0.78rem; color: var(--text-tertiary); border-top: 1px solid var(--border); }
+.faq-section { margin-top: 1.5rem; background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 1.2rem 1.4rem; }
+.faq-section h2 { font-family: var(--font-display); font-size: 1.05rem; font-weight: 500; letter-spacing: -0.02em; margin-bottom: 1rem; }
+.faq-item { border-top: 1px solid var(--border); padding: 0.75rem 0; }
+.faq-item summary { font-size: 0.88rem; font-weight: 600; cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; color: var(--text-primary); }
+.faq-item summary::-webkit-details-marker { display: none; }
+.faq-item summary::after { content: '+'; font-size: 1.1rem; color: var(--text-tertiary); }
+.faq-item[open] summary::after { content: '−'; }
+.faq-answer { font-size: 0.85rem; color: var(--text-secondary); padding-top: 0.5rem; line-height: 1.6; }
+.cross-link { margin-top: 1.5rem; background: var(--accent-light); border: 1.5px solid rgba(27,107,74,0.2); border-radius: var(--radius); padding: 1rem 1.4rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.cross-link p { font-size: 0.88rem; color: var(--accent); font-weight: 500; margin: 0; }
+.cross-link a { font-size: 0.82rem; font-weight: 700; color: var(--accent); text-decoration: none; white-space: nowrap; padding: 0.4rem 0.9rem; border: 1.5px solid var(--accent); border-radius: var(--radius-sm); transition: all var(--transition); }
+.cross-link a:hover { background: var(--accent); color: #fff; }
+
+/* Award breakdown */
+.award-breakdown { padding: 0 1.4rem 1rem; border-top: 1px solid var(--border); }
+.award-row { display: flex; justify-content: space-between; align-items: center; padding: 0.55rem 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+.award-row:last-child { border-bottom: none; font-weight: 700; font-size: 0.9rem; }
+.award-row span:first-child { color: var(--text-secondary); }
+.award-row span:last-child { font-family: var(--font-body); font-variant-numeric: tabular-nums lining-nums; font-feature-settings: 'tnum' 1, 'lnum' 1; color: var(--text-primary); }
+.award-row.total span { color: var(--text-primary); }
+.award-row.capped-note { font-size: 0.75rem; color: var(--text-tertiary); display: block; padding: 0.3rem 0; }
+
+/* Disclaimer box */
+.disclaimer { margin-top: 1.5rem; background: var(--surface-alt); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 1rem 1.4rem; font-size: 0.8rem; color: var(--text-secondary); line-height: 1.6; }
+.disclaimer strong { color: var(--text-primary); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="calc-wrap">
+  <div class="calc-header">
+    <h1>Unfair Dismissal Compensation Calculator 2025/26</h1>
+    <p>Estimate basic and compensatory award amounts using 2025/26 statutory limits. For indicative purposes only.</p>
+  </div>
+
+  <div class="calc-grid">
+    <!-- Input card -->
+    <div class="input-card">
+      <h2>Enter Details</h2>
+
+      <div class="field">
+        <label for="salary">Annual salary (gross)</label>
+        <input type="text" id="salary" value="£40,000" inputmode="numeric">
+      </div>
+
+      <div class="field">
+        <label for="age">Age at dismissal</label>
+        <input type="number" id="age" value="38" min="18" max="80">
+      </div>
+
+      <div class="field">
+        <label for="service">Years of continuous service</label>
+        <input type="number" id="service" value="5" min="0" max="50">
+      </div>
+
+      <div class="field">
+        <label for="strength">Claim strength</label>
+        <select id="strength">
+          <option value="weak">Weak (3&ndash;6 months)</option>
+          <option value="moderate" selected>Moderate (6&ndash;12 months)</option>
+          <option value="strong">Strong (12&ndash;18 months)</option>
+        </select>
+      </div>
+
+      <div style="margin-top: 1rem; padding: 0.7rem 0.85rem; background: var(--surface-alt); border-radius: var(--radius-sm); font-size: 0.78rem; color: var(--text-secondary); line-height: 1.5;">
+        <strong>2025/26 caps:</strong> Weekly pay £700 &bull; Compensatory award £105,707 &bull; Max service 20 years
+      </div>
+    </div>
+
+    <!-- Result card -->
+    <div>
+      <div class="result-card">
+        <div class="result-head">
+          <div class="result-head-label">Total estimated compensation</div>
+          <div class="result-primary" id="res-total">£15,000</div>
+          <div class="result-sub">Basic award + compensatory award</div>
+        </div>
+        <div class="award-breakdown">
+          <div class="award-row">
+            <span>Basic award</span>
+            <span id="bd-basic">—</span>
+          </div>
+          <div class="award-row">
+            <span>Compensatory award (pre-cap)</span>
+            <span id="bd-comp-precap">—</span>
+          </div>
+          <div class="award-row">
+            <span>Compensatory cap applied</span>
+            <span id="bd-cap-applied">—</span>
+          </div>
+          <div class="award-row">
+            <span>Compensatory award (capped)</span>
+            <span id="bd-comp">—</span>
+          </div>
+          <div class="award-row total">
+            <span>Total estimate</span>
+            <span id="bd-total">—</span>
+          </div>
+        </div>
+        <div class="kpi-grid">
+          <div class="kpi">
+            <div class="kpi-label">Basic award</div>
+            <div class="kpi-value" id="kpi-basic">—</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Compensatory award</div>
+            <div class="kpi-value" id="kpi-comp">—</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Cap applied</div>
+            <div class="kpi-value" id="kpi-cap">—</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Total</div>
+            <div class="kpi-value" id="kpi-total">—</div>
+          </div>
+        </div>
+        <div class="result-note">
+          Estimates only. Compensatory award is at tribunal discretion. Actual amounts depend on loss of earnings, mitigation efforts, contributory fault and judicial assessment. Employment Rights Act 2025 changes are ongoing &mdash; check GOV.UK for updates.
+        </div>
+      </div>
+
+      <div class="cross-link">
+        <p>Calculate full employer cost including NI and pension</p>
+        <a href="/calculator">Employer Cost Calculator &rarr;</a>
+      </div>
+
+      <div class="disclaimer">
+        <strong>Important:</strong> This calculator provides estimates only and does not constitute legal advice. Tribunal awards vary significantly based on individual circumstances, judicial discretion, contributory fault and the claimant's duty to mitigate their loss. Always seek advice from an employment law specialist.
+      </div>
+
+      <div class="faq-section">
+        <h2>Frequently Asked Questions</h2>
+
+        <details class="faq-item">
+          <summary>What is the basic award for unfair dismissal?</summary>
+          <div class="faq-answer">
+            The basic award is calculated in the same way as statutory redundancy pay &mdash; using age, years of service (up to 20) and weekly pay (capped at £700 for 2025/26). It is the minimum compensation for an unfair dismissal claim regardless of actual financial loss.
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary>How is the compensatory award calculated?</summary>
+          <div class="faq-answer">
+            The compensatory award compensates for actual financial loss caused by the unfair dismissal, including lost earnings, loss of benefits and future loss of earnings. It is capped at the lower of 52 weeks&apos; gross pay or £105,707 for 2025/26. Tribunals may reduce awards for contributory fault or failure to mitigate.
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary>What changes are coming under the Employment Rights Act 2025?</summary>
+          <div class="faq-answer">
+            The Employment Rights Act 2025 introduces day-one unfair dismissal rights, removing the current two-year qualifying period. This significantly expands the pool of employees who can bring unfair dismissal claims. The Act is being implemented in stages through 2025 and 2026 &mdash; employers should monitor GOV.UK for commencement dates.
+          </div>
+        </details>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  var WEEKLY_PAY_CAP = 700;
+  var COMP_CAP = 105707;
+
+  function money(n) { return '\u00a3' + Math.round(n).toLocaleString('en-GB'); }
+  function setText(id, v) { var el = document.getElementById(id); if (el) el.textContent = v; }
+  function parseMoney(v) { return parseFloat(String(v).replace(/[^0-9.]/g,'')) || 0; }
+
+  function calcBasicAward(age, service, weeklyPay) {
+    var wp = Math.min(weeklyPay, WEEKLY_PAY_CAP);
+    var years = Math.min(service, 20);
+    var total = 0;
+    for (var y = 1; y <= years; y++) {
+      var ageAtYear = age - y + 1;
+      var mult = ageAtYear < 22 ? 0.5 : ageAtYear <= 40 ? 1.0 : 1.5;
+      total += mult * wp;
+    }
+    return total;
+  }
+
+  var STRENGTH_MAP = {
+    weak:     4.5 / 12,
+    moderate: 9   / 12,
+    strong:   15  / 12
+  };
+
+  function calculate() {
+    var salary   = parseMoney(document.getElementById('salary').value);
+    var age      = parseInt(document.getElementById('age').value) || 0;
+    var service  = parseInt(document.getElementById('service').value) || 0;
+    var strength = document.getElementById('strength').value;
+
+    var weeklyPay = salary / 52;
+
+    // Basic award
+    var basicAward = calcBasicAward(age, service, weeklyPay);
+
+    // Compensatory award
+    var multiplier = STRENGTH_MAP[strength] || STRENGTH_MAP.moderate;
+    var compPreCap = salary * multiplier;
+
+    // Compensatory cap: lower of 52 weeks' pay or £105,707
+    var compCapLimit = Math.min(weeklyPay * 52, COMP_CAP);
+    var compAward = Math.min(compPreCap, compCapLimit);
+    var capApplied = compPreCap > compCapLimit;
+
+    var total = basicAward + compAward;
+
+    // Update result
+    setText('res-total', money(total));
+
+    // Breakdown
+    setText('bd-basic', money(basicAward));
+    setText('bd-comp-precap', money(compPreCap));
+    setText('bd-cap-applied', capApplied ? 'Yes (limit: ' + money(compCapLimit) + ')' : 'No');
+    setText('bd-comp', money(compAward));
+    setText('bd-total', money(total));
+
+    // KPIs
+    setText('kpi-basic', money(basicAward));
+    setText('kpi-comp', money(compAward));
+    setText('kpi-cap', capApplied ? 'Yes' : 'No');
+    setText('kpi-total', money(total));
+  }
+
+  // Format salary input
+  var salaryInput = document.getElementById('salary');
+  salaryInput.addEventListener('focus', function() {
+    this.value = String(parseMoney(this.value));
+  });
+  salaryInput.addEventListener('blur', function() {
+    var v = parseMoney(this.value);
+    this.value = v ? '\u00a3' + Math.round(v).toLocaleString('en-GB') : '';
+    calculate();
+  });
+  salaryInput.addEventListener('input', calculate);
+
+  document.getElementById('age').addEventListener('input', calculate);
+  document.getElementById('service').addEventListener('input', calculate);
+  document.getElementById('strength').addEventListener('change', calculate);
+
+  calculate();
+})();
+</script>
+{% endblock %}

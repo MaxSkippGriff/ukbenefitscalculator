@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% set day_fmt = "£{:,.0f}".format(day_rate) %}
+{% set annual_fmt = "£{:,}".format(annual_salary) %}
+{% block title %}{{ day_fmt }}/day After Tax (UK 2025/26){% endblock %}
+{% block meta_description %}Estimate take-home pay for {{ day_fmt }} per day in the UK. Includes annual equivalent, Scotland comparison, student loan and pension scenarios.{% endblock %}
+{% block canonical %}<link rel="canonical" href="{{ canonical_url }}">{% endblock %}
+
+{% block head_extra %}
+<script>
+  window.dataLayer = window.dataLayer || [];
+  window.dataLayer.push({
+    event: 'salary_page_view',
+    page_type: 'day_rate',
+    day_rate: {{ day_rate }},
+    annual_equivalent: {{ annual_salary }}
+  });
+</script>
+{% endblock %}
+
+{% block jsonld %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {"@type":"ListItem","position":1,"name":"Home","item":"{{ site_url }}/"},
+    {"@type":"ListItem","position":2,"name":"Day rate","item":"{{ site_url }}/day-rate"},
+    {"@type":"ListItem","position":3,"name":"{{ day_fmt }} after tax","item":"{{ canonical_url }}"}
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context":"https://schema.org",
+  "@type":"FAQPage",
+  "mainEntity":[
+    {"@type":"Question","name":"How is {{ day_fmt }} converted to salary?","acceptedAnswer":{"@type":"Answer","text":"This page uses 230 working days, so {{ day_fmt }} per day is treated as {{ annual_fmt }} annual gross for take-home estimates."}},
+    {"@type":"Question","name":"Is this exact payroll advice?","acceptedAnswer":{"@type":"Answer","text":"No. This is a planning estimate. Final payroll depends on tax code, NI category, student loan and pension settings."}},
+    {"@type":"Question","name":"Does region change take-home?","acceptedAnswer":{"@type":"Answer","text":"Yes. Scotland and rUK use different income tax bands, so net pay can differ at the same annual equivalent."}}
+  ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<section class="max-w-6xl mx-auto px-4 sm:px-6 py-10">
+  <nav class="text-sm text-slate-500 mb-4"><a href="/" class="hover:text-blue-600">Home</a> / <a href="/day-rate" class="hover:text-blue-600">Day rate</a> / <span class="text-slate-700">{{ day_fmt }} after tax</span></nav>
+  <h1 class="text-4xl font-extrabold text-slate-900">{{ day_fmt }}/day After Tax in the UK (2025/26)</h1>
+  <p class="mt-3 text-slate-600 max-w-4xl">Using a 230-day working year, {{ day_fmt }}/day maps to an annual gross equivalent of <strong>{{ annual_fmt }}</strong>. Use this page to benchmark monthly take-home under standard UK payroll assumptions.</p>
+
+  <div class="grid md:grid-cols-4 gap-4 mt-6">
+    <div class="card p-4"><div class="text-xs text-slate-500">Annual equivalent</div><div class="text-2xl font-bold text-slate-900">{{ annual_fmt }}</div></div>
+    <div class="card p-4"><div class="text-xs text-slate-500">England monthly</div><div class="text-2xl font-bold text-slate-900">{{ england.take_home.monthly|gbp2 }}</div></div>
+    <div class="card p-4"><div class="text-xs text-slate-500">Scotland monthly</div><div class="text-2xl font-bold text-slate-900">{{ scotland.take_home.monthly|gbp2 }}</div></div>
+    <div class="card p-4"><div class="text-xs text-slate-500">Annual take-home (England)</div><div class="text-2xl font-bold text-emerald-700">{{ england.take_home.annual|gbp2 }}</div></div>
+  </div>
+
+  <div class="card p-6 mt-6">
+    <h2 class="text-2xl font-bold text-slate-900">Worked scenarios</h2>
+    <ul class="mt-3 list-disc pl-5 text-slate-600 space-y-2">
+      <li>Plan 2 student loan monthly net: <strong>{{ scenario_plan2.take_home.monthly|gbp2 }}</strong></li>
+      <li>5% pension monthly net: <strong>{{ scenario_pension5.take_home.monthly|gbp2 }}</strong></li>
+      <li>Base monthly net (England): <strong>{{ england.take_home.monthly|gbp2 }}</strong></li>
+    </ul>
+  </div>
+
+  <div class="card p-6 mt-6">
+    <h2 class="text-2xl font-bold text-slate-900">Related pages</h2>
+    <div class="mt-3 flex flex-wrap gap-2 text-sm">
+      <a href="/salary/{{ annual_salary }}/england" class="rounded-full border border-slate-300 px-3 py-1.5 hover:bg-slate-50">{{ annual_fmt }} salary page</a>
+      <a href="/salary/{{ annual_salary }}-after-tax" class="rounded-full border border-slate-300 px-3 py-1.5 hover:bg-slate-50">{{ annual_fmt }} after-tax intent page</a>
+      <a href="/compare/scotland-vs-england-on-{{ annual_salary if annual_salary in [35000,50000,60000,100000] else 50000 }}" class="rounded-full border border-slate-300 px-3 py-1.5 hover:bg-slate-50">Scotland vs England comparison</a>
+      <a href="/student-loans" class="rounded-full border border-slate-300 px-3 py-1.5 hover:bg-slate-50">Student loans guide</a>
+      <a href="/pension-salary-sacrifice" class="rounded-full border border-slate-300 px-3 py-1.5 hover:bg-slate-50">Pension salary sacrifice guide</a>
+      <a href="/calculator?salary={{ annual_salary }}&region=england" class="rounded-full border border-slate-300 px-3 py-1.5 hover:bg-slate-50">Open calculator state</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

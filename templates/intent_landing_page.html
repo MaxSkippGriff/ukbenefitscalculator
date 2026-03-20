@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="section">
+  <div class="badge">{{ page.badge }}</div>
+  <h1>{{ page.h1 }}</h1>
+  <p>{{ page.intro }}</p>
+  <p style="font-size:0.9rem; color:var(--text-secondary);">UK scope: England, Scotland, Wales and Northern Ireland employer payroll planning for the {{ tax_year }} tax year.</p>
+
+  <div class="grid-3" style="margin-top:1rem;">
+    <div class="card" style="padding:1rem;">
+      <h2 style="font-size:1rem; margin-bottom:0.35rem;">Sample total cost</h2>
+      <p style="font-size:1.35rem; font-family:var(--font-display); color:var(--text-primary); margin-bottom:0.2rem;">{{ sample_calc.total_cost|money }}</p>
+      <p style="font-size:0.82rem; color:var(--text-tertiary); margin:0;">{{ sample_calc.total_cost|monthly }} per month on £{{ "{:,}".format(sample_calc.salary|int) }} salary</p>
+    </div>
+    <div class="card" style="padding:1rem;">
+      <h2 style="font-size:1rem; margin-bottom:0.35rem;">Employer NI</h2>
+      <p style="font-size:1.35rem; font-family:var(--font-display); color:var(--text-primary); margin-bottom:0.2rem;">{{ sample_calc.employer_ni.ni_due|money }}</p>
+      <p style="font-size:0.82rem; color:var(--text-tertiary); margin:0;">15% above £5,000 secondary threshold (2025/26)</p>
+    </div>
+    <div class="card" style="padding:1rem;">
+      <h2 style="font-size:1rem; margin-bottom:0.35rem;">Pension + overheads</h2>
+      <p style="font-size:1.35rem; font-family:var(--font-display); color:var(--text-primary); margin-bottom:0.2rem;">{{ (sample_calc.pension_contribution + sample_calc.overheads)|money }}</p>
+      <p style="font-size:0.82rem; color:var(--text-tertiary); margin:0;">Baseline employer pension plus configured overheads</p>
+    </div>
+  </div>
+
+  <section class="card" style="padding:1rem 1.15rem; margin-top:1rem;">
+    <h2 style="font-size:1.05rem; margin-bottom:0.5rem;">What this page helps you check</h2>
+    <ul style="padding-left:1.1rem; margin:0; color:var(--text-secondary);">
+      {% for bullet in page.bullets %}
+      <li style="margin-bottom:0.4rem;">{{ bullet }}</li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section class="card" style="padding:1rem 1.15rem; margin-top:0.9rem;">
+    <h2 style="font-size:1.05rem; margin-bottom:0.5rem;">Use the live tools</h2>
+    <div class="pill-grid">
+      <a class="pill" href="{{ page.primary_cta.url }}">{{ page.primary_cta.label }}</a>
+      <a class="pill" href="/cost-of-employing">Cost of employing by salary</a>
+      <a class="pill" href="/employer-ni">Employer NI by salary</a>
+      <a class="pill" href="/pension-cost">Auto-enrolment pension calculator</a>
+    </div>
+  </section>
+
+  <section class="card" style="padding:1rem 1.15rem; margin-top:0.9rem;">
+    <h2 style="font-size:1.05rem; margin-bottom:0.5rem;">UK assumptions used</h2>
+    <div class="grid-3">
+      <div>
+        <p style="font-size:0.78rem; color:var(--text-tertiary); margin-bottom:0.2rem;">Employer NI</p>
+        <p style="font-size:0.88rem; color:var(--text-secondary); margin:0;">15% above £5,000 secondary threshold for 2025/26.</p>
+      </div>
+      <div>
+        <p style="font-size:0.78rem; color:var(--text-tertiary); margin-bottom:0.2rem;">Auto-enrolment pension</p>
+        <p style="font-size:0.88rem; color:var(--text-secondary); margin:0;">Minimum employer contribution 3% on qualifying earnings.</p>
+      </div>
+      <div>
+        <p style="font-size:0.78rem; color:var(--text-tertiary); margin-bottom:0.2rem;">Employment Allowance</p>
+        <p style="font-size:0.88rem; color:var(--text-secondary); margin:0;">Up to £10,500 relief in 2025/26 for eligible employers.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" style="padding:1rem 1.15rem; margin-top:0.9rem;">
+    <h2 style="font-size:1.05rem; margin-bottom:0.5rem;">Official UK references</h2>
+    <div class="pill-grid">
+      <a class="pill" href="https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2025-to-2026" rel="noopener" target="_blank">HMRC rates and thresholds</a>
+      <a class="pill" href="https://www.gov.uk/claim-employment-allowance" rel="noopener" target="_blank">Employment Allowance</a>
+      <a class="pill" href="https://www.thepensionsregulator.gov.uk/en/employers/automatic-enrolment-guide-for-employers/contributions" rel="noopener" target="_blank">Pensions Regulator guidance</a>
+      <a class="pill" href="/methodology">Our methodology</a>
+      <a class="pill" href="/sources">Our source list</a>
+    </div>
+  </section>
+
+  {% if faq_items %}
+  <section class="card" style="padding:1rem 1.15rem; margin-top:0.9rem;">
+    <h2 style="font-size:1.05rem; margin-bottom:0.6rem;">Frequently asked questions</h2>
+    <div class="faq-list">
+      {% for item in faq_items %}
+      <details class="faq-item">
+        <summary>{{ item.q }}</summary>
+        <div class="faq-answer">{{ item.a }}</div>
+      </details>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  <p style="font-size:0.82rem; color:var(--text-tertiary); margin-top:0.9rem;">UK coverage only. Last reviewed: {{ now.strftime('%d %B %Y') }}. Estimates use 2025/26 assumptions and are for planning, not legal or tax advice.</p>
+</section>
+{% endblock %}

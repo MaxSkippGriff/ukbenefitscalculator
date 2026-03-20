@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}{{ page.title }}{% endblock %}
+{% block meta_description %}{{ page.description }}{% endblock %}
+{% block canonical %}<link rel="canonical" href="{{ site_url }}/take-home-pay-in/{{ page.slug }}">{% endblock %}
+
+{% block head_extra %}
+<meta property="og:type" content="website">
+<meta property="og:url" content="{{ site_url }}/take-home-pay-in/{{ page.slug }}">
+<meta property="og:title" content="{{ page.title }}">
+<meta property="og:description" content="{{ page.description }}">
+<meta name="twitter:card" content="summary_large_image">
+{% endblock %}
+
+{% block content %}
+<section class="max-w-5xl mx-auto px-4 sm:px-6 pt-12 pb-8">
+  <h1 class="text-4xl sm:text-5xl font-extrabold text-slate-900">{{ page.city }} Take-Home Pay Guide</h1>
+  <p class="mt-4 text-lg text-slate-500">{{ page.intro }}</p>
+</section>
+
+<section class="max-w-5xl mx-auto px-4 sm:px-6 pb-10">
+  <div class="grid md:grid-cols-3 gap-4">
+    <div class="card p-5">
+      <div class="text-xs text-slate-500">Example gross salary</div>
+      <div class="text-2xl font-bold text-slate-900">{{ sample.gross_salary|gbp }}</div>
+    </div>
+    <div class="card p-5">
+      <div class="text-xs text-slate-500">Estimated take-home</div>
+      <div class="text-2xl font-bold text-blue-600">{{ sample.take_home.annual|gbp }}</div>
+    </div>
+    <div class="card p-5">
+      <div class="text-xs text-slate-500">Effective tax rate</div>
+      <div class="text-2xl font-bold text-slate-900">{{ sample.effective_tax_rate }}%</div>
+    </div>
+  </div>
+</section>
+
+<section class="max-w-5xl mx-auto px-4 sm:px-6 pb-20">
+  <div class="card p-6">
+    <h2 class="text-2xl font-bold text-slate-900 mb-3">What to check for {{ page.city }} salary planning</h2>
+    <p class="text-slate-600 mb-4">{{ page.body }}</p>
+    <ul class="list-disc pl-6 text-slate-600 mb-4">
+      {% for bullet in page.bullets %}
+      <li>{{ bullet }}</li>
+      {% endfor %}
+    </ul>
+    <p class="text-slate-600">
+      Run your exact numbers in the
+      <a href="/calculator" class="text-blue-600 font-semibold hover:underline">salary calculator</a>
+      , browse the
+      <a href="/salaries" class="text-blue-600 font-semibold hover:underline">salary hub</a>,
+      and compare with
+      <a href="/salary/50000/england" class="text-blue-600 font-semibold hover:underline">popular salary breakdowns</a>.
+    </p>
+  </div>
+</section>
+{% endblock %}

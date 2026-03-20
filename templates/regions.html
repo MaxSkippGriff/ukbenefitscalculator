@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}UK Tax Regions: rUK vs Scotland {{ tax_year }}{% endblock %}
+{% block meta_description %}Compare take-home pay between England/Wales/NI (rUK) and Scotland for {{ tax_year }}. See how Scottish income tax bands differ and what it means for your salary.{% endblock %}
+{% block canonical %}<link rel="canonical" href="{{ site_url }}/regions">{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+  <nav class="text-sm text-gray-400 mb-6">
+    <a href="/" class="hover:text-brand-600 transition-colors">Home</a>
+    <span class="mx-1.5">/</span>
+    <span class="text-gray-600">Regions</span>
+  </nav>
+
+  <h1 class="text-3xl sm:text-4xl font-extrabold text-gray-900 animate-fade-in">
+    rUK vs Scotland: Tax Differences <span class="text-brand-600">{{ tax_year }}</span>
+  </h1>
+  <p class="mt-3 text-lg text-gray-500">
+    Scotland sets its own income tax rates, which differ from the rest of the UK (England, Wales, and Northern Ireland).
+    National Insurance rates are the same across the UK.
+  </p>
+
+  <!-- Comparison at £50k -->
+  <div class="mt-10 grid sm:grid-cols-2 gap-6">
+    <div class="bg-white rounded-2xl card-shadow p-6 animate-slide-up">
+      <div class="flex items-center gap-2 mb-4">
+        <span class="text-2xl">🏴󠁧󠁢󠁥󠁮󠁧󠁿</span>
+        <h2 class="font-bold text-gray-900">England / Wales / NI</h2>
+      </div>
+      <p class="text-sm text-gray-500 mb-4">£50,000 salary</p>
+      <div class="space-y-2 text-sm">
+        <div class="flex justify-between"><span class="text-gray-600">Income tax</span><span class="font-medium">{{ sample_ruk.income_tax.total_tax|gbp2 }}</span></div>
+        <div class="flex justify-between"><span class="text-gray-600">National Insurance</span><span class="font-medium">{{ sample_ruk.national_insurance.total_ni|gbp2 }}</span></div>
+        <div class="flex justify-between border-t border-gray-100 pt-2"><span class="font-bold text-brand-700">Take-home</span><span class="font-bold text-brand-700">{{ sample_ruk.take_home.annual|gbp }}</span></div>
+      </div>
+      <p class="mt-3 text-xs text-gray-400">Bands: 20% Basic / 40% Higher / 45% Additional</p>
+    </div>
+
+    <div class="bg-white rounded-2xl card-shadow p-6 animate-slide-up stagger-1">
+      <div class="flex items-center gap-2 mb-4">
+        <span class="text-2xl">🏴󠁧󠁢󠁳󠁣󠁴󠁿</span>
+        <h2 class="font-bold text-gray-900">Scotland</h2>
+      </div>
+      <p class="text-sm text-gray-500 mb-4">£50,000 salary</p>
+      <div class="space-y-2 text-sm">
+        <div class="flex justify-between"><span class="text-gray-600">Income tax</span><span class="font-medium">{{ sample_scot.income_tax.total_tax|gbp2 }}</span></div>
+        <div class="flex justify-between"><span class="text-gray-600">National Insurance</span><span class="font-medium">{{ sample_scot.national_insurance.total_ni|gbp2 }}</span></div>
+        <div class="flex justify-between border-t border-gray-100 pt-2"><span class="font-bold text-brand-700">Take-home</span><span class="font-bold text-brand-700">{{ sample_scot.take_home.annual|gbp }}</span></div>
+      </div>
+      <p class="mt-3 text-xs text-gray-400">Bands: 19% Starter / 20% Basic / 21% Intermediate / 42% Higher / 45% Advanced / 48% Top</p>
+    </div>
+  </div>
+
+  <div class="mt-8 grid sm:grid-cols-2 gap-4">
+    <a href="/regions/england-wales-ni" class="block rounded-2xl border border-slate-200 bg-white p-5 hover:border-blue-300 hover:shadow-sm transition">
+      <h2 class="font-bold text-slate-900">England, Wales and Northern Ireland</h2>
+      <p class="mt-2 text-sm text-slate-600">Detailed guide to rUK rates, thresholds and practical salary planning.</p>
+    </a>
+    <a href="/regions/scotland" class="block rounded-2xl border border-slate-200 bg-white p-5 hover:border-blue-300 hover:shadow-sm transition">
+      <h2 class="font-bold text-slate-900">Scotland</h2>
+      <p class="mt-2 text-sm text-slate-600">Detailed guide to Scottish bands, thresholds and region-specific take-home effects.</p>
+    </a>
+  </div>
+
+  {% set diff = sample_ruk.take_home.annual - sample_scot.take_home.annual %}
+  <div class="mt-6 bg-navy-50 rounded-2xl p-6 border border-navy-200/50 text-center">
+    <p class="text-gray-700">
+      At £50,000 salary, you take home <strong class="text-navy-700">{{ diff|gbp2 }}</strong>
+      {{ "more" if diff > 0 else "less" }} in England/Wales/NI than in Scotland.
+    </p>
+  </div>
+
+  <!-- Band comparison table -->
+  <div class="mt-10 bg-white rounded-2xl card-shadow p-6">
+    <h2 class="font-bold text-gray-900 mb-4">{{ tax_year }} Income Tax Bands</h2>
+    <div class="grid sm:grid-cols-2 gap-8">
+      <div>
+        <h3 class="font-semibold text-gray-700 mb-3">rUK (England, Wales, NI)</h3>
+        <table class="w-full text-sm">
+          <thead><tr class="text-gray-400 border-b"><th class="pb-2 text-left font-medium">Band</th><th class="pb-2 text-right font-medium">Rate</th><th class="pb-2 text-right font-medium">Threshold</th></tr></thead>
+          <tbody class="divide-y divide-gray-50">
+            <tr><td class="py-2">Personal Allowance</td><td class="text-right">0%</td><td class="text-right">Up to £12,570</td></tr>
+            <tr><td class="py-2">Basic rate</td><td class="text-right">20%</td><td class="text-right">£12,571–£50,270</td></tr>
+            <tr><td class="py-2">Higher rate</td><td class="text-right">40%</td><td class="text-right">£50,271–£125,140</td></tr>
+            <tr><td class="py-2">Additional rate</td><td class="text-right">45%</td><td class="text-right">Over £125,140</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <h3 class="font-semibold text-gray-700 mb-3">Scotland</h3>
+        <table class="w-full text-sm">
+          <thead><tr class="text-gray-400 border-b"><th class="pb-2 text-left font-medium">Band</th><th class="pb-2 text-right font-medium">Rate</th><th class="pb-2 text-right font-medium">Threshold</th></tr></thead>
+          <tbody class="divide-y divide-gray-50">
+            <tr><td class="py-2">Personal Allowance</td><td class="text-right">0%</td><td class="text-right">Up to £12,570</td></tr>
+            <tr><td class="py-2">Starter rate</td><td class="text-right">19%</td><td class="text-right">£12,571–£14,732</td></tr>
+            <tr><td class="py-2">Basic rate</td><td class="text-right">20%</td><td class="text-right">£14,733–£25,688</td></tr>
+            <tr><td class="py-2">Intermediate rate</td><td class="text-right">21%</td><td class="text-right">£25,689–£43,662</td></tr>
+            <tr><td class="py-2">Higher rate</td><td class="text-right">42%</td><td class="text-right">£43,663–£75,000</td></tr>
+            <tr><td class="py-2">Advanced rate</td><td class="text-right">45%</td><td class="text-right">£75,001–£125,140</td></tr>
+            <tr><td class="py-2">Top rate</td><td class="text-right">48%</td><td class="text-right">Over £125,140</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <p class="mt-4 text-xs text-gray-400">
+      Source: <a href="https://www.gov.uk/scottish-income-tax" class="text-brand-600 hover:underline" rel="nofollow">gov.uk/scottish-income-tax</a>
+    </p>
+  </div>
+
+  <div class="mt-8 text-center">
+    <a href="/calculator" class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-brand-600 text-white font-semibold hover:bg-brand-700 transition-all">
+      Try the calculator &rarr;
+    </a>
+  </div>
+</div>
+{% endblock %}

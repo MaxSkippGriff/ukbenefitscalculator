@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}About{% endblock %}
+{% block meta_description %}About AfterTaxSalary and our approach to UK salary after-tax calculations.{% endblock %}
+{% block canonical %}<link rel="canonical" href="{{ site_url }}/about">{% endblock %}
+{% block content %}
+<section class="max-w-4xl mx-auto px-4 sm:px-6 py-12">
+  <h1 class="text-4xl font-extrabold text-slate-900">About AfterTaxSalary</h1>
+  <p class="mt-4 text-slate-600 leading-relaxed">AfterTaxSalary is focused on one job: making UK net-pay calculations easy to understand and practical to use. The site combines a fast calculator with salary pages, city pages and explanatory guides so people can compare offers, plan budgets and understand why take-home pay changes.</p>
+  <div class="card p-6 mt-6 text-slate-600">
+    <h2 class="text-2xl font-bold text-slate-900 mb-3">What this site is for</h2>
+    <p class="leading-relaxed">Use the calculator to estimate take-home pay, compare salary scenarios and understand how deductions affect monthly cashflow. The salary and city pages are designed to answer common search questions (for example, “£50k after tax in Scotland” or “take-home pay in Manchester”) with useful links into the core tools. For formal personal guidance, consult a qualified adviser.</p>
+  </div>
+  <div class="card p-6 mt-6 text-slate-600">
+    <h2 class="text-2xl font-bold text-slate-900 mb-3">Editorial approach</h2>
+    <p class="leading-relaxed">Every guide and salary page is written in plain British English and reviewed against current HMRC and GOV.UK guidance for the active tax year. We prioritise practical accuracy, transparent assumptions and pages that are genuinely useful for salary planning. Where a page contains estimates, assumptions and limitations are linked clearly to the <a href="/methodology" class="text-blue-600 font-semibold hover:underline">methodology page</a>.</p>
+  </div>
+  <div class="card p-6 mt-6 text-slate-600">
+    <h2 class="text-2xl font-bold text-slate-900 mb-3">How the site is maintained</h2>
+    <ul class="list-disc pl-6 space-y-2">
+      <li>Calculator assumptions are updated when tax-year rates and thresholds change.</li>
+      <li>Guides and salary pages are reviewed for internal-link quality and content relevance.</li>
+      <li>Pages are improved when users report confusing assumptions or unclear wording.</li>
+      <li>We avoid publishing thin pages that do not add practical value to a user.</li>
+    </ul>
+  </div>
+  <div class="card p-6 mt-6 text-slate-600">
+    <h2 class="text-2xl font-bold text-slate-900 mb-3">Author and contact</h2>
+    <p>Editorial owner: Max Griffiths.</p>
+    <p class="mt-2">For corrections or data-quality feedback, contact: <a class="text-blue-600 font-semibold hover:underline" href="mailto:mskippergriffiths@gmail.com">mskippergriffiths@gmail.com</a>.</p>
+    <p class="mt-2 text-sm text-slate-500">Last reviewed: 15 February 2026.</p>
+  </div>
+</section>
+{% endblock %}

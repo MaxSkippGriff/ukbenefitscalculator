@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block jsonld %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FinancialProduct",
+  "name": "Cost of employing someone on £{{ "{:,}".format(salary) }} ({{ tax_year }})",
+  "description": "Total employer cost for a £{{ "{:,}".format(salary) }} salary in {{ tax_year }}, including employer NI at 15% and auto-enrolment pension contributions."
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<section class="section">
+  <div class="badge">Employer cost</div>
+  <h1>Cost of employing someone on £{{ "{:,}".format(salary) }} in {{ tax_year }}</h1>
+  <p>Employing someone on a £{{ "{:,}".format(salary) }} salary costs <strong>{{ calc.total_cost|money }}</strong> per year ({{ calc.total_cost|monthly }} per month) once you add employer NI at 15% and minimum auto-enrolment pension. That is <strong>{{ calc.cost_above_salary|money }}</strong> above the headline salary — a {{ calc.cost_above_salary_pct|percent }} uplift employers need to budget for before the first payslip.</p>
+
+  <div class="card" style="padding:1rem 1.1rem; margin-top:0.9rem;">
+    <h2 style="font-size:1.18rem;">Monthly-first summary</h2>
+    <p style="margin-bottom:0.25rem;"><strong>{{ calc.total_cost|monthly }}</strong> per month total employer cost.</p>
+    <p style="margin-bottom:0.25rem;"><strong>{{ calc.employer_ni.gross_ni|monthly }}</strong> per month employer NI ({{ calc.employer_ni.gross_ni|money }} per year).</p>
+    <p style="margin-bottom:0;"><strong>{{ calc.cost_above_salary|money }}</strong> per year above salary ({{ calc.cost_above_salary_pct|percent }}).</p>
+  </div>
+
+  <div class="card" style="padding:1rem 1.1rem; margin-top:0.9rem; overflow-x:auto;">
+    <h2 style="font-size:1.15rem;">Full cost breakdown</h2>
+    <table style="width:100%; border-collapse:collapse; margin-top:0.4rem;">
+      <tr><th style="text-align:left; border-bottom:1px solid var(--border); padding:0.5rem 0.2rem; font-size:0.72rem; text-transform:uppercase; color:var(--text-tertiary);">Item</th><th style="text-align:right; border-bottom:1px solid var(--border); padding:0.5rem 0.2rem; font-size:0.72rem; text-transform:uppercase; color:var(--text-tertiary);">Annual</th><th style="text-align:right; border-bottom:1px solid var(--border); padding:0.5rem 0.2rem; font-size:0.72rem; text-transform:uppercase; color:var(--text-tertiary);">Monthly</th></tr>
+      <tr><td style="padding:0.45rem 0.2rem; border-bottom:1px solid var(--border);">Salary</td><td style="padding:0.45rem 0.2rem; border-bottom:1px solid var(--border); text-align:right;">{{ calc.salary|money }}</td><td style="padding:0.45rem 0.2rem; border-bottom:1px solid var(--border); text-align:right;">{{ calc.salary|monthly }}</td></tr>
+      <tr><td style="padding:0.45rem 0.2rem; border-bottom:1px solid var(--border);">Employer NI (15% above £5,000)</td><td style="padding:0.45rem 0.2rem; border-bottom:1px solid var(--border); text-align:right;">{{ calc.employer_ni.gross_ni|money }}</td><td style="padding:0.45rem 0.2rem; border-bottom:1px solid var(--border); text-align:right;">{{ calc.employer_ni.gross_ni|monthly }}</td></tr>
+      <tr><td style="padding:0.45rem 0.2rem; border-bottom:1px solid var(--border);">Employer pension (3% minimum)</td><td style="padding:0.45rem 0.2rem; border-bottom:1px solid var(--border); text-align:right;">{{ calc.pension_contribution|money }}</td><td style="padding:0.45rem 0.2rem; border-bottom:1px solid var(--border); text-align:right;">{{ calc.pension_contribution|monthly }}</td></tr>
+      <tr><td style="padding:0.45rem 0.2rem; border-bottom:1px solid var(--border); font-weight:600;">Total employer cost</td><td style="padding:0.45rem 0.2rem; border-bottom:1px solid var(--border); text-align:right; font-weight:600;">{{ calc.total_cost|money }}</td><td style="padding:0.45rem 0.2rem; border-bottom:1px solid var(--border); text-align:right; font-weight:600;">{{ calc.total_cost|monthly }}</td></tr>
+    </table>
+  </div>
+
+  <div class="card" style="padding:1rem 1.1rem; margin-top:0.9rem; overflow-x:auto;">
+    <h2 style="font-size:1.15rem;">Employer NI band breakdown</h2>
+    <p style="margin-bottom:0.5rem; font-size:0.9rem; color:var(--text-secondary);">Employer NI for {{ tax_year }} is charged at 15% on earnings above the £5,000 secondary threshold. The first £5,000 of salary is exempt.</p>
+    <table style="width:100%; border-collapse:collapse; margin-top:0.4rem;">
+      <tr><th style="text-align:left; border-bottom:1px solid var(--border); padding:0.5rem 0.2rem; font-size:0.72rem; text-transform:uppercase; color:var(--text-tertiary);">Earnings band</th><th style="text-align:left; border-bottom:1px solid var(--border); padding:0.5rem 0.2rem; font-size:0.72rem; text-transform:uppercase; color:var(--text-tertiary);">Rate</th><th style="text-align:right; border-bottom:1px solid var(--border); padding:0.5rem 0.2rem; font-size:0.72rem; text-transform:uppercase; color:var(--text-tertiary);">NI due</th></tr>
+      <tr><td style="padding:0.45rem 0.2rem; border-bottom:1px solid var(--border);">Up to £5,000</td><td style="padding:0.45rem 0.2rem; border-bottom:1px solid var(--border);">0%</td><td style="padding:0.45rem 0.2rem; border-bottom:1px solid var(--border); text-align:right;">£0</td></tr>
+      <tr><td style="padding:0.45rem 0.2rem; border-bottom:1px solid var(--border);">£5,001 to £{{ "{:,}".format(salary) }}</td><td style="padding:0.45rem 0.2rem; border-bottom:1px solid var(--border);">15%</td><td style="padding:0.45rem 0.2rem; border-bottom:1px solid var(--border); text-align:right;">{{ calc.employer_ni.gross_ni|money }}</td></tr>
+      <tr><td style="padding:0.45rem 0.2rem; border-bottom:1px solid var(--border); font-weight:600;">Total NI ({{ tax_year }})</td><td style="padding:0.45rem 0.2rem; border-bottom:1px solid var(--border);"></td><td style="padding:0.45rem 0.2rem; border-bottom:1px solid var(--border); text-align:right; font-weight:600;">{{ calc.employer_ni.gross_ni|money }}</td></tr>
+    </table>
+  </div>
+
+  <div class="card" style="padding:1rem 1.1rem; margin-top:0.9rem;">
+    <h2 style="font-size:1.15rem;">With and without Employment Allowance</h2>
+    <p>Employment Allowance reduces the annual employer NI bill by up to £10,500 for eligible businesses and charities. Solo-director companies are excluded.</p>
+    <p>Without allowance: <strong>{{ calc.employer_ni.gross_ni|money }}</strong> employer NI per year.</p>
+    <p style="margin-bottom:0;">With full £10,500 allowance applied: <strong>{{ with_allowance.employer_ni.ni_due|money }}</strong> NI due after offset.</p>
+  </div>
+
+  <div class="card" style="padding:1rem 1.1rem; margin-top:0.9rem;">
+    <h2 style="font-size:1.15rem;">What changed in {{ tax_year }}</h2>
+    <p>From 6 April 2025, employer NI increased from 13.8% to 15% and the secondary threshold fell from £9,100 to £5,000. Both changes increase cost simultaneously — a higher rate applied to a wider NIable base.</p>
+    <p>2024/25 NI on this salary: <strong>{{ year_change.ni_2024|money }}</strong> (13.8% above £9,100).</p>
+    <p>2025/26 NI on this salary: <strong>{{ year_change.ni_2025|money }}</strong> (15% above £5,000).</p>
+    <p style="margin-bottom:0;">Increase: <strong>{{ year_change.increase|money }}</strong> ({{ year_change.increase_pct|percent }} more than 2024/25).</p>
+  </div>
+
+  <div class="card" style="padding:1rem 1.1rem; margin-top:0.9rem;">
+    <h2 style="font-size:1.15rem;">Understanding your total employer cost for £{{ "{:,}".format(salary) }}</h2>
+    <p style="margin-bottom:0.6rem;">Employer costs go well beyond the salary figure on the job advert. For a £{{ "{:,}".format(salary) }} hire, the true cost to your business is <strong>{{ calc.total_cost|money }}</strong> per year — before you factor in any overheads such as equipment, software licences or workspace costs. The gap between the two figures ({{ calc.cost_above_salary|money }}) is the amount that often catches small employers off-guard when preparing a hiring budget.</p>
+    <p style="margin-bottom:0.6rem;">The two compulsory on-costs are employer National Insurance and auto-enrolment pension. Employer NI is set at 15% on all earnings above the £5,000 secondary threshold from April 2025 — higher than the previous 13.8% rate — and you cannot avoid it unless the role qualifies for a reduced rate (under-21s, apprentices under 25). Pension is the employer's minimum 3% contribution on qualifying earnings between £6,240 and £50,270; you can offer more, but 3% is the legal floor for most workers.</p>
+    <p style="margin-bottom:0;">Employment Allowance can offset up to £10,500 of your annual employer NI bill if you are eligible. Most businesses with multiple employees can claim it — but single-director companies with no other employees cannot. If you qualify, your actual NI cost after the allowance is <strong>{{ with_allowance.employer_ni.ni_due|money }}</strong> per year, which brings the total employer cost down significantly at lower salary levels.</p>
+  </div>
+
+  <div class="card" style="padding:1rem 1.1rem; margin-top:0.9rem;">
+    <h2 style="font-size:1.15rem;">Budgeting for this hire</h2>
+    <p style="margin-bottom:0.5rem;">A few practical things to work through before your first payroll run:</p>
+    <ul style="margin:0 0 0.65rem 1.1rem; padding:0; list-style:disc; font-size:0.88rem; color:var(--text-secondary); line-height:1.7;">
+      <li><strong style="color:var(--text-primary);">Check Employment Allowance eligibility</strong> — if you have not claimed it before, HMRC's guidance is straightforward. At £{{ "{:,}".format(salary) }}, the full allowance saves {{ with_allowance.employer_ni.allowance_used|money }} off your NI bill.</li>
+      <li><strong style="color:var(--text-primary);">Confirm auto-enrolment duties</strong> — if your new hire is aged 22 or over and earns above £10,000, you must enrol them automatically within six weeks of their start date. The 3% pension figure here is the minimum; many employers offer 5–10%.</li>
+      <li><strong style="color:var(--text-primary);">Account for overheads</strong> — salary and statutory on-costs are the starting point. Add equipment, remote working allowance, training, software and any benefit-in-kind costs to get a realistic total headcount cost.</li>
+      <li><strong style="color:var(--text-primary);">Factor in the April 2025 NI change</strong> — if you budgeted using 2024/25 rates (13.8% above £9,100), this hire now costs {{ year_change.increase|money }} more per year in NI alone. Revisit your headcount budget if you set it before April 2025.</li>
+    </ul>
+    <p style="margin-bottom:0.6rem; font-size:0.85rem; color:var(--text-secondary);">The figures on this page use 3% employer pension and no Employment Allowance. Use the full calculator to model your real scenario.</p>
+    <div class="pill-grid">
+      <a class="pill" href="/calculator?salary={{ salary }}&pension=3&overheads=0&allowance=0">Open in full calculator</a>
+      <a class="pill" href="/calculator?salary={{ salary }}&pension=3&overheads=0&allowance=10500">With Employment Allowance</a>
+      <a class="pill" href="/calculator?salary={{ salary }}&pension=5&overheads=3000&allowance=0">With 5% pension + overheads</a>
+    </div>
+  </div>
+
+  <div class="card" style="padding:1rem 1.1rem; margin-top:0.9rem;">
+    <h2 style="font-size:1.15rem;">Nearby salary pages</h2>
+    <div class="pill-grid">
+      {% for item in nearby %}
+      <a class="pill" href="/cost/{{ item }}">£{{ "{:,}".format(item) }}</a>
+      {% endfor %}
+    </div>
+    <h3 style="font-size:1rem; margin-top:0.85rem;">Related tools</h3>
+    <div class="pill-grid">
+      <a class="pill" href="/calculator">Full employer cost calculator</a>
+      <a class="pill" href="/employer-ni/{{ salary }}">Employer NI only — £{{ "{:,}".format(salary) }}</a>
+      <a class="pill" href="/employer-ni">Employer NI by salary</a>
+      <a class="pill" href="/cost-of-employing">All salary cost pages</a>
+    </div>
+    <h3 style="font-size:1rem; margin-top:0.85rem;">Related guides</h3>
+    <div class="pill-grid">
+      <a class="pill" href="/guides/employer-ni-changes-2025">Employer NI changes April 2025</a>
+      <a class="pill" href="/guides/true-cost-of-hiring">True cost of hiring</a>
+      <a class="pill" href="/guides/employment-allowance-guide">Employment Allowance guide</a>
+      <a class="pill" href="/guides/auto-enrolment-pension-costs">Auto-enrolment pension costs</a>
+    </div>
+  </div>
+
+  <section style="margin-top:1rem;" class="card">
+    <div style="padding:1rem 1.1rem;">
+      <h2 style="font-size:1.15rem;">Frequently asked questions</h2>
+      <div class="faq-list">
+        {% for item in faq_items %}
+        <details class="faq-item"><summary>{{ item.q }}</summary><div class="faq-answer">{{ item.a }}</div></details>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <div class="card" style="padding:1rem 1.1rem; margin-top:0.9rem; background:var(--surface-alt);">
+    <h2 style="font-size:1.05rem;">Methodology and assumptions</h2>
+    <p style="margin-bottom:0.2rem;">Tax year {{ tax_year }}. Employer NI calculated at 15% on earnings above the £5,000 secondary threshold per HMRC rates and thresholds guidance. Auto-enrolment pension at employer minimum 3% on qualifying earnings between £6,240 and £50,270 per The Pensions Regulator guidance. Employment Allowance eligibility must be confirmed with HMRC or your accountant — this page shows both with and without scenarios. Overhead costs are excluded from this page — use the <a href="/calculator" style="color:var(--accent);">full calculator</a> to include them.</p>
+    <p style="margin-bottom:0; font-size:0.83rem; color:var(--text-tertiary);">Estimates only — not financial or legal advice. Sources: <a href="https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2025-to-2026" rel="noopener" target="_blank" style="color:var(--accent);">HMRC</a> · <a href="https://www.thepensionsregulator.gov.uk/en/employers/managing-a-scheme/contributions-and-funding" rel="noopener" target="_blank" style="color:var(--accent);">The Pensions Regulator</a></p>
+  </div>
+</section>
+{% endblock %}

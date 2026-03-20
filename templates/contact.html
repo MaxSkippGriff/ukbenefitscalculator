@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="section">
+  <div class="badge">Contact</div>
+  <h1>Contact</h1>
+  <p>{{ lead }}</p>
+  <div class="card" style="padding:1rem 1.1rem; margin-top:0.9rem;">
+    {% for line in content %}
+    <p>{{ line }}</p>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}
