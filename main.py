@@ -583,8 +583,8 @@ def home():
         "landing.html",
         **with_meta(
             context,
-            title="Employer Cost Calculator UK (2025/26) — Employer NI & Total Cost",
-            description="Employer cost calculator UK for 2025/26. Calculate employer NI at 15%, pension and total cost to employer with monthly and annual breakdowns.",
+            title="Employer Cost Calculator UK 2025/26 | True Cost of Employing: NI + Pension",
+            description="Calculate the true cost of employing someone in the UK. Adds employer NI (15% above £5,000), pension (3% minimum) and overheads to any salary. Monthly and annual totals, free.",
             breadcrumbs=[{"name": "Home", "url": f"{SITE_URL}/"}],
         ),
     )
@@ -705,7 +705,7 @@ def cost_page(amount: int):
         "cost_page.html",
         **with_meta(
             context,
-            title=f"Cost of Employing Someone on £{amount:,} (2025/26) — NI, Pension & Total",
+            title=f"Cost of Employing Someone on £{amount:,} (2025/26): {gbp(calc.total_cost)}/year Total",
             description=(
                 f"A £{amount:,} salary costs {gbp(calc.total_cost)} per year total in 2025/26 — "
                 f"{gbp(calc.total_cost / 12)} per month. Includes {ni_meta} employer NI at 15%, "
@@ -754,8 +754,8 @@ def employer_ni_page(amount: int):
         "employer_ni_page.html",
         **with_meta(
             context,
-            title=f"Employer NI on £{amount:,} Salary (2025/26) — National Insurance Calculation",
-            description=f"Employer National Insurance on a £{amount:,} salary is {gbp(ni_current.gross_ni)} per year in 2025/26 ({gbp(monthly(ni_current.gross_ni))} per month). Calculated at 15% above the £5,000 threshold. Includes 2024/25 comparison.",
+            title=f"Employer NI on £{amount:,} (2025/26): {gbp(ni_current.gross_ni)}/year — {gbp(monthly(ni_current.gross_ni))}/month",
+            description=f"Employer NI on a £{amount:,} salary is {gbp(ni_current.gross_ni)}/year ({gbp(monthly(ni_current.gross_ni))}/month) in 2025/26. Up {gbp(ni_current.gross_ni - ni_previous['gross_ni'])} from 2024/25. Rate 15% above £5,000. Employment Allowance offset included.",
             breadcrumbs=[
                 {"name": "Home", "url": f"{SITE_URL}/"},
                 {"name": "Employer NI by salary", "url": f"{SITE_URL}/employer-ni"},
@@ -866,8 +866,8 @@ def employer_ni_index():
         "employer_ni_index.html",
         **with_meta(
             context,
-            title="Employer NI Calculator UK (2025/26) by Salary — Monthly & Annual NI",
-            description="Employer NI calculator UK for 2025/26. Check annual and monthly NI at 15% above £5,000 and compare directly with 2024/25 assumptions.",
+            title="Employer NI Calculator UK 2025/26 | 15% Above £5,000 — Monthly & Annual NI",
+            description="Employer NI is 15% above £5,000 from April 2025. A £35,000 salary costs £4,500/year in NI — up £928 from 2024/25. Select any salary to see annual, monthly and year-on-year figures.",
             breadcrumbs=[
                 {"name": "Home", "url": f"{SITE_URL}/"},
                 {"name": "Employer NI by salary", "url": f"{SITE_URL}/employer-ni"},
@@ -911,8 +911,8 @@ def cost_index():
         "cost_index.html",
         **with_meta(
             context,
-            title="Total Cost to Employer Calculator UK (2025/26) by Salary",
-            description="Total cost to employer calculator UK pages for 2025/26. See salary, employer NI, pension and monthly total employer cost by salary band.",
+            title="Total Cost to Employ Someone UK 2025/26 | Employer NI + Pension by Salary",
+            description="True employer cost for every UK salary — NI at 15% above £5,000, pension at 3% minimum, monthly and annual totals. Includes April 2025 NI rise comparison. Pick a salary below.",
             breadcrumbs=[
                 {"name": "Home", "url": f"{SITE_URL}/"},
                 {"name": "Cost of employing", "url": f"{SITE_URL}/cost-of-employing"},
