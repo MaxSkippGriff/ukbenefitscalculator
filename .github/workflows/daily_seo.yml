@@ -69,6 +69,33 @@ jobs:
             --port 8080 \
             --quiet
 
+      - name: Ping IndexNow
+        if: steps.git_check.outputs.no_changes == 'false'
+        run: |
+          python - <<'EOF'
+          import json, urllib.request
+          base = "https://employercalculator.co.uk"
+          key = "c9e5a2d7f4b10863fc9a765de9f21b4c"
+          try:
+              with open("data/seo_extras.json") as f:
+                  data = json.load(f)
+              guides = list(data.get("guides", {}).keys())
+              urls = [base + "/"] + [base + "/guides/" + slug for slug in guides[-5:]]
+          except Exception:
+              urls = [base + "/"]
+          payload = json.dumps({"host": "employercalculator.co.uk", "key": key,
+              "keyLocation": base + "/static/" + key + ".txt",
+              "urlList": urls[:50]}).encode()
+          req = urllib.request.Request("https://api.indexnow.org/IndexNow",
+              data=payload, headers={"Content-Type": "application/json"}, method="POST")
+          try:
+              with urllib.request.urlopen(req, timeout=10) as r:
+                  print(f"IndexNow: {r.status} — {len(urls)} URLs")
+          except Exception as e:
+              print(f"IndexNow ping failed (non-fatal): {e}")
+          EOF
+        continue-on-error: true
+
       - name: Summary
         run: |
           echo "### EmployerCalculator Daily SEO Update" >> $GITHUB_STEP_SUMMARY

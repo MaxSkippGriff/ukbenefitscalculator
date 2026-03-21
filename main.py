@@ -960,7 +960,7 @@ def guide_page(slug: str):
         "guide": guide,
         "slug": slug,
         "related_guides": related,
-        "faq_items": default_faq(),
+        "faq_items": guide.get("faq") or default_faq(),
         "show_cross_links": True,
     }
     return render_template(
