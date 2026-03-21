@@ -11,9 +11,9 @@ import re
 import sys
 from datetime import date
 
-import anthropic
+from openai import OpenAI
 
-CLIENT = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+CLIENT = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 EXTRAS_FILE = os.path.join(os.path.dirname(__file__), "..", "data", "seo_extras.json")
 
 SYSTEM = """You are an SEO content writer for EmployerCalculator.co.uk, a UK employer cost calculator.
@@ -68,13 +68,15 @@ def save_extras(data):
 
 
 def call_claude(prompt: str) -> str:
-    response = CLIENT.messages.create(
-        model="claude-opus-4-6",
+    response = CLIENT.chat.completions.create(
+        model="gpt-4o",
         max_tokens=3000,
-        system=SYSTEM,
-        messages=[{"role": "user", "content": prompt}],
+        messages=[
+            {"role": "system", "content": SYSTEM},
+            {"role": "user", "content": prompt},
+        ],
     )
-    return response.content[0].text.strip()
+    return response.choices[0].message.content.strip()
 
 
 def extract_json(text: str):
