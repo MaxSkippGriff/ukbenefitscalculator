@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 from datetime import datetime
 from typing import Dict, List
@@ -456,6 +457,13 @@ GUIDES: Dict[str, Dict] = {
         ],
     },
 }
+
+# Load daily SEO content additions (updated by automation — never edit manually)
+_SEO_PATH = os.path.join(os.path.dirname(__file__), "data", "seo_extras.json")
+if os.path.exists(_SEO_PATH):
+    with open(_SEO_PATH) as _f:
+        _seo_extras = json.load(_f)
+    GUIDES.update(_seo_extras.get("guides", {}))
 
 STATIC_PAGES = {
     "methodology": {
