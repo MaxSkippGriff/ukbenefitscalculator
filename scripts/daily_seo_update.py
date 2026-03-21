@@ -16,9 +16,18 @@ from openai import OpenAI
 CLIENT = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 EXTRAS_FILE = os.path.join(os.path.dirname(__file__), "..", "data", "seo_extras.json")
 
-SYSTEM = """You are an SEO content writer for EmployerCalculator.co.uk, a UK employer cost calculator.
-Write expert, concise content about UK employer costs, HR compliance, and employment law.
-UK English. Be specific with HMRC rates, thresholds, and legislation references.
+SYSTEM = """You write SEO content for EmployerCalculator.co.uk, a UK employer cost and HR calculator tool.
+
+Write like an experienced UK HR or payroll professional — not like AI. No filler phrases like
+"in today's dynamic business environment" or "streamline your processes". Plain British English.
+Be specific: cite actual HMRC rates (employer NI 15%, secondary threshold £5,000, Employment Allowance £10,500),
+reference actual legislation (Employment Rights Act 2025, Finance Act 2024), give real worked examples
+with pound figures. Small business owners and HR managers are the audience — they want facts, not management speak.
+
+Your goal: improve Google ranking, featured snippets, and click-through rates.
+Strong guide = opens with the specific rule/rate/threshold, explains it in one clear sentence,
+then gives a worked example. A reader should be able to act on it immediately.
+
 Always respond with valid JSON only — no markdown, no commentary."""
 
 GUIDE_PROMPT = """Generate a new short guide for EmployerCalculator.co.uk about one of these UK employer topics.
