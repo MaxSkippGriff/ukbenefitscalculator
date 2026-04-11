@@ -88,6 +88,10 @@ _GOOD_BOTS = (
     "bingbot", "slurp", "duckduckbot", "baiduspider", "yandexbot",
     "applebot", "facebot", "linkedinbot", "twitterbot", "whatsapp",
     "telegrambot", "ia_archiver", "ahrefsbot", "semrushbot",
+    # LLM crawlers
+    "gptbot", "chatgpt-user", "claudebot", "anthropic-ai",
+    "google-extended", "gemini", "perplexitybot", "youbot",
+    "meta-externalagent", "amazonbot", "cohere-ai", "diffbot",
 )
 _HONEYPOT_BLOCKED: set = set()
 
