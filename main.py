@@ -82,6 +82,13 @@ _BLOCKED_SUBNETS = [
     ipaddress.ip_network("110.249.200.0/22"),  # Bytespider alternate
 ]
 _BLOCKED_UAS = ("bytespider", "petalbot", "ccbot", "omgili", "dataforseo", "scrapy", "python-httpx", "go-http-client")
+# Known legitimate crawlers — exempt from browser fingerprint check
+_GOOD_BOTS = (
+    "googlebot", "google-inspectiontool", "adsbot-google", "mediapartners-google",
+    "bingbot", "slurp", "duckduckbot", "baiduspider", "yandexbot",
+    "applebot", "facebot", "linkedinbot", "twitterbot", "whatsapp",
+    "telegrambot", "ia_archiver", "ahrefsbot", "semrushbot",
+)
 _HONEYPOT_BLOCKED: set = set()
 
 
@@ -102,9 +109,24 @@ def block_scrapers():
                 abort(403)
     except ValueError:
         pass
+
     ua = request.headers.get("User-Agent", "").lower()
+
+    # Hard-block known bad bots
     if any(b in ua for b in _BLOCKED_UAS):
         abort(403)
+
+    # Allow known good crawlers through without further checks
+    if any(g in ua for g in _GOOD_BOTS):
+        return
+
+    # Browser fingerprint check — real browsers always send Accept-Language.
+    # Scrapers using requests/httpx/curl rarely do unless explicitly configured.
+    # Only applies to HTML page requests (not assets, API calls, etc.)
+    accept = request.headers.get("Accept", "")
+    if "text/html" in accept:
+        if not request.headers.get("Accept-Language"):
+            abort(403)
 
 
 @app.before_request
