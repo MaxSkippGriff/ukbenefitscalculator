@@ -223,9 +223,9 @@
 {
   "@context": "https://schema.org",
   "@type": "WebApplication",
-  "name": "UK Employer Cost Calculator 2025/26",
+  "name": "UK Employer Cost Calculator {{ tax_year }}",
   "url": "{{ canonical_url }}",
-  "description": "Calculate the true employer cost of any UK salary: employer NI at 15%, auto-enrolment pension, Employment Allowance, and total annual cost for 2025/26.",
+  "description": "Calculate the true employer cost of any UK salary: employer NI at 15%, auto-enrolment pension, Employment Allowance, and total annual cost for {{ tax_year }}.",
   "applicationCategory": "FinanceApplication",
   "operatingSystem": "Any",
   "inLanguage": "en-GB",
@@ -242,7 +242,7 @@
   <div class="page-intro">
     <div class="badge">Employer cost calculator</div>
     <h1>Employer NI &amp; total cost calculator ({{ tax_year }})</h1>
-    <p>Enter any UK salary to run an employer total cost calculator and employer cost calculator UK check: NI at 15%, auto-enrolment pension, Employment Allowance and optional overheads. This also works as a total cost to employer calculator UK and NI change calculator versus pre-April 2025 assumptions.</p>
+    <p>Enter any UK salary to see the true employer cost for {{ tax_year }}: employer NI at 15% above £5,000, minimum pension at 3%, optional overheads and Employment Allowance offset. Results include a side-by-side comparison against 2024/25 so you can quantify the April 2025 NI change on any budget line.</p>
   </div>
 
   <div class="calc-layout">
@@ -252,18 +252,45 @@
       <div class="panel-head"><h2>Calculator inputs</h2></div>
       <div class="panel-body">
         <div class="field field-prefix">
-          <label for="salary">Annual salary</label>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.28rem;">
+            <label for="salary" id="salary-label" style="margin-bottom:0;">Annual salary</label>
+            <div style="display:flex;border:1.5px solid var(--border);border-radius:6px;overflow:hidden;font-size:0.71rem;font-weight:700;letter-spacing:0.02em;">
+              <button type="button" id="mode-annual" style="padding:0.18rem 0.6rem;background:var(--accent);color:white;border:none;cursor:pointer;transition:all 0.15s;">Annual</button>
+              <button type="button" id="mode-hourly" style="padding:0.18rem 0.6rem;background:transparent;color:var(--text-secondary);border:none;cursor:pointer;transition:all 0.15s;">Hourly</button>
+            </div>
+          </div>
           <div class="currency-input">
             <span class="currency-symbol" aria-hidden="true">£</span>
-            <input id="salary" type="text" value="{{ "{:,}".format(query_state.salary) }}" inputmode="numeric">
+            <input id="salary" type="text" value="{{ "{:,}".format(query_state.salary) }}" inputmode="decimal">
           </div>
         </div>
-        <div class="btn-row">
+        <div class="btn-row" id="annual-chips">
           <button type="button" data-salary="25000" onclick="setSalary(25000)">£25k</button>
           <button type="button" data-salary="35000" onclick="setSalary(35000)">£35k</button>
           <button type="button" data-salary="50000" onclick="setSalary(50000)">£50k</button>
           <button type="button" data-salary="75000" onclick="setSalary(75000)">£75k</button>
           <button type="button" data-salary="100000" onclick="setSalary(100000)">£100k</button>
+        </div>
+        <div class="btn-row" id="hourly-chips" style="display:none;">
+          <button type="button" onclick="setHourlyRate(10)">£10/hr</button>
+          <button type="button" onclick="setHourlyRate(12.50)">£12.50</button>
+          <button type="button" onclick="setHourlyRate(15)">£15/hr</button>
+          <button type="button" onclick="setHourlyRate(20)">£20/hr</button>
+          <button type="button" onclick="setHourlyRate(25)">£25/hr</button>
+        </div>
+        <div class="field" style="margin-top:0.8rem;">
+          <label for="hours-per-week">Hours per week</label>
+          <select id="hours-per-week">
+            <option value="37.5">Full time (37.5h/wk)</option>
+            <option value="35">35h / week</option>
+            <option value="30">4 days (30h/wk)</option>
+            <option value="22.5">3 days (22.5h/wk)</option>
+            <option value="20">Part time (20h/wk)</option>
+            <option value="16">Part time (16h/wk)</option>
+            <option value="custom">Custom...</option>
+          </select>
+          <input id="hours-custom" type="number" min="1" max="80" step="0.5" placeholder="Hours per week" style="display:none;margin-top:0.4rem;width:100%;height:42px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);padding:0 0.75rem;font-family:var(--font-body);font-size:0.92rem;color:var(--text-primary);box-sizing:border-box;">
+          <div id="hours-hint" class="hint" style="display:none;"></div>
         </div>
         <div class="field" style="margin-top:1rem;">
           <label for="pension">Employer pension rate</label>
@@ -362,6 +389,11 @@
           <div class="kpi-label">EA saving</div>
           <div class="kpi-value" id="eaSaving">{{ calc.employer_ni.allowance_used|money }}</div>
         </div>
+        <div class="kpi" id="kpi-hourly" style="display:none;">
+          <div class="kpi-label">Hourly cost</div>
+          <div class="kpi-value" id="hourlyTotal">—</div>
+          <div class="kpi-detail" id="hourlyBasis"></div>
+        </div>
       </div>
 
       <!-- BREAKDOWN TABLES -->
@@ -421,10 +453,10 @@
 <!-- ABOUT THIS CALCULATOR -->
 <section style="max-width:var(--max-w);margin:2.5rem auto 0;padding:0 1.25rem;">
   <div style="font-size:0.72rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem;">About</div>
-  <h2 style="font-family:var(--font-display);font-size:clamp(1.4rem,3vw,1.85rem);font-weight:500;color:var(--text-primary);letter-spacing:-0.02em;margin:0 0 0.85rem;">Employer NI calculator 2025/26 — what it calculates</h2>
+  <h2 style="font-family:var(--font-display);font-size:clamp(1.4rem,3vw,1.85rem);font-weight:500;color:var(--text-primary);letter-spacing:-0.02em;margin:0 0 0.85rem;">Employer NI calculator {{ tax_year }} — what it calculates</h2>
   <div style="display:grid;gap:1rem;grid-template-columns:1fr 1fr;" class="ec-about-grid">
     <div>
-      <p style="font-size:0.92rem;color:var(--text-secondary);line-height:1.7;margin-bottom:0.75rem;">This calculator computes the true employer cost of any UK salary for the 2025/26 tax year. Enter a gross salary and it instantly calculates employer National Insurance at 15% above the £5,000 secondary threshold, auto-enrolment pension on qualifying earnings, and optional overheads — giving you an annual and monthly total.</p>
+      <p style="font-size:0.92rem;color:var(--text-secondary);line-height:1.7;margin-bottom:0.75rem;">This calculator computes the true employer cost of any UK salary for the {{ tax_year }} tax year. Enter a gross salary and it instantly calculates employer National Insurance at 15% above the £5,000 secondary threshold, auto-enrolment pension on qualifying earnings, and optional overheads — giving you an annual and monthly total.</p>
       <p style="font-size:0.92rem;color:var(--text-secondary);line-height:1.7;margin-bottom:0;">Employment Allowance can be applied to offset up to £10,500 of the employer NI liability — eligible businesses can toggle this in the inputs to see their net cost after the allowance.</p>
     </div>
     <div>
@@ -434,6 +466,13 @@
     </div>
   </div>
   <style>@media(max-width:640px){.ec-about-grid{grid-template-columns:1fr!important;}}</style>
+</section>
+
+<!-- RELATED PAGES -->
+<section style="max-width:var(--max-w);margin:2rem auto 0;padding:0 1.25rem;">
+  <p style="font-size:0.9rem;color:var(--text-secondary);line-height:1.7;">
+    See pre-calculated totals at every salary level on the <a href="/cost-of-employing" style="color:var(--accent);">employer cost by salary</a> hub, or check NI-only figures on the <a href="/employer-ni" style="color:var(--accent);">employer NI calculator</a>. For pension alone, use the <a href="/pension-cost" style="color:var(--accent);">auto-enrolment cost calculator</a>.
+  </p>
 </section>
 
 <!-- FAQ -->
@@ -454,6 +493,8 @@
   </div>
 </section>
 {% endif %}
+
+{% include "partials/tools_block.html" %}
 
 <!-- STICKY BAR -->
 <div class="sticky-result" id="stickyResult">
@@ -479,12 +520,54 @@ const QE_LOWER = 6240, QE_UPPER = 50270, NI_THRESHOLD = 5000, NI_RATE = 0.15;
 const DONUT_R = 72, DONUT_C = 2 * Math.PI * DONUT_R;
 
 function parseCurrency(v){ return parseInt(String(v).replace(/[^0-9]/g,''),10) || 0; }
+function parseRate(v){ return parseFloat(String(v).replace(/[^0-9.]/g,'')) || 0; }
 function money(n){ return '£' + Math.round(n).toLocaleString('en-GB'); }
 function money2(n){ return '£' + Number(n).toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function pct(n){ return n.toFixed(1)+'%'; }
 function setText(id,v){ const el=document.getElementById(id); if(el) el.textContent=v; }
 function calcPension(s,r){ return Math.max(0,Math.min(s,QE_UPPER)-QE_LOWER)*(r/100); }
 function calcNI(s,a){ const g=Math.max(0,s-NI_THRESHOLD)*NI_RATE; const u=Math.min(g,a); return{gross:g,used:u,due:Math.max(0,g-u)}; }
+
+let salaryMode = 'annual';
+function getHours(){
+  const el=document.getElementById('hours-per-week');
+  if(!el) return 37.5;
+  if(el.value==='custom') return parseFloat(document.getElementById('hours-custom').value)||37.5;
+  return parseFloat(el.value)||37.5;
+}
+function getEffectiveSalary(){
+  if(salaryMode==='hourly') return Math.round(parseRate(document.getElementById('salary').value)*getHours()*52);
+  return parseCurrency(document.getElementById('salary').value);
+}
+function setMode(mode){
+  const prev=getEffectiveSalary();
+  salaryMode=mode;
+  const aBtn=document.getElementById('mode-annual'), hBtn=document.getElementById('mode-hourly');
+  const salInput=document.getElementById('salary');
+  if(mode==='hourly'){
+    aBtn.style.background='transparent'; aBtn.style.color='var(--text-secondary)';
+    hBtn.style.background='var(--accent)'; hBtn.style.color='white';
+    document.getElementById('salary-label').textContent='Hourly rate';
+    document.getElementById('annual-chips').style.display='none';
+    document.getElementById('hourly-chips').style.display='flex';
+    const rate=prev/(getHours()*52);
+    salInput.value=rate%1===0?String(rate):rate.toFixed(2);
+  } else {
+    aBtn.style.background='var(--accent)'; aBtn.style.color='white';
+    hBtn.style.background='transparent'; hBtn.style.color='var(--text-secondary)';
+    document.getElementById('salary-label').textContent='Annual salary';
+    document.getElementById('annual-chips').style.display='flex';
+    document.getElementById('hourly-chips').style.display='none';
+    const hint=document.getElementById('hours-hint'); if(hint) hint.style.display='none';
+    salInput.value=prev.toLocaleString('en-GB');
+  }
+  runCalc();
+}
+function setHourlyRate(rate){
+  document.getElementById('salary').value=rate%1===0?String(rate):rate.toFixed(2);
+  document.querySelectorAll('#hourly-chips button').forEach(b=>b.classList.toggle('qa-active', parseFloat(b.textContent)===rate));
+  runCalc();
+}
 
 function updateDonut(salary, niDue, pension, overheads, total) {
   const segs = [['seg-salary',salary],['seg-ni',niDue],['seg-pension',pension],['seg-overhead',overheads]];
@@ -515,11 +598,25 @@ function updateUrl(salary,pension,overheads,allowance){
 }
 
 function runCalc(){
-  const salary      = parseCurrency(document.getElementById('salary').value);
+  const salary      = getEffectiveSalary();
   const pensionRate = parseFloat(document.getElementById('pension').value||'3');
   const overheads   = parseCurrency(document.getElementById('overheads').value);
   const allowance   = parseFloat(document.getElementById('allowance').value||'0');
+  const hours       = getHours();
   if(salary<=0) return;
+
+  // In annual mode, keep input formatted with commas
+  if(salaryMode==='annual'){
+    const salEl=document.getElementById('salary');
+    const v=parseCurrency(salEl.value);
+    if(v) salEl.value=v.toLocaleString('en-GB');
+    // Show hourly equiv hint if part-time
+    const hint=document.getElementById('hours-hint');
+    if(hint && hours!==37.5){
+      hint.textContent='Equivalent hourly: £'+(salary/(hours*52)).toFixed(2)+'/hr';
+      hint.style.display='block';
+    } else if(hint){ hint.style.display='none'; }
+  }
 
   const ni      = calcNI(salary,allowance);
   const pension = calcPension(salary,pensionRate);
@@ -535,6 +632,14 @@ function runCalc(){
   setText('costAbove', money(above));
   setText('costAbovePct', pct(abovePct)+' above');
   setText('eaSaving', money(ni.used));
+
+  // Hourly cost KPI — always show
+  const hourlyCostEl=document.getElementById('kpi-hourly');
+  if(hourlyCostEl){
+    hourlyCostEl.style.display='block';
+    setText('hourlyTotal', money2(total/(hours*52)));
+    setText('hourlyBasis', hours===37.5?'full time':hours+'h/wk');
+  }
 
   // Breakdown table
   setText('bSalary', money2(salary));
@@ -560,8 +665,9 @@ function runCalc(){
 }
 
 function setSalary(val){
+  if(salaryMode!=='annual') setMode('annual');
   document.getElementById('salary').value = val.toLocaleString('en-GB');
-  document.querySelectorAll('.btn-row button').forEach(btn => {
+  document.querySelectorAll('#annual-chips button').forEach(btn => {
     btn.classList.toggle('qa-active', parseInt(btn.dataset.salary)===val);
   });
   runCalc();
@@ -571,8 +677,19 @@ function setSalary(val){
   document.getElementById(id).addEventListener('input', runCalc);
   document.getElementById(id).addEventListener('change', runCalc);
 });
-document.getElementById('salary').addEventListener('blur', function(){ const v=parseCurrency(this.value); if(v) this.value=v.toLocaleString('en-GB'); });
+document.getElementById('salary').addEventListener('blur', function(){ if(salaryMode==='annual'){ const v=parseCurrency(this.value); if(v) this.value=v.toLocaleString('en-GB'); } });
 document.getElementById('overheads').addEventListener('blur', function(){ const v=parseCurrency(this.value); if(v) this.value=v.toLocaleString('en-GB'); });
+
+document.getElementById('mode-annual').addEventListener('click', () => { if(salaryMode!=='annual') setMode('annual'); });
+document.getElementById('mode-hourly').addEventListener('click', () => { if(salaryMode!=='hourly') setMode('hourly'); });
+
+const hoursSelect=document.getElementById('hours-per-week');
+const hoursCustom=document.getElementById('hours-custom');
+hoursSelect.addEventListener('change', () => {
+  if(hoursSelect.value==='custom'){ hoursCustom.style.display='block'; hoursCustom.focus(); }
+  else { hoursCustom.style.display='none'; runCalc(); }
+});
+hoursCustom.addEventListener('input', runCalc);
 
 new IntersectionObserver(([e]) => {
   document.getElementById('stickyResult').classList.toggle('visible',!e.isIntersecting);

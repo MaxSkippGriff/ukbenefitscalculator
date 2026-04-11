@@ -16,6 +16,9 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="{{ title }}">
 <meta name="twitter:description" content="{{ meta_description }}">
+{% if adsense_client %}
+<meta name="google-adsense-account" content="{{ adsense_client }}">
+{% endif %}
 <meta name="geo.region" content="GB">
 <meta name="geo.placename" content="United Kingdom">
 <meta name="ICBM" content="54.7023545, -3.2765753">
@@ -32,6 +35,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300..700;1,9..40,300..700&family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&display=swap" rel="stylesheet">
+{% if adsense_client %}
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client={{ adsense_client }}" crossorigin="anonymous"></script>
+{% endif %}
 {% if ga_measurement_id %}
 <script async src="https://www.googletagmanager.com/gtag/js?id={{ ga_measurement_id }}"></script>
 <script>
@@ -88,7 +94,7 @@
   --c-overhead: #B0A89E;
 }
 
-html { font-size: 16px; scroll-behavior: smooth; }
+html { font-size: 16px; scroll-behavior: smooth; overflow-x: hidden; }
 body {
   font-family: var(--font-body);
   background: var(--bg);
@@ -96,6 +102,7 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 /* ── NAV ── */
@@ -201,7 +208,7 @@ body {
 /* ── CALCULATOR CARD ── */
 .calc-section {
   max-width: var(--max-w); margin: 0 auto;
-  padding: 0 1.25rem 2.2rem;
+  padding: 0 1.25rem 1.4rem;
   scroll-margin-top: 104px;
 }
 .calc-card {
@@ -214,9 +221,9 @@ body {
   position: relative;
 }
 .calc-header {
-  padding: 1.4rem 1.75rem 0;
+  padding: 0.8rem 1.1rem 0;
   display: flex; align-items: flex-start; justify-content: space-between;
-  gap: 1rem; flex-wrap: wrap;
+  gap: 0.75rem; flex-wrap: wrap;
 }
 .calc-header h2 {
   font-family: var(--font-display); font-weight: 500;
@@ -231,7 +238,7 @@ body {
   border: 1px solid rgba(27,107,74,0.18); margin-top: 0.15rem;
 }
 @media (max-width: 560px) {
-  .calc-header { padding: 0.95rem 1rem 0 !important; align-items: center !important; gap: 0.5rem !important; }
+  .calc-header { padding: 0.7rem 0.9rem 0 !important; align-items: center !important; gap: 0.5rem !important; }
   .calc-header h2 {
     font-size: 0.98rem !important;
     white-space: nowrap;
@@ -246,11 +253,12 @@ body {
 /* ── SPLIT LAYOUT ── */
 .calc-split {
   display: grid; grid-template-columns: 1fr 1fr;
-  margin-top: 1.1rem;
+  margin-top: 0.75rem;
 }
 @media (max-width: 780px) { .calc-split { grid-template-columns: 1fr; } }
 
-.calc-inputs { padding: 1.5rem 1.75rem 1.75rem; }
+.calc-inputs { padding: 1rem 1.25rem 1.25rem; min-width: 0; overflow: hidden; }
+.calc-visual { min-width: 0; }
 .calc-inputs .field { transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease; border-radius: 8px; padding: 0.15rem 0.15rem 0.4rem; }
 .calc-inputs .field:focus-within {
   transform: translateY(-1px);
@@ -261,18 +269,29 @@ body {
 .calc-visual {
   background: var(--surface);
   border-left: none;
-  padding: 1.3rem 1.5rem 1.45rem;
+  padding: 1rem 1.25rem 1.25rem;
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  gap: 0.85rem;
+  gap: 0.75rem;
   position: relative;
 }
+.visual-right {
+  width: 100%;
+  display: flex; flex-direction: column;
+  gap: 0.65rem;
+}
 @media (max-width: 780px) {
-  .calc-visual { padding: 1.2rem 1.2rem 1.35rem; }
+  .calc-visual { padding: 0.85rem 1rem 1rem; }
+}
+@media (max-width: 560px) {
+  .visual-kpis { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 380px) {
+  .visual-kpis { grid-template-columns: 1fr; }
 }
 
 /* ── FIELD STYLES ── */
-.field { margin-bottom: 1rem; }
+.field { margin-bottom: 0.7rem; }
 .field:last-child { margin-bottom: 0; }
 .field label {
   display: block; font-size: 0.78rem; font-weight: 600;
@@ -336,7 +355,7 @@ body {
 
 /* ── DONUT CHART ── */
 .donut-svg {
-  width: 206px; height: 206px; display: block; overflow: visible;
+  width: 210px; height: 210px; display: block; overflow: visible;
   filter: drop-shadow(0 4px 10px rgba(26,26,24,0.06));
   z-index: 1;
   transition: transform 0.3s ease, filter 0.3s ease;
@@ -377,12 +396,11 @@ body {
 }
 
 /* ── LEGEND ── */
-.donut-legend { width: 100%; max-width: 240px; }
+.donut-legend { width: 100%; }
 .visual-kpis {
   width: 100%;
-  max-width: 240px;
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 0.45rem;
 }
 .vk {
@@ -638,15 +656,15 @@ body {
   filter: drop-shadow(0 8px 18px rgba(26,26,24,0.10));
 }
 @media (max-width: 900px) {
-  .donut-svg { width: 190px; height: 190px; }
+  .donut-svg { width: 180px; height: 180px; }
 }
 @media (max-width: 520px) { .sr-back { display: none; } .sr-divider { display: none; } }
 </style>
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebSite","name":"EmployerCalculator.co.uk","url":"{{ site_url }}","description":"Free UK employer cost calculator. Calculate employer NI, pension contributions and total hiring costs for 2025/26.","inLanguage":"en-GB","potentialAction":{"@type":"SearchAction","target":"{{ site_url }}/cost/{salary}","query-input":"required name=salary"}}
+{"@context":"https://schema.org","@type":"WebSite","name":"EmployerCalculator.co.uk","url":"{{ site_url }}","description":"Free UK employer cost calculator. Calculate employer NI, pension contributions and total hiring costs for {{ tax_year }}.","inLanguage":"en-GB","potentialAction":{"@type":"SearchAction","target":"{{ site_url }}/cost/{salary}","query-input":"required name=salary"}}
 </script>
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"Organization","name":"EmployerCalculator.co.uk","url":"{{ site_url }}","logo":"{{ site_url }}/static/site-logo.svg","description":"UK employer cost calculator hub. Calculate employer NI at 15%, pension and total hiring costs for 2025/26.","areaServed":{"@type":"Country","name":"United Kingdom"},"knowsAbout":["Employer National Insurance","UK payroll","Auto-enrolment pensions","Employment Allowance","UK employment costs"],"sameAs":["https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2025-to-2026","https://www.thepensionsregulator.gov.uk/en/employers"]}
+{"@context":"https://schema.org","@type":"Organization","name":"EmployerCalculator.co.uk","url":"{{ site_url }}","logo":"{{ site_url }}/static/site-logo.svg","description":"UK employer cost calculator hub. Calculate employer NI at 15%, pension and total hiring costs for {{ tax_year }}.","areaServed":{"@type":"Country","name":"United Kingdom"},"knowsAbout":["Employer National Insurance","UK payroll","Auto-enrolment pensions","Employment Allowance","UK employment costs"],"sameAs":["https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2025-to-2026","https://www.thepensionsregulator.gov.uk/en/employers"]}
 </script>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"{{ site_url }}/"}]}
@@ -656,6 +674,36 @@ body {
 {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{% for item in faq_items %}{"@type":"Question","name":{{ item.q|tojson }},"acceptedAnswer":{"@type":"Answer","text":{{ item.a|tojson }}}}{% if not loop.last %},{% endif %}{% endfor %}]}
 </script>
 {% endif %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "UK Employer Cost Calculator {{ tax_year }}",
+  "url": "{{ site_url }}/",
+  "description": "Free UK employer cost calculator. Calculate employer NI at 15%, pension at 3% and total employer cost for any salary in {{ tax_year }}.",
+  "applicationCategory": "FinanceApplication",
+  "operatingSystem": "Any",
+  "inLanguage": "en-GB",
+  "isAccessibleForFree": true,
+  "offers": {"@type": "Offer", "price": "0", "priceCurrency": "GBP"},
+  "provider": {"@type": "Organization", "name": "EmployerCalculator.co.uk", "url": "{{ site_url }}"}
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "How to calculate cost to employer UK ({{ tax_year }})",
+  "description": "Calculate the true cost to employer in the UK for {{ tax_year }} — salary plus employer NI at 15% plus pension at 3%.",
+  "step": [
+    {"@type": "HowToStep", "position": 1, "name": "Start with gross salary", "text": "Begin with the employee's annual gross salary. This is the starting point for all employer cost calculations."},
+    {"@type": "HowToStep", "position": 2, "name": "Calculate employer NI", "text": "Subtract £5,000 (the {{ tax_year }} secondary threshold) from the salary, then multiply by 15%. Example: £35,000 − £5,000 = £30,000 × 15% = £4,500 employer NI per year."},
+    {"@type": "HowToStep", "position": 3, "name": "Calculate employer pension", "text": "Multiply qualifying earnings by 3%. Qualifying earnings = salary between £6,240 and £50,270. Example: £35,000 − £6,240 = £28,760 × 3% = £862.80 employer pension per year."},
+    {"@type": "HowToStep", "position": 4, "name": "Add salary + NI + pension", "text": "Total employer cost = salary + NI + pension. Example: £35,000 + £4,500 + £863 = £40,363 per year, or £3,364 per month."},
+    {"@type": "HowToStep", "position": 5, "name": "Add overheads and apply Employment Allowance", "text": "Add per-employee overhead costs (equipment, software, workspace) if applicable. Apply Employment Allowance (up to £10,500 off NI) if your business is eligible."}
+  ]
+}
+</script>
 </head>
 <body>
 
@@ -678,9 +726,9 @@ body {
 
 <!-- HERO -->
 <header class="hero">
-  <div class="hero-badge">Updated for 2025/26</div>
-  <h1>UK employer calculators — NI, hiring costs and HR planning tools</h1>
-  <p>Use this employer NI calculator 2025/26 to calculate what employees actually cost your business. Includes NI rise comparison logic for the April 2025 move to 15% and the new £5,000 secondary threshold.</p>
+  <div class="hero-badge">Updated for {{ tax_year }}</div>
+  <h1>Cost to Employer Calculator UK — NI, Pension &amp; Total Salary Cost ({{ tax_year }})</h1>
+  <p>Enter any salary for the exact employer NI, pension and overhead breakdown — updated for {{ tax_year }}.</p>
   <a href="#calculator" class="hero-cta">
     Calculate employer costs
     <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
@@ -697,6 +745,7 @@ body {
     <span class="hero-stat"><strong>£10,500</strong> Employment Allowance</span>
     <span class="hero-stat">Updated April 2025</span>
     <span class="hero-stat">Free to use</span>
+    <a href="https://aftertaxsalary.co.uk" target="_blank" rel="noopener" class="hero-stat" style="text-decoration:none;color:inherit;">Employee take-home? → <span style="color:var(--accent);font-weight:600;">AfterTaxSalary.co.uk</span></a>
   </div>
 </header>
 
@@ -709,7 +758,7 @@ body {
         <h2>Employer NI &amp; Total Cost Calculator</h2>
         <p>Adjust the salary — results update instantly.</p>
       </div>
-      <span class="calc-year-badge">Tax year 2025/26</span>
+      <span class="calc-year-badge">Tax year {{ tax_year }}</span>
     </div>
 
     <div class="calc-split">
@@ -717,12 +766,18 @@ body {
       <!-- LEFT: INPUTS -->
       <div class="calc-inputs">
         <div class="field field-prefix">
-          <label for="salary">Annual gross salary</label>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.28rem;">
+            <label for="salary" id="salary-label" style="margin-bottom:0;">Annual gross salary</label>
+            <div style="display:flex;border:1.5px solid var(--border);border-radius:6px;overflow:hidden;font-size:0.71rem;font-weight:700;letter-spacing:0.02em;">
+              <button type="button" id="mode-annual" style="padding:0.18rem 0.6rem;background:var(--accent);color:white;border:none;cursor:pointer;transition:all 0.15s;">Annual</button>
+              <button type="button" id="mode-hourly" style="padding:0.18rem 0.6rem;background:transparent;color:var(--text-secondary);border:none;cursor:pointer;transition:all 0.15s;">Hourly</button>
+            </div>
+          </div>
           <div class="currency-input">
             <span class="currency-symbol" aria-hidden="true">£</span>
-            <input type="text" id="salary" inputmode="numeric" value="35,000" placeholder="e.g. 35,000">
+            <input type="text" id="salary" inputmode="decimal" value="35,000" placeholder="e.g. 35,000">
           </div>
-          <div class="quick-amounts">
+          <div class="quick-amounts" id="annual-chips">
             <button data-salary="25000" onclick="setSalary(25000)">£25k</button>
             <button data-salary="30000" onclick="setSalary(30000)">£30k</button>
             <button data-salary="35000" onclick="setSalary(35000)" class="qa-active">£35k</button>
@@ -730,6 +785,27 @@ body {
             <button data-salary="55000" onclick="setSalary(55000)">£55k</button>
             <button data-salary="75000" onclick="setSalary(75000)">£75k</button>
           </div>
+          <div class="quick-amounts" id="hourly-chips" style="display:none;">
+            <button onclick="setHourlyRate(10)">£10/hr</button>
+            <button onclick="setHourlyRate(12.50)">£12.50</button>
+            <button onclick="setHourlyRate(15)">£15/hr</button>
+            <button onclick="setHourlyRate(20)">£20/hr</button>
+            <button onclick="setHourlyRate(25)">£25/hr</button>
+          </div>
+          <div id="salary-equiv-hint" class="field-hint" style="display:none;"></div>
+        </div>
+        <div class="field">
+          <label for="hours-per-week">Hours per week</label>
+          <select id="hours-per-week">
+            <option value="37.5">Full time (37.5h/wk)</option>
+            <option value="35">35h / week</option>
+            <option value="30">4 days (30h/wk)</option>
+            <option value="22.5">3 days (22.5h/wk)</option>
+            <option value="20">Part time (20h/wk)</option>
+            <option value="16">Part time (16h/wk)</option>
+            <option value="custom">Custom...</option>
+          </select>
+          <input id="hours-custom" type="number" min="1" max="80" step="0.5" placeholder="Hours per week" style="display:none;margin-top:0.4rem;width:100%;height:42px;border:1.5px solid var(--border);border-radius:var(--radius-sm,6px);background:var(--bg);padding:0 0.75rem;font-family:var(--font-body);font-size:0.92rem;box-sizing:border-box;">
         </div>
         <div class="field">
           <label for="pension">Employer pension</label>
@@ -756,7 +832,7 @@ body {
           <label for="empAllowance">Employment Allowance</label>
           <select id="empAllowance">
             <option value="0" selected>Not eligible / not applying</option>
-            <option value="10500">Eligible — up to £10,500 offset</option>
+            <option value="10500">Eligible (up to £10,500 offset)</option>
           </select>
           <div class="field-hint">Most single-director companies cannot claim.</div>
         </div>
@@ -786,6 +862,7 @@ body {
           <text class="donut-month-text" x="100" y="118" text-anchor="middle" id="donut-monthly">{{ calc.monthly_total|money }}</text>
         </svg>
 
+        <div class="visual-right">
         <div class="visual-kpis" aria-live="polite">
           <div class="vk">
             <span class="vk-dot"></span>
@@ -837,6 +914,7 @@ body {
             <span class="legend-pct" id="lOverheadPct">{{ ((calc.overheads / calc.total_cost) * 100)|percent if calc.total_cost > 0 else '' }}</span>
           </div>
         </div>
+        </div><!-- /visual-right -->
       </div><!-- /calc-visual -->
     </div><!-- /calc-split -->
 
@@ -874,7 +952,7 @@ body {
         </table>
       </details>
       <div class="assumptions" id="assumptionsBlock">
-        Tax year 2025/26 · Employer NI 15% above £5,000 · Pension {{ calc.pension_rate|round(0)|int }}% on qualifying earnings (£6,240–£50,270)
+        Tax year {{ tax_year }} · Employer NI 15% above £5,000 · Pension {{ calc.pension_rate|round(0)|int }}% on qualifying earnings (£6,240–£50,270)
         · Employment Allowance: {{ 'Applied' if calc.employer_ni.allowance_used > 0 else 'Not applied' }} · Overheads: {{ calc.overheads|money }} per year
         · Estimates only — not financial or legal advice.
       </div>
@@ -911,11 +989,11 @@ body {
 <section class="section" id="tools">
   <div class="section-label">Calculators</div>
   <h2>All employer calculators</h2>
-  <p>12 live tools covering employer cost, payroll obligations and HR calculations. All updated for 2025/26 rates.</p>
+  <p>12 live tools covering employer cost, payroll obligations and HR calculations. All updated for {{ tax_year }} rates.</p>
   <div class="tools-grid" style="grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:0.55rem;">
     <a href="/calculator" class="tool-card tool-live">
       <h3>Employer NI &amp; Total Cost</h3>
-      <p>Salary + NI at 15% + pension + overheads. Full employer cost with band breakdown for 2025/26.</p>
+      <p>Salary + NI at 15% + pension + overheads. Full employer cost with band breakdown for {{ tax_year }}.</p>
     </a>
     <a href="/employer-ni" class="tool-card tool-live">
       <h3>Employer NI by Salary</h3>
@@ -947,7 +1025,7 @@ body {
     </a>
     <a href="/sick-pay" class="tool-card tool-live">
       <h3>Statutory Sick Pay</h3>
-      <p>SSP eligibility, waiting days, weekly amounts and duration for 2025/26.</p>
+      <p>SSP eligibility, waiting days, weekly amounts and duration for {{ tax_year }}.</p>
     </a>
     <a href="/pension-cost" class="tool-card tool-live">
       <h3>Employer Pension Cost</h3>
@@ -968,7 +1046,7 @@ body {
 <section class="section" id="costs">
   <div class="section-label">Cost pages</div>
   <h2>Employer cost by salary</h2>
-  <p>Pre-calculated employer cost at every salary level — NI, pension and total cost. Updated for 2025/26.</p>
+  <p>Pre-calculated employer cost at every salary level — NI, pension and total cost. Updated for {{ tax_year }}.</p>
   <div class="pill-grid">
     <a href="/cost/20000" class="pill">£20,000</a>
     <a href="/cost/25000" class="pill">£25,000</a>
@@ -985,7 +1063,7 @@ body {
     <a href="/cost/100000" class="pill">£100,000</a>
     <a href="/cost/150000" class="pill">£150,000</a>
   </div>
-  <a href="/cost-of-employing" class="see-all-link">See all 48 salary levels →</a>
+  <a href="/cost-of-employing" class="see-all-link">See all salary levels →</a>
 
   <h3 style="font-size:0.92rem; margin-top:1.75rem; margin-bottom:0.25rem; font-weight:600;">Employer NI on specific salaries</h3>
   <div class="pill-grid">
@@ -1008,6 +1086,20 @@ body {
   </div>
 </section>
 
+<!-- SCENARIO PAGES -->
+<section class="section" style="padding-top:0;">
+  <h3 style="font-family:var(--font-display);font-size:1.05rem;font-weight:500;letter-spacing:-0.02em;margin:0 0 0.45rem;">Common employer cost scenarios</h3>
+  <p style="font-size:0.87rem;color:var(--text-secondary);margin-bottom:0.8rem;">Quick answers for specific hiring situations — each uses {{ tax_year }} rates and links to the full calculator.</p>
+  <div class="pill-grid">
+    <a href="/first-employee-cost-uk" class="pill">Hiring your first employee</a>
+    <a href="/part-time-employee-cost" class="pill">Part-time employee cost</a>
+    <a href="/employer-salary-cost-calculator-uk" class="pill">Employer salary cost calculator</a>
+    <a href="/guides/first-employee-cost" class="pill">First employee guide</a>
+    <a href="/guides/part-time-employee-cost" class="pill">Part-time hiring guide</a>
+    <a href="/minimum-wage-employer-cost" class="pill">Minimum wage employer cost</a>
+  </div>
+</section>
+
 <!-- GUIDES -->
 <section class="section" id="guides">
   <div class="section-label">Guides</div>
@@ -1023,13 +1115,13 @@ body {
     <a href="/guides/true-cost-of-hiring" class="guide-card">
       <span class="guide-arrow">→</span>
       <div class="guide-topic">Hiring</div>
-      <h3>The true cost of hiring an employee in the UK (2025/26)</h3>
+      <h3>The true cost of hiring an employee in the UK ({{ tax_year }})</h3>
       <p>Beyond salary: NI, pension, recruitment, onboarding, equipment and hidden costs.</p>
     </a>
     <a href="/guides/employment-allowance-guide" class="guide-card">
       <span class="guide-arrow">→</span>
       <div class="guide-topic">Tax relief</div>
-      <h3>Employment Allowance 2025/26 — eligibility, claiming and examples</h3>
+      <h3>Employment Allowance {{ tax_year }} — eligibility, claiming and examples</h3>
       <p>£10,500 maximum. Who qualifies, how to claim, and common mistakes.</p>
     </a>
     <a href="/guides/auto-enrolment-pension-costs" class="guide-card">
@@ -1050,7 +1142,68 @@ body {
       <h3>Employment Rights Act 2025 — what employers need to know</h3>
       <p>Day-one rights, unfair dismissal changes, zero-hours reforms and implementation timeline.</p>
     </a>
+    <a href="/guides/employer-on-costs-explained" class="guide-card">
+      <span class="guide-arrow">→</span>
+      <div class="guide-topic">Cost planning</div>
+      <h3>Employer on-costs explained — NI, pension, holiday and overheads</h3>
+      <p>All the costs above salary. What employers actually pay beyond the headline number.</p>
+    </a>
+    <a href="/guides/cost-of-hiring-london" class="guide-card">
+      <span class="guide-arrow">→</span>
+      <div class="guide-topic">London</div>
+      <h3>Cost of hiring in London ({{ tax_year }})</h3>
+      <p>London salary benchmarks, employer NI and total hiring costs with worked examples.</p>
+    </a>
+    <a href="/guides/cost-of-hiring-manchester" class="guide-card">
+      <span class="guide-arrow">→</span>
+      <div class="guide-topic">Manchester</div>
+      <h3>Cost of hiring in Manchester ({{ tax_year }})</h3>
+      <p>Manchester salary benchmarks and employer NI at common pay levels.</p>
+    </a>
+    <a href="/guides/hiring-costs-edinburgh" class="guide-card">
+      <span class="guide-arrow">→</span>
+      <div class="guide-topic">Edinburgh</div>
+      <h3>Cost of hiring in Edinburgh ({{ tax_year }})</h3>
+      <p>Edinburgh salary benchmarks and employer NI. Employer NI is UK-wide — Scottish income tax does not affect employer costs.</p>
+    </a>
+    <a href="/guides/hiring-costs-cardiff" class="guide-card">
+      <span class="guide-arrow">→</span>
+      <div class="guide-topic">Cardiff</div>
+      <h3>Cost of hiring in Cardiff ({{ tax_year }})</h3>
+      <p>Cardiff salary benchmarks and total hiring costs at common Welsh salary levels.</p>
+    </a>
+    <a href="/payroll-software-uk" class="guide-card">
+      <span class="guide-arrow">→</span>
+      <div class="guide-topic">Payroll tools</div>
+      <h3>Best payroll software for UK small businesses ({{ tax_year }})</h3>
+      <p>Compare Xero, QuickBooks, Sage, FreeAgent and Employment Hero — once your employer cost model is done, this is the next step.</p>
+    </a>
+    <a href="/guides/hiring-costs-sheffield" class="guide-card">
+      <span class="guide-arrow">→</span>
+      <div class="guide-topic">Sheffield</div>
+      <h3>Cost of hiring in Sheffield ({{ tax_year }})</h3>
+      <p>Sheffield salary benchmarks in manufacturing, engineering and digital, with employer NI and total above-salary cost.</p>
+    </a>
+    <a href="/guides/hiring-costs-nottingham" class="guide-card">
+      <span class="guide-arrow">→</span>
+      <div class="guide-topic">Nottingham</div>
+      <h3>Cost of hiring in Nottingham ({{ tax_year }})</h3>
+      <p>Nottingham employer costs across healthcare, retail and professional services. Worked examples at common salary levels.</p>
+    </a>
+    <a href="/guides/first-employee-cost" class="guide-card">
+      <span class="guide-arrow">→</span>
+      <div class="guide-topic">First hire</div>
+      <h3>Cost of hiring your first employee in the UK ({{ tax_year }})</h3>
+      <p>True cost breakdown for first-time employers: NI, pension, Employment Allowance eligibility and practical setup checklist.</p>
+    </a>
+    <a href="/guides/part-time-employee-cost" class="guide-card">
+      <span class="guide-arrow">→</span>
+      <div class="guide-topic">Part-time</div>
+      <h3>Cost of employing part-time staff UK ({{ tax_year }})</h3>
+      <p>Employer NI and pension rules for part-time workers. The £5,000 NI threshold is not pro-rated — see what that means in practice.</p>
+    </a>
   </div>
+  <div style="margin-top:1.25rem;"><a href="/guides" class="btn-secondary" style="font-size:0.85rem;">View all guides →</a></div>
 </section>
 
 <!-- FAQ -->
@@ -1058,12 +1211,16 @@ body {
   <h2>Frequently asked questions</h2>
   <div class="faq-list">
     <details class="faq-item">
-      <summary>What is the employer NI rate for 2025/26?</summary>
+      <summary>How much does it cost to employ someone in the UK?</summary>
+      <div class="faq-answer">The true cost to employ someone in the UK is typically 15–20% above gross salary. For a £30,000 salary: employer NI £3,750 + pension £713 = approximately £34,463 per year. For a £50,000 salary: employer NI £6,750 + pension £1,313 = approximately £58,063 per year. Add workplace overheads (office space, equipment, management time) of £2,000–£5,000 and the total can reach 20–25% above headline salary. Use the calculator above to model any specific salary.</div>
+    </details>
+    <details class="faq-item">
+      <summary>What is the employer NI rate for {{ tax_year }}?</summary>
       <div class="faq-answer">Employers pay 15% National Insurance on employee earnings above the secondary threshold of £5,000 per year (£96 per week, £416 per month). This rate increased from 13.8% in April 2025, and the threshold was reduced from £9,100 to £5,000 at the same time. The combined effect means significantly higher employer costs, particularly for lower-paid employees where the threshold reduction has proportionally more impact.</div>
     </details>
     <details class="faq-item">
       <summary>What is Employment Allowance and can I claim it?</summary>
-      <div class="faq-answer">Employment Allowance lets eligible employers reduce their annual employer NI bill by up to £10,500 for 2025/26. This was increased from £5,000 in 2024/25. The previous £100,000 eligibility cap has been removed, so more businesses can now claim. However, companies with only one employee who is also a director cannot claim. You apply through your payroll software by ticking the Employment Allowance indicator on your Employer Payment Summary.</div>
+      <div class="faq-answer">Employment Allowance lets eligible employers reduce their annual employer NI bill by up to £10,500 for {{ tax_year }}. This was increased from £5,000 in 2024/25. The previous £100,000 eligibility cap has been removed, so more businesses can now claim. However, companies with only one employee who is also a director cannot claim. You apply through your payroll software by ticking the Employment Allowance indicator on your Employer Payment Summary.</div>
     </details>
     <details class="faq-item">
       <summary>How much does it really cost to employ someone on £35,000?</summary>
@@ -1077,8 +1234,46 @@ body {
       <summary>What changed in April 2025 for employer costs?</summary>
       <div class="faq-answer">Three changes took effect from 6 April 2025: the employer NI rate increased from 13.8% to 15%, the secondary threshold was cut from £9,100 to £5,000, and Employment Allowance rose from £5,000 to £10,500 (with the £100,000 eligibility cap removed). For an employee on £30,000, annual employer NI went from approximately £2,884 to £3,750 — an increase of about £866 per year. Smaller employers who can claim Employment Allowance may offset some or all of this increase.</div>
     </details>
+    <details class="faq-item">
+      <summary>How much does it cost to employ someone part-time?</summary>
+      <div class="faq-answer">Part-time employees carry the same employer NI threshold (£5,000 per year) and pension rules as full-time staff — neither is pro-rated for hours. A part-time worker on £16,000 per year costs an employer approximately £17,943 in total: £1,650 employer NI (15% above £5,000) plus £292 minimum pension. For salaries below £10,000, auto-enrolment does not apply automatically — but the worker can opt in. See the <a href="/part-time-employee-cost" style="color:var(--accent);">part-time employee cost page</a> for worked examples.</div>
+    </details>
+    <details class="faq-item">
+      <summary>What does it cost to hire your first employee in the UK?</summary>
+      <div class="faq-answer">The recurring cost of your first employee includes salary, employer NI (15% above £5,000) and auto-enrolment pension (3% minimum). Most first-time employers can also claim Employment Allowance — up to £10,500 off employer NI per year — which may eliminate your entire NI bill at lower salary levels. At £30,000 salary with allowance, true recurring employer cost is approximately £30,714 per year. Without the allowance, the same hire costs approximately £34,464. See the <a href="/first-employee-cost-uk" style="color:var(--accent);">first employee cost page</a> for a full breakdown.</div>
+    </details>
+    <details class="faq-item">
+      <summary>What does a minimum wage employee cost an employer?</summary>
+      <div class="faq-answer">A full-time employee on the {{ tax_year }} National Living Wage (£12.71/hr, approximately £24,785/year for a 37.5-hour week) costs an employer approximately £28,309 per year before overheads: £23,810 salary plus £2,968 employer NI plus £556 minimum pension. With Employment Allowance, the NI can be offset entirely for eligible small employers. See the <a href="/minimum-wage-employer-cost" style="color:var(--accent);">minimum wage employer cost page</a> for the full breakdown.</div>
+    </details>
   </div>
 </section>
+
+<!-- KEY FACTS — structured for both users and AI citation -->
+<section class="section" style="padding-top:0;">
+  <h2>UK employer cost: key facts for {{ tax_year }}</h2>
+  <p>Quick reference for UK employer NI, pension and total hiring cost calculations.</p>
+  <div style="display:grid;gap:0.75rem;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));margin-top:1.1rem;">
+    <div class="card" style="padding:1rem 1.1rem;">
+      <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--accent);margin-bottom:0.35rem;">Employer NI {{ tax_year }}</div>
+      <p style="font-size:0.88rem;color:var(--text-secondary);line-height:1.65;margin:0;"><strong style="color:var(--text-primary);">15%</strong> on earnings above the <strong style="color:var(--text-primary);">£5,000 secondary threshold</strong> (£96/week). No upper cap. Rate was 13.8% above £9,100 in 2024/25. Reduced rate of 0% up to £50,270 for under-21s and apprentices under 25.</p>
+    </div>
+    <div class="card" style="padding:1rem 1.1rem;">
+      <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--accent);margin-bottom:0.35rem;">Auto-enrolment pension</div>
+      <p style="font-size:0.88rem;color:var(--text-secondary);line-height:1.65;margin:0;">Minimum employer contribution: <strong style="color:var(--text-primary);">3%</strong> on qualifying earnings (£6,240–£50,270 band). Total minimum: 8% (employer 3% + employee 5%). Triggers for eligible employees aged 22–state pension age earning over £10,000/year.</p>
+    </div>
+    <div class="card" style="padding:1rem 1.1rem;">
+      <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--accent);margin-bottom:0.35rem;">Employment Allowance</div>
+      <p style="font-size:0.88rem;color:var(--text-secondary);line-height:1.65;margin:0;">Eligible employers can offset up to <strong style="color:var(--text-primary);">£10,500</strong> of employer NI per tax year (increased from £5,000 in 2024/25). The £100,000 eligibility cap has been removed. Single-director companies without other employees remain excluded.</p>
+    </div>
+    <div class="card" style="padding:1rem 1.1rem;">
+      <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--accent);margin-bottom:0.35rem;">Common salary costs</div>
+      <p style="font-size:0.88rem;color:var(--text-secondary);line-height:1.65;margin:0;"><strong style="color:var(--text-primary);">£25k</strong>: ~£28,563/yr · <strong style="color:var(--text-primary);">£30k</strong>: ~£34,463/yr · <strong style="color:var(--text-primary);">£35k</strong>: ~£40,363/yr · <strong style="color:var(--text-primary);">£50k</strong>: ~£58,063/yr · <strong style="color:var(--text-primary);">£75k</strong>: ~£86,813/yr. Includes employer NI + 3% pension.</p>
+    </div>
+  </div>
+</section>
+
+{% include "partials/tools_block.html" %}
 
 <!-- CALCULATOR SUITE -->
 <section class="section" style="padding-top:0.5rem;padding-bottom:2.5rem;">
@@ -1133,6 +1328,8 @@ body {
       <a href="/cost/45000">£45k employer cost</a>
       <a href="/cost/50000">£50k employer cost</a>
       <a href="/cost/75000">£75k employer cost</a>
+      <a href="/minimum-wage-employer-cost">Minimum wage cost</a>
+      <a href="/employer-cost-per-employee">Cost per employee</a>
     </div>
     <div class="footer-col">
       <h4>Guides</h4>
@@ -1140,8 +1337,8 @@ body {
       <a href="/guides/true-cost-of-hiring">True cost of hiring</a>
       <a href="/guides/employment-allowance-guide">Employment Allowance</a>
       <a href="/guides/auto-enrolment-pension-costs">Auto-enrolment pensions</a>
-      <a href="/guides/redundancy-process-guide">Redundancy guide</a>
-      <a href="/guides/employment-rights-act-2025">Employment Rights Act 2025</a>
+      <a href="/guides/first-employee-cost">First employee cost</a>
+      <a href="/guides/part-time-employee-cost">Part-time employee cost</a>
     </div>
     <div class="footer-col">
       <h4>About &amp; Legal</h4>
@@ -1160,7 +1357,7 @@ body {
     </div>
   </div>
   <div class="footer-bottom">
-    © 2026 EmployerCalculator.co.uk · Tax year 2025/26 · Estimates only — not financial or legal advice.<br>
+    © 2026 EmployerCalculator.co.uk · Tax year {{ tax_year }} · Estimates only — not financial or legal advice.<br>
     Sources: <a href="https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2025-to-2026">HMRC Rates &amp; Thresholds</a> · <a href="https://www.gov.uk/national-insurance-rates-letters">NI Rates &amp; Letters</a> · <a href="https://www.gov.uk/employment-allowance">Employment Allowance</a>
   </div>
 </footer>
@@ -1198,6 +1395,50 @@ let donutState = { salary: 0, ni: 0, pension: 0, overhead: 0 };
 
 function parseCurrency(str) {
   return parseInt(String(str).replace(/[^0-9]/g, ''), 10) || 0;
+}
+function parseRate(str) {
+  return parseFloat(String(str).replace(/[^0-9.]/g, '')) || 0;
+}
+
+let landingSalaryMode = 'annual';
+function landingGetHours() {
+  const el = document.getElementById('hours-per-week');
+  if (!el) return 37.5;
+  if (el.value === 'custom') return parseFloat(document.getElementById('hours-custom').value) || 37.5;
+  return parseFloat(el.value) || 37.5;
+}
+function landingGetEffectiveSalary() {
+  if (landingSalaryMode === 'hourly') return Math.round(parseRate(document.getElementById('salary').value) * landingGetHours() * 52);
+  return parseCurrency(document.getElementById('salary').value);
+}
+function landingSetMode(mode) {
+  const prev = landingGetEffectiveSalary();
+  landingSalaryMode = mode;
+  const aBtn = document.getElementById('mode-annual'), hBtn = document.getElementById('mode-hourly');
+  const salEl = document.getElementById('salary');
+  if (mode === 'hourly') {
+    aBtn.style.background = 'transparent'; aBtn.style.color = 'var(--text-secondary)';
+    hBtn.style.background = 'var(--accent)'; hBtn.style.color = 'white';
+    document.getElementById('salary-label').textContent = 'Hourly rate';
+    document.getElementById('annual-chips').style.display = 'none';
+    document.getElementById('hourly-chips').style.display = 'flex';
+    const rate = prev / (landingGetHours() * 52);
+    salEl.value = rate % 1 === 0 ? String(rate) : rate.toFixed(2);
+  } else {
+    aBtn.style.background = 'var(--accent)'; aBtn.style.color = 'white';
+    hBtn.style.background = 'transparent'; hBtn.style.color = 'var(--text-secondary)';
+    document.getElementById('salary-label').textContent = 'Annual gross salary';
+    document.getElementById('annual-chips').style.display = 'flex';
+    document.getElementById('hourly-chips').style.display = 'none';
+    const hint = document.getElementById('salary-equiv-hint'); if (hint) hint.style.display = 'none';
+    salEl.value = prev.toLocaleString('en-GB');
+  }
+  calculate();
+}
+function setHourlyRate(rate) {
+  document.getElementById('salary').value = rate % 1 === 0 ? String(rate) : rate.toFixed(2);
+  document.querySelectorAll('#hourly-chips button').forEach(b => b.classList.remove('qa-active'));
+  calculate();
 }
 function fmt(n) {
   return '£' + Math.round(n).toLocaleString('en-GB');
@@ -1317,11 +1558,24 @@ function setText(id, val) {
 }
 
 function calculate() {
-  const salaryRaw      = parseCurrency(document.getElementById('salary').value);
+  const salaryRaw      = landingGetEffectiveSalary();
   const pensionRateRaw = parseFloat(document.getElementById('pension').value);
   const overheadsRaw   = parseCurrency(document.getElementById('overheads').value);
   const allowanceRaw   = parseFloat(document.getElementById('empAllowance').value);
+  const hours          = landingGetHours();
   const salary = Math.min(Math.max(0, salaryRaw), 5_000_000);
+
+  // Format salary input in annual mode
+  if (landingSalaryMode === 'annual') {
+    const salEl = document.getElementById('salary');
+    const v = parseCurrency(salEl.value);
+    if (v > 0) salEl.value = v.toLocaleString('en-GB');
+    const hint = document.getElementById('salary-equiv-hint');
+    if (hint && hours !== 37.5) {
+      hint.textContent = `Equivalent hourly: £${(salary / (hours * 52)).toFixed(2)}/hr`;
+      hint.style.display = 'block';
+    } else if (hint) { hint.style.display = 'none'; }
+  }
   const pensionRate = Number.isFinite(pensionRateRaw) ? pensionRateRaw : 0;
   const overheads = Math.min(Math.max(0, overheadsRaw), 5_000_000);
   const allowance = Number.isFinite(allowanceRaw) ? allowanceRaw : 0;
@@ -1364,7 +1618,7 @@ function calculate() {
 
   // Assumptions
   setText('assumptionsBlock',
-    `Tax year 2025/26 · Employer NI 15% above £5,000 · ` +
+    `Tax year {{ tax_year }} · Employer NI 15% above £5,000 · ` +
     `Pension ${pensionRate}% on qualifying earnings (£6,240–£50,270) · ` +
     `Employment Allowance: ${allowance > 0 ? fmt(allowance) : 'not applied'} · ` +
     `Overheads: ${fmt(overheads)}/year · Estimates only — not financial advice.`);
@@ -1386,8 +1640,9 @@ function calculate() {
 
 function setSalary(val) {
   userHasInteracted = true;
+  if (landingSalaryMode !== 'annual') landingSetMode('annual');
   document.getElementById('salary').value = val.toLocaleString('en-GB');
-  document.querySelectorAll('.quick-amounts button').forEach(btn => {
+  document.querySelectorAll('#annual-chips button').forEach(btn => {
     btn.classList.toggle('qa-active', parseInt(btn.dataset.salary) === val);
   });
   calculate();
@@ -1420,9 +1675,20 @@ document.getElementById('salary').addEventListener('change', () => {
   calculate();
 });
 document.getElementById('salary').addEventListener('blur', function() {
-  const v = parseCurrency(this.value);
-  if (v > 0) this.value = v.toLocaleString('en-GB');
+  if (landingSalaryMode === 'annual') { const v = parseCurrency(this.value); if (v > 0) this.value = v.toLocaleString('en-GB'); }
 });
+
+document.getElementById('mode-annual').addEventListener('click', () => { if (landingSalaryMode !== 'annual') landingSetMode('annual'); });
+document.getElementById('mode-hourly').addEventListener('click', () => { if (landingSalaryMode !== 'hourly') landingSetMode('hourly'); });
+const landingHoursSelect = document.getElementById('hours-per-week');
+const landingHoursCustom = document.getElementById('hours-custom');
+if (landingHoursSelect) {
+  landingHoursSelect.addEventListener('change', () => {
+    if (landingHoursSelect.value === 'custom') { landingHoursCustom.style.display = 'block'; landingHoursCustom.focus(); }
+    else { landingHoursCustom.style.display = 'none'; userHasInteracted = true; calculate(); }
+  });
+}
+if (landingHoursCustom) landingHoursCustom.addEventListener('input', () => { userHasInteracted = true; calculate(); });
 document.getElementById('overheads').addEventListener('blur', function() {
   const v = parseCurrency(this.value);
   if (v > 0) this.value = v.toLocaleString('en-GB');
