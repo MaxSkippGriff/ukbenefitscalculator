@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-{% block title %}{{ region_label }} salary pages (2025/26) – after tax pay by salary band{% endblock %}
-{% block meta_description %}Browse {{ region_label }} after-tax salary pages by pay band. Check monthly and annual take-home pay with Income Tax and National Insurance breakdowns for 2025/26.{% endblock %}
+{% block title %}{{ region_label }} salary pages ({{ tax_year }}) – after tax pay by salary band{% endblock %}
+{% block meta_description %}Browse {{ region_label }} after-tax salary pages by pay band. Check monthly and annual take-home pay with Income Tax and National Insurance breakdowns for {{ tax_year }}.{% endblock %}
 {% block canonical %}<link rel="canonical" href="{{ region_canonical_url or canonical_url }}">{% endblock %}
 
 {% block head_extra %}
 <meta property="og:type" content="website">
 <meta property="og:url" content="{{ canonical_url }}">
-<meta property="og:title" content="{{ region_label }} salary pages (2025/26) – after tax pay by salary band">
+<meta property="og:title" content="{{ region_label }} salary pages ({{ tax_year }}) – after tax pay by salary band">
 <meta property="og:description" content="Browse {{ region_label }} after-tax salary pages and compare nearby salary bands with shareable links.">
 {% endblock %}
 
@@ -51,7 +51,7 @@
     <a href="/salaries" class="hover:text-blue-600">Salaries</a> /
     <span class="text-slate-700">{{ region_label }}</span>
   </nav>
-  <h1 class="text-4xl sm:text-5xl font-extrabold text-slate-900">{{ region_label }} salary pages (2025/26)</h1>
+  <h1 class="text-4xl sm:text-5xl font-extrabold text-slate-900">{{ region_label }} salary pages ({{ tax_year }})</h1>
   <p class="mt-4 text-lg text-slate-600 max-w-4xl">Use this salary index to open {{ region_label }} take-home pay pages by salary band, compare nearby values, and move into the full calculator only when you need deeper assumptions.</p>
   <div class="mt-4 flex flex-wrap gap-2">
     <a href="/calculator?region={{ region_slug }}" class="rounded-full border border-slate-300 px-3 py-1.5 text-sm font-semibold hover:bg-slate-50">Open calculator ({{ region_label }})</a>

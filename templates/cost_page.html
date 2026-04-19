@@ -9,6 +9,38 @@
   "description": "Total employer cost for a £{{ "{:,}".format(salary) }} salary in {{ tax_year }}, including employer NI at 15% and auto-enrolment pension contributions."
 }
 </script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "How much does it cost to employ someone on £{{ "{:,}".format(salary) }}?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Employing someone on £{{ "{:,}".format(salary) }} costs {{ calc.total_cost|money }} per year ({{ calc.total_cost|monthly }} per month) for {{ tax_year }}, including employer NI of {{ calc.employer_ni.gross_ni|money }} and employer pension of {{ calc.pension_contribution|money }}. That is {{ calc.cost_above_salary|money }} above the headline salary — a {{ calc.cost_above_salary_pct|percent }} uplift."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is the employer NI on a £{{ "{:,}".format(salary) }} salary?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Employer National Insurance on a £{{ "{:,}".format(salary) }} salary is {{ calc.employer_ni.gross_ni|money }} per year ({{ calc.employer_ni.gross_ni|monthly }} per month) for {{ tax_year }}. This is calculated at 15% on earnings above the £5,000 secondary threshold."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is the monthly cost of employing someone on £{{ "{:,}".format(salary) }}?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The monthly cost of employing someone on £{{ "{:,}".format(salary) }} is {{ calc.total_cost|monthly }} for {{ tax_year }}, made up of {{ calc.salary|monthly }} salary, {{ calc.employer_ni.gross_ni|monthly }} employer NI and {{ calc.pension_contribution|monthly }} employer pension contribution."
+      }
+    }
+  ]
+}
+</script>
 {% endblock %}
 
 {% block content %}
@@ -16,6 +48,13 @@
   <div class="badge">Employer cost</div>
   <h1>Cost of employing someone on £{{ "{:,}".format(salary) }} in {{ tax_year }}</h1>
   <p>Employing someone on a £{{ "{:,}".format(salary) }} salary costs <strong>{{ calc.total_cost|money }}</strong> per year ({{ calc.total_cost|monthly }} per month) once you add employer NI at 15% and minimum auto-enrolment pension. That is <strong>{{ calc.cost_above_salary|money }}</strong> above the headline salary — a {{ calc.cost_above_salary_pct|percent }} uplift employers need to budget for before the first payslip.</p>
+
+  <div class="pill-grid" style="margin-top:0.8rem;">
+    <a class="pill" href="/calculator?salary={{ salary }}">Open £{{ "{:,}".format(salary) }} in calculator</a>
+    <a class="pill" href="/employer-ni/{{ salary }}">Employer NI only on £{{ "{:,}".format(salary) }}</a>
+    <a class="pill" href="/team-cost-planner">Payroll planner</a>
+    <a class="pill" href="/guides/auto-enrolment-pension-costs">Auto-enrolment costs</a>
+  </div>
 
   <div class="card" style="padding:1rem 1.1rem; margin-top:0.9rem;">
     <h2 style="font-size:1.18rem;">Monthly-first summary</h2>
@@ -57,7 +96,7 @@
     <h2 style="font-size:1.15rem;">What changed in {{ tax_year }}</h2>
     <p>From 6 April 2025, employer NI increased from 13.8% to 15% and the secondary threshold fell from £9,100 to £5,000. Both changes increase cost simultaneously — a higher rate applied to a wider NIable base.</p>
     <p>2024/25 NI on this salary: <strong>{{ year_change.ni_2024|money }}</strong> (13.8% above £9,100).</p>
-    <p>2025/26 NI on this salary: <strong>{{ year_change.ni_2025|money }}</strong> (15% above £5,000).</p>
+    <p>{{ tax_year }} NI on this salary: <strong>{{ year_change.ni_2025|money }}</strong> (15% above £5,000).</p>
     <p style="margin-bottom:0;">Increase: <strong>{{ year_change.increase|money }}</strong> ({{ year_change.increase_pct|percent }} more than 2024/25).</p>
   </div>
 
@@ -98,6 +137,9 @@
       <a class="pill" href="/employer-ni/{{ salary }}">Employer NI only — £{{ "{:,}".format(salary) }}</a>
       <a class="pill" href="/employer-ni">Employer NI by salary</a>
       <a class="pill" href="/cost-of-employing">All salary cost pages</a>
+      <a class="pill" href="/ni-change-calculator">NI Change Calculator →</a>
+      <a class="pill" href="/employer-salary-cost-calculator-uk">Employer salary cost calculator</a>
+      <a class="pill" href="/employee-cost-calculator-uk">Employee cost calculator UK</a>
     </div>
     <h3 style="font-size:1rem; margin-top:0.85rem;">Related guides</h3>
     <div class="pill-grid">
@@ -118,6 +160,16 @@
       </div>
     </div>
   </section>
+
+  <div class="card" style="padding:1rem 1.1rem; margin-top:0.9rem; background:var(--accent-light); border-color:var(--accent);">
+    <h2 style="font-size:1rem; margin-bottom:0.35rem;">Run the payroll for this hire</h2>
+    <p style="font-size:0.87rem; color:var(--text-secondary); margin-bottom:0.6rem;">Once you know the total employer cost, the next step is payroll software that handles RTI submissions, auto-enrolment and payslips automatically. UK employers typically use Xero, QuickBooks, Sage or FreeAgent.</p>
+    <div class="pill-grid">
+      <a class="pill" href="/payroll-software-uk">Compare UK payroll software</a>
+      <a class="pill" href="/guides/employer-ni-changes-2025">What changed in April 2025</a>
+      <a class="pill" href="/guides/employment-allowance-guide">Employment Allowance guide</a>
+    </div>
+  </div>
 
   <div class="card" style="padding:1rem 1.1rem; margin-top:0.9rem; background:var(--surface-alt);">
     <h2 style="font-size:1.05rem;">Methodology and assumptions</h2>

@@ -7,12 +7,12 @@
   "@type": "Article",
   "headline": {{ guide.title|tojson }},
   "description": {{ guide.description|tojson }},
-  "datePublished": "2025-04-06",
+  "datePublished": "{{ guide.date_iso if guide.date_iso else '2025-04-06' }}",
   "dateModified": "{{ now.date().isoformat() }}",
   "author": {
     "@type": "Organization",
     "name": "EmployerCalculator Editorial",
-    "url": "{{ site_url }}/editorial-standards"
+    "url": "{{ site_url }}/about"
   },
   "publisher": {
     "@type": "Organization",
@@ -33,6 +33,29 @@
   <h1>{{ guide.title }}</h1>
   <p style="font-size:0.875rem; color:var(--text-tertiary); margin-bottom:0.5rem;">Written by EmployerCalculator Editorial &nbsp;·&nbsp; Reviewed against official UK sources &nbsp;·&nbsp; Last updated: {{ now.strftime('%B %Y') }}</p>
   <p style="font-size:0.95rem; color:var(--text-secondary);">{{ guide.description }}</p>
+
+  {% if slug in ["auto-enrolment-pension-costs", "employer-ni-changes-2025"] %}
+  <section class="card" style="padding:1rem 1.25rem; margin-top:0.9rem;">
+    <h2 style="font-size:1.05rem; margin-bottom:0.55rem;">Best next step from this guide</h2>
+    {% if slug == "auto-enrolment-pension-costs" %}
+    <p style="font-size:0.88rem; color:var(--text-secondary); margin-bottom:0.7rem;">This guide answers <strong>auto-enrolment costs</strong> intent. If you need the full employer cost rather than pension-only cost, move next to the calculator or the salary pages.</p>
+    <div class="pill-grid">
+      <a class="pill" href="/pension-cost">Auto-enrolment pension calculator</a>
+      <a class="pill" href="/calculator">Full employer cost calculator</a>
+      <a class="pill" href="/cost-of-employing">Cost of employing by salary</a>
+      <a class="pill" href="/team-cost-planner">Payroll planner</a>
+    </div>
+    {% elif slug == "employer-ni-changes-2025" %}
+    <p style="font-size:0.88rem; color:var(--text-secondary); margin-bottom:0.7rem;">This guide answers the <strong>NI rise</strong> question. If you now need to price an actual hire, jump to the NI pages, salary pages or the full calculator.</p>
+    <div class="pill-grid">
+      <a class="pill" href="/ni-change-calculator">NI rise calculator landing page</a>
+      <a class="pill" href="/employer-ni">Employer NI by salary</a>
+      <a class="pill" href="/cost-of-employing">Cost of employing by salary</a>
+      <a class="pill" href="/calculator">Full employer cost calculator</a>
+    </div>
+    {% endif %}
+  </section>
+  {% endif %}
 
   {% for sec in guide.sections %}
   <article class="card" style="padding:1rem 1.25rem; margin-top:0.9rem;">
@@ -79,6 +102,18 @@
     </div>
   </section>
   {% endif %}
+
+  {% include "partials/tools_block.html" %}
+
+  <div class="card" style="padding:1rem 1.25rem; margin-top:0.9rem; background:var(--accent-light); border-color:var(--accent);">
+    <h2 style="font-size:1rem; margin-bottom:0.5rem;">Once you know the cost — what next?</h2>
+    <p style="font-size:0.87rem; color:var(--text-secondary); margin-bottom:0.6rem;">Running payroll correctly after you have calculated employer cost is the next practical step. The tools below handle HMRC RTI submissions, auto-enrolment pension and payslip generation automatically.</p>
+    <div class="pill-grid">
+      <a class="pill" href="/payroll-software-uk">Compare UK payroll software →</a>
+      <a class="pill" href="/calculator">Open employer cost calculator</a>
+      <a class="pill" href="/guides/employment-allowance-guide">Check Employment Allowance eligibility</a>
+    </div>
+  </div>
 
   <div class="card" style="padding:1rem 1.25rem; margin-top:0.9rem; background:var(--surface-alt);">
     <p style="margin-bottom:0; font-size:0.83rem; color:var(--text-tertiary);">EmployerCalculator Editorial. Content reviewed against <a href="https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2025-to-2026" rel="noopener" target="_blank" style="color:var(--accent);">HMRC guidance</a>. Estimates only — not financial or legal advice. See our <a href="/methodology" style="color:var(--accent);">methodology</a> and <a href="/sources" style="color:var(--accent);">sources</a>.</p>

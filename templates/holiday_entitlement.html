@@ -5,9 +5,9 @@
 {
   "@context": "https://schema.org",
   "@type": "WebApplication",
-  "name": "Holiday Entitlement Calculator 2025/26",
+  "name": "Holiday Entitlement Calculator {{ tax_year }}",
   "url": "{{ canonical_url }}",
-  "description": "Calculate statutory holiday entitlement for full-time, part-time and mid-year starters. Updated for 2025/26.",
+  "description": "Calculate statutory holiday entitlement for full-time, part-time and mid-year starters. Updated for {{ tax_year }}.",
   "applicationCategory": "FinanceApplication",
   "operatingSystem": "Any",
   "inLanguage": "en-GB",
@@ -63,7 +63,7 @@
 <div class="calc-wrap">
   <div class="calc-header">
     <div class="badge">Holiday entitlement calculator</div>
-    <h1>Holiday Entitlement Calculator 2025/26</h1>
+    <h1>Holiday Entitlement Calculator {{ tax_year }}</h1>
     <p>Calculate statutory UK holiday entitlement for full-time, part-time and hours-based workers, including pro-rata for mid-year starters. Results update live.</p>
   </div>
 

@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{{ title }}</title>
 <meta name="description" content="{{ meta_description }}">
+<meta name="robots" content="index,follow">
 <link rel="canonical" href="{{ canonical_url }}">
 <link rel="alternate" hreflang="en-gb" href="{{ canonical_url }}">
 <meta property="og:locale" content="en_GB">
@@ -16,6 +17,8 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="{{ title }}">
 <meta name="twitter:description" content="{{ meta_description }}">
+<meta name="twitter:image" content="{{ site_url }}/static/logo-512.png">
+<meta property="og:image" content="{{ site_url }}/static/logo-512.png">
 {% if adsense_client %}
 <meta name="google-adsense-account" content="{{ adsense_client }}">
 {% endif %}
@@ -727,15 +730,17 @@ body {
 <!-- HERO -->
 <header class="hero">
   <div class="hero-badge">Updated for {{ tax_year }}</div>
-  <h1>Cost to Employer Calculator UK — NI, Pension &amp; Total Salary Cost ({{ tax_year }})</h1>
-  <p>Enter any salary for the exact employer NI, pension and overhead breakdown — updated for {{ tax_year }}.</p>
+  <h1>Employer Cost Calculator UK — salary cost to employer, NI and pension ({{ tax_year }})</h1>
+  <p>Calculate the true cost of employing someone in the UK. Enter any salary to see employer NI, auto-enrolment pension, overheads and total salary cost to employer for {{ tax_year }}.</p>
   <a href="#calculator" class="hero-cta">
     Calculate employer costs
     <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
   </a>
   <div class="hero-links">
     <a href="#tools">All calculators</a>
-    <a href="#costs">Cost-per-salary pages</a>
+    <a href="#costs">Cost by salary</a>
+    <a href="/employer-ni">Employer NI only</a>
+    <a href="/team-cost-planner">Payroll planner</a>
     <a href="/guides">Guides</a>
     <a href="/sources">Sources</a>
   </div>
@@ -965,6 +970,7 @@ body {
 <section class="section" style="padding-top:0.9rem;padding-bottom:0.75rem;">
   <div class="section-label">How it works</div>
   <h2>Three quick steps to estimate employer cost</h2>
+  <p style="margin-bottom:0.8rem;">The homepage owns broad <strong>employer cost calculator UK</strong> intent. If you already know the salary, jump to the salary pages. If you only need employer NI, use the NI pages. If you need a whole-team view, use the payroll planner.</p>
   <div style="display:grid;gap:0.75rem;grid-template-columns:repeat(3,1fr);" class="ec-inline-steps">
     <div class="card" style="padding:0.95rem 1rem;">
       <div style="font-family:var(--font-display);font-size:1.35rem;color:var(--accent);line-height:1;margin-bottom:0.35rem;">01</div>
@@ -989,11 +995,15 @@ body {
 <section class="section" id="tools">
   <div class="section-label">Calculators</div>
   <h2>All employer calculators</h2>
-  <p>12 live tools covering employer cost, payroll obligations and HR calculations. All updated for {{ tax_year }} rates.</p>
+  <p>Tools for different search intents: full employer cost calculator, employer NI calculator, payroll planner and supporting HR calculators. All updated for {{ tax_year }} rates.</p>
   <div class="tools-grid" style="grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:0.55rem;">
     <a href="/calculator" class="tool-card tool-live">
       <h3>Employer NI &amp; Total Cost</h3>
       <p>Salary + NI at 15% + pension + overheads. Full employer cost with band breakdown for {{ tax_year }}.</p>
+    </a>
+    <a href="/team-cost-planner" class="tool-card tool-live">
+      <h3>Payroll Planner</h3>
+      <p>Model total payroll cost for multiple employees with Employment Allowance, pension and overheads.</p>
     </a>
     <a href="/employer-ni" class="tool-card tool-live">
       <h3>Employer NI by Salary</h3>
@@ -1148,13 +1158,13 @@ body {
       <h3>Employer on-costs explained — NI, pension, holiday and overheads</h3>
       <p>All the costs above salary. What employers actually pay beyond the headline number.</p>
     </a>
-    <a href="/guides/cost-of-hiring-london" class="guide-card">
+    <a href="/guides/hiring-costs-london" class="guide-card">
       <span class="guide-arrow">→</span>
       <div class="guide-topic">London</div>
       <h3>Cost of hiring in London ({{ tax_year }})</h3>
       <p>London salary benchmarks, employer NI and total hiring costs with worked examples.</p>
     </a>
-    <a href="/guides/cost-of-hiring-manchester" class="guide-card">
+    <a href="/guides/hiring-costs-manchester" class="guide-card">
       <span class="guide-arrow">→</span>
       <div class="guide-topic">Manchester</div>
       <h3>Cost of hiring in Manchester ({{ tax_year }})</h3>

@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block jsonld %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": {{ title|tojson }},
+  "description": {{ meta_description|tojson }},
+  "datePublished": "2025-04-06",
+  "dateModified": "{{ now.date().isoformat() }}",
+  "author": {"@type": "Organization", "name": "EmployerCalculator Editorial", "url": "{{ site_url }}/about"},
+  "publisher": {"@type": "Organization", "name": "EmployerCalculator.co.uk", "url": "{{ site_url }}"},
+  "mainEntityOfPage": {"@type": "WebPage", "@id": "{{ canonical_url }}"}
+}
+</script>
+{% if faq_items %}
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{% for item in faq_items %}{"@type":"Question","name":{{ item.q|tojson }},"acceptedAnswer":{"@type":"Answer","text":{{ item.a|tojson }}}}{% if not loop.last %},{% endif %}{% endfor %}]}
+</script>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<section class="section">
+  <nav style="font-size:0.8rem;color:var(--text-tertiary);margin-bottom:0.75rem;">
+    <a href="/" style="color:var(--accent);">Home</a> / <span>Payroll software</span>
+  </nav>
+
+  <div class="badge">Guide</div>
+  <h1>Best Payroll Software for UK Small Businesses ({{ tax_year }})</h1>
+  <p style="font-size:0.875rem;color:var(--text-tertiary);margin-bottom:0.5rem;">Written by EmployerCalculator Editorial &nbsp;·&nbsp; Updated for {{ tax_year }} &nbsp;·&nbsp; Reviewed: {{ now.strftime('%B %Y') }}</p>
+
+  <div class="card" style="padding:1rem 1.25rem;margin-top:0.75rem;background:var(--accent-light);border-color:var(--accent);">
+    <p style="font-size:0.9rem;color:var(--text-primary);margin:0;">Once you have calculated your <a href="/calculator" style="color:var(--accent);font-weight:600;">true employer cost</a> — salary, NI at 15%, pension at 3% — the next step is payroll software that automates the monthly compliance. This page compares the main options for UK employers so you can choose the right tool for your headcount and workflow.</p>
+  </div>
+
+  <article class="card" style="padding:1rem 1.25rem;margin-top:0.9rem;">
+    <h2>Why payroll software matters after your cost calculation</h2>
+    <p>Knowing that a £35,000 salary costs approximately £40,363 per year in total employer cost is the planning stage. Running that payroll each month — submitting RTI reports to HMRC, handling auto-enrolment contributions, generating payslips — requires software that integrates with HMRC's systems and automates the compliance steps.</p>
+    <p>For most UK small businesses, the choice comes down to three decisions: do you want payroll standalone or bundled with accounting; how many employees are you running; and how much HR functionality do you need alongside payroll.</p>
+  </article>
+
+  <article class="card" style="padding:1rem 1.25rem;margin-top:0.9rem;">
+    <h2>Best for small employers (1–10 employees)</h2>
+    <p><strong>Xero Payroll</strong> — Xero's payroll module is included in higher-tier plans and integrates directly with Xero's accounting. It handles RTI submissions, pension contributions, and payslip generation. Well-suited for businesses that already use Xero for bookkeeping. Pricing is tiered by plan.</p>
+    <p><strong>QuickBooks Payroll</strong> — QuickBooks offers a payroll add-on to its accounting software. Strong HMRC integration, auto-enrolment support, and a streamlined interface for small teams. Good option if you are already on QuickBooks for accounting.</p>
+    <p><strong>Sage Payroll</strong> — Sage has long-standing HMRC recognition and is widely used in UK small businesses and accountancy practices. The standalone Sage Payroll product works without Sage's accounting software, which suits businesses that use a separate bookkeeping tool. <a href="https://sageuklimited.sjv.io/n44Vmx" rel="sponsored noopener" target="_blank" style="color:var(--accent);font-weight:600;">Visit Sage Payroll →</a></p>
+    <p><strong>FreeAgent</strong> — Built for freelancers and micro-businesses. Includes payroll for small teams and integrates with NatWest and RBS business banking accounts, often making it free for those customers. Strong auto-submission features.</p>
+  </article>
+
+  <article class="card" style="padding:1rem 1.25rem;margin-top:0.9rem;">
+    <h2>Best for payroll and accounting together</h2>
+    <p>If you want one system that handles both the books and the payroll, the two dominant options are <strong>Xero</strong> (with its payroll module) and <strong>QuickBooks</strong>. Both offer accounting-to-payroll data flow without manual re-entry, making them efficient for small businesses that do not have a dedicated finance team.</p>
+    <p>For employers billing per employee and watching costs carefully, it is worth modelling the true annual software cost at your headcount before committing. Both platforms offer free trials.</p>
+  </article>
+
+  <article class="card" style="padding:1rem 1.25rem;margin-top:0.9rem;">
+    <h2>Best for HR and payroll together</h2>
+    <p><strong>Employment Hero</strong> — A cloud-based platform that combines HR (contracts, onboarding, leave management, performance) with payroll in a single system. Popular with growing small businesses in the 5–50 employee range where the overhead of separate HR and payroll tools becomes friction. Employment Hero has a UK-specific product with HMRC RTI integration.</p>
+    <p><strong>Rippling</strong> — US-origin platform with a UK payroll product. Strong on automating HR and IT administration alongside payroll. Better suited to businesses with a mix of UK and international employees, or those with complex device and software provisioning needs.</p>
+    <p>For most UK employers with under 20 staff, Xero or QuickBooks with a payroll module is simpler and cheaper than a full HRIS platform. The HR-plus-payroll tools become worthwhile once onboarding, contracts and leave management create real administrative overhead.</p>
+  </article>
+
+  <article class="card" style="padding:1rem 1.25rem;margin-top:0.9rem;">
+    <h2>Quick decision guide</h2>
+    <p><strong>1–5 employees, already on Xero or QuickBooks:</strong> add payroll to your existing accounting software. Fastest setup and no double-entry.</p>
+    <p><strong>Standalone payroll, accountant-managed:</strong> Sage Payroll is the most widely used by UK accountancy practices and supports payroll-only without requiring Sage accounting. <a href="https://sageuklimited.sjv.io/n44Vmx" rel="sponsored noopener" target="_blank" style="color:var(--accent);font-weight:600;">See Sage Payroll →</a></p>
+    <p><strong>New employer, budget-conscious:</strong> HMRC's Basic PAYE Tools is free for up to 10 employees. It handles RTI and basic payslips. No auto-enrolment management built in — you will need to handle pension separately.</p>
+    <p><strong>HR and payroll together, 5–50 employees:</strong> Employment Hero or Rippling bundle people management with payroll in one platform. Worth the higher cost if you are also managing onboarding, contracts and leave.</p>
+    <p style="margin-bottom:0;font-size:0.85rem;color:var(--text-secondary);">Use the <a href="/calculator" style="color:var(--accent);">employer cost calculator</a> to confirm your monthly payroll cost before committing to a software plan. Most plans charge per employee per month, so knowing your headcount and average salary helps you estimate the total.</p>
+  </article>
+
+  <article class="card" style="padding:1rem 1.25rem;margin-top:0.9rem;">
+    <h2>Quick comparison</h2>
+    <div style="overflow-x:auto;margin-top:0.5rem;">
+      <table style="width:100%;font-size:0.83rem;border-collapse:collapse;">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border);text-align:left;">
+            <th style="padding:0.5rem 0.75rem 0.5rem 0;color:var(--text-secondary);font-weight:600;">Product</th>
+            <th style="padding:0.5rem 0.75rem;color:var(--text-secondary);font-weight:600;">Best for</th>
+            <th style="padding:0.5rem 0.75rem;color:var(--text-secondary);font-weight:600;">Accounting included</th>
+            <th style="padding:0.5rem 0.75rem;color:var(--text-secondary);font-weight:600;">HR included</th>
+            <th style="padding:0.5rem 0.75rem;color:var(--text-secondary);font-weight:600;">HMRC RTI</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in comparison_table %}
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:0.5rem 0.75rem 0.5rem 0;font-weight:600;color:var(--text-primary);">{{ row.name }}</td>
+            <td style="padding:0.5rem 0.75rem;color:var(--text-secondary);">{{ row.best_for }}</td>
+            <td style="padding:0.5rem 0.75rem;color:var(--text-secondary);">{{ row.accounting }}</td>
+            <td style="padding:0.5rem 0.75rem;color:var(--text-secondary);">{{ row.hr }}</td>
+            <td style="padding:0.5rem 0.75rem;color:var(--text-secondary);">{{ row.hmrc_rti }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:0.75rem;color:var(--text-tertiary);margin-top:0.5rem;">All products listed support HMRC RTI. Pricing varies by plan and employee count — check each provider's current pricing directly.</p>
+  </article>
+
+  <article class="card" style="padding:1rem 1.25rem;margin-top:0.9rem;">
+    <h2>How we compare payroll tools</h2>
+    <p>Our editorial assessment covers products most commonly used by UK small businesses and HR teams. We do not rank by price alone — the relevant criteria for most small employers are HMRC compliance, integration with existing accounting software, and whether the product handles auto-enrolment pension alongside PAYE.</p>
+    <ul style="padding-left:1.25rem;font-size:0.9rem;color:var(--text-secondary);line-height:1.8;margin-top:0.5rem;">
+      <li><strong>HMRC RTI support</strong> — all products listed support Real Time Information submissions. This is a baseline requirement, not a differentiator.</li>
+      <li><strong>Auto-enrolment handling</strong> — we note whether the software calculates qualifying earnings, manages contribution deductions, and submits to pension providers, or whether this must be done separately.</li>
+      <li><strong>Accounting integration</strong> — for most small businesses, the question is whether payroll is bundled with accounting (Xero, QuickBooks, FreeAgent) or standalone (Sage). We describe both options without a blanket preference.</li>
+      <li><strong>Business size fit</strong> — we note which products suit micro-businesses (1–5 employees), small businesses (5–20 employees), and growing teams (20–50) where HR functionality becomes relevant.</li>
+      <li><strong>No paid placements</strong> — product inclusion is editorial, not commercial. Some links on this page are affiliate links — marked with <code>rel="sponsored"</code> — and are disclosed in the footer below. Affiliate relationships do not influence which products are listed or how they are assessed.</li>
+    </ul>
+    <p style="margin-top:0.75rem;font-size:0.85rem;color:var(--text-tertiary);">Pricing, features and availability change frequently. Always check the provider's current terms before making a purchase decision. See our <a href="/editorial-standards" style="color:var(--accent);">editorial standards</a> for our full approach to commercial relationships.</p>
+  </article>
+
+  <article class="card" style="padding:1rem 1.25rem;margin-top:0.9rem;">
+    <h2>What to check before choosing</h2>
+    <ul style="padding-left:1.25rem;font-size:0.9rem;color:var(--text-secondary);line-height:1.8;margin-top:0.25rem;">
+      <li>Does the software handle <strong>auto-enrolment pension submissions</strong> to your pension provider, or just calculate contributions?</li>
+      <li>What is the per-employee cost at your headcount — the base subscription plus any per-employee charges?</li>
+      <li>Can you submit RTI directly from the software, or do you need a separate HMRC PAYE Online account?</li>
+      <li>Does it integrate with your existing accounting software, or does it replace it?</li>
+      <li>Does it support <strong>Employment Allowance</strong> claims and handle the eligibility check?</li>
+    </ul>
+  </article>
+
+  <section class="card" style="padding:1rem 1.25rem;margin-top:0.9rem;">
+    <h2 style="font-size:1.1rem;margin-bottom:0.6rem;">Head-to-head comparisons</h2>
+    <p style="font-size:0.875rem;color:var(--text-secondary);margin-bottom:0.75rem;">Choosing between specific platforms? See our dedicated comparison pages.</p>
+    <div class="pill-grid">
+      <a class="pill" href="/xero-vs-sage-payroll">Xero vs Sage Payroll →</a>
+      <a class="pill" href="/xero-vs-quickbooks-payroll">Xero vs QuickBooks Payroll →</a>
+      <a class="pill" href="/best-payroll-software-1-employee">Best for 1 employee →</a>
+    </div>
+  </section>
+
+  <section class="card" style="padding:1rem 1.25rem;margin-top:0.9rem;">
+    <h2 style="font-size:1.1rem;margin-bottom:0.6rem;">Calculate your employer costs first</h2>
+    <p style="font-size:0.875rem;color:var(--text-secondary);margin-bottom:0.75rem;">Before choosing payroll software, use the <a href="/calculator" style="color:var(--accent);font-weight:600;">employer cost calculator</a> to model the total cost of your headcount — salary, employer NI at 15%, and pension contributions. That gives you the budget basis for payroll decisions.</p>
+    <div class="pill-grid">
+      <a class="pill" href="/calculator">Employer cost calculator</a>
+      <a class="pill" href="/employer-ni">Employer NI by salary</a>
+      <a class="pill" href="/cost-of-employing">True cost of hiring — by salary band</a>
+      <a class="pill" href="/guides/employer-on-costs-explained">Employer on-costs explained</a>
+      <a class="pill" href="/guides/employer-ni-changes-2025">NI changes April 2025</a>
+    </div>
+  </section>
+
+  {% if faq_items %}
+  <section class="card" style="padding:1rem 1.25rem;margin-top:0.9rem;">
+    <h2 style="font-size:1.15rem;">Frequently asked questions</h2>
+    <div class="faq-list">
+      {% for item in faq_items %}
+      <details class="faq-item"><summary>{{ item.q }}</summary><div class="faq-answer">{{ item.a }}</div></details>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  <div class="card" style="padding:0.85rem 1.1rem;margin-top:0.9rem;background:var(--surface-alt);">
+    <p style="margin-bottom:0;font-size:0.78rem;color:var(--text-tertiary);">EmployerCalculator Editorial. Product descriptions are factual summaries based on publicly available information and are not endorsements. Some links on this page may be affiliate links — if you choose a product through them, we may earn a commission at no extra cost to you. This does not affect our editorial assessment. Estimates only — not financial or legal advice.</p>
+  </div>
+</section>
+{% endblock %}

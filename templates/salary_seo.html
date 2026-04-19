@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 {% set salary_fmt = "£{:,}".format(salary) %}
-{% block title %}{{ salary_fmt }} after tax {{ region_name }} (2025/26) - monthly take-home pay{% endblock %}
-{% block meta_description %}See {{ salary_fmt }} after tax in {{ region_name }} for 2025/26. View monthly and annual take-home pay with tax, NI, pension and student loan scenarios.{% endblock %}
+{% block title %}{{ salary_fmt }} after tax {{ region_name }} ({{ tax_year }}) - monthly take-home pay{% endblock %}
+{% block meta_description %}See {{ salary_fmt }} after tax in {{ region_name }} for {{ tax_year }}. View monthly and annual take-home pay with tax, NI, pension and student loan scenarios.{% endblock %}
 {% block canonical %}<link rel="canonical" href="{{ canonical_url }}">{% endblock %}
 
 {% block head_extra %}
 <meta property="og:type" content="website">
 <meta property="og:url" content="{{ canonical_url }}">
-<meta property="og:title" content="{{ salary_fmt }} after tax {{ region_name }} (2025/26) - monthly take-home pay">
+<meta property="og:title" content="{{ salary_fmt }} after tax {{ region_name }} ({{ tax_year }}) - monthly take-home pay">
 <meta property="og:description" content="Server-rendered UK salary page with tax bands, NI and scenario variants for {{ salary_fmt }}.">
 <meta name="twitter:card" content="summary_large_image">
 <script>
@@ -46,7 +46,7 @@
     {
       "@type": "Question",
       "name": "How much income tax is paid on {{ salary_fmt }}?",
-      "acceptedAnswer": {"@type":"Answer","text":"Estimated income tax is {{ result.income_tax.total_tax|gbp2 }} in the 2025/26 tax year, with tax applied by band."}
+      "acceptedAnswer": {"@type":"Answer","text":"Estimated income tax is {{ result.income_tax.total_tax|gbp2 }} in the {{ tax_year }} tax year, with tax applied by band."}
     },
     {
       "@type": "Question",
@@ -66,7 +66,7 @@
     <span class="text-slate-700">{{ region_name }}</span>
   </nav>
 
-  <h1 class="text-4xl font-extrabold text-slate-900">{{ salary_fmt }} after tax {{ region_name }} (2025/26)</h1>
+  <h1 class="text-4xl font-extrabold text-slate-900">{{ salary_fmt }} after tax {{ region_name }} ({{ tax_year }})</h1>
   <p class="mt-4 text-slate-600 max-w-4xl">At {{ salary_fmt }} gross salary, estimated net pay is <strong>{{ result.take_home.monthly|gbp2 }} per month</strong> and <strong>{{ result.take_home.annual|gbp2 }} per year</strong> under default assumptions (tax code 1257L, NI category A, no student loan, no pension). This page is server-rendered so the headline result and breakdown are indexable and shareable.</p>
 
   <div class="grid sm:grid-cols-2 lg:grid-cols-5 gap-4 mt-8">
@@ -188,7 +188,7 @@
 
   <div class="card p-6 mt-6">
     <h2 class="text-2xl font-bold text-slate-900 mb-3">How we calculated this</h2>
-    <p class="text-slate-600">This page uses current 2025/26 tax year assumptions with a default PAYE setup (tax code 1257L, NI category A, no student loan and no pension contribution) to produce an indexable server-rendered estimate. Use it as a planning baseline, then compare variants if your deductions differ.</p>
+    <p class="text-slate-600">This page uses current {{ tax_year }} tax year assumptions with a default PAYE setup (tax code 1257L, NI category A, no student loan and no pension contribution) to produce an indexable server-rendered estimate. Use it as a planning baseline, then compare variants if your deductions differ.</p>
     <div class="mt-4 flex flex-wrap gap-3 text-sm">
       <a class="text-blue-600 font-semibold hover:underline" href="/methodology">Methodology and assumptions</a>
       <a class="text-blue-600 font-semibold hover:underline" href="/guides/how-take-home-pay-is-calculated">How take-home pay is calculated</a>

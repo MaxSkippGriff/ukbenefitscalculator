@@ -8,6 +8,9 @@ import os
 from datetime import datetime
 from typing import Dict, List
 
+import geoip2.database as _geoip2db
+_geo = _geoip2db.Reader("/app/dbip-country.mmdb")
+
 from dotenv import load_dotenv
 from flask import Flask, abort, make_response, redirect, render_template, request, send_from_directory, url_for
 from flask_limiter import Limiter
@@ -45,43 +48,58 @@ ADSENSE_CLIENT = os.getenv("ADSENSE_CLIENT", "ca-pub-3932111812673824").strip()
 limiter = Limiter(
     app=app,
     key_func=lambda: (request.headers.get("X-Forwarded-For", "").split(",")[0].strip() or request.remote_addr or ""),
-    default_limits=["100 per minute"],
+    default_limits=["30 per minute"],
     storage_uri="memory://",
     strategy="fixed-window",
 )
 
+# Countries blocked entirely — GeoIP lookup, covers all ISPs/clouds/residential
+_BLOCKED_COUNTRIES = {"SG"}  # Singapore (AdSense invalid click fraud source)
+
+# Specific subnets blocked — SG ranges the GeoIP lite DB misses + other known scrapers
 _BLOCKED_SUBNETS = [
-    # ── Singapore cloud / hosting (scraper source) ───────────────────────────
-    ipaddress.ip_network("43.173.0.0/16"),     # Wangsu/CDNetworks
-    ipaddress.ip_network("47.82.0.0/16"),      # Alibaba Cloud SG
-    ipaddress.ip_network("47.128.0.0/16"),     # Alibaba Cloud SG (broader)
-    ipaddress.ip_network("8.222.0.0/16"),      # Alibaba Cloud SG
-    ipaddress.ip_network("47.245.0.0/16"),     # Alibaba Cloud SG
-    ipaddress.ip_network("43.129.0.0/16"),     # Tencent Cloud SG
-    ipaddress.ip_network("43.134.0.0/16"),     # Tencent Cloud SG
-    ipaddress.ip_network("43.156.0.0/16"),     # Tencent Cloud SG
-    ipaddress.ip_network("103.253.40.0/22"),   # Tencent Cloud SG
-    ipaddress.ip_network("13.212.0.0/15"),     # AWS ap-southeast-1 (SG)
-    ipaddress.ip_network("18.136.0.0/15"),     # AWS ap-southeast-1 (SG)
-    ipaddress.ip_network("18.138.0.0/15"),     # AWS ap-southeast-1 (SG)
-    ipaddress.ip_network("52.76.0.0/15"),      # AWS ap-southeast-1 (SG)
-    ipaddress.ip_network("54.169.0.0/16"),     # AWS ap-southeast-1 (SG)
-    ipaddress.ip_network("54.254.0.0/16"),     # AWS ap-southeast-1 (SG)
-    ipaddress.ip_network("175.41.128.0/17"),   # AWS ap-southeast-1 (SG)
-    ipaddress.ip_network("34.87.0.0/18"),      # GCP asia-southeast1 (SG)
-    ipaddress.ip_network("34.126.64.0/18"),    # GCP asia-southeast1 (SG)
-    ipaddress.ip_network("35.185.176.0/20"),   # GCP asia-southeast1 (SG)
-    ipaddress.ip_network("35.240.176.0/20"),   # GCP asia-southeast1 (SG)
-    ipaddress.ip_network("128.199.192.0/19"),  # DigitalOcean SG
-    ipaddress.ip_network("68.183.160.0/19"),   # DigitalOcean SG
-    ipaddress.ip_network("139.59.192.0/18"),   # DigitalOcean SG
-    ipaddress.ip_network("104.238.160.0/20"),  # Vultr SG
-    ipaddress.ip_network("172.104.160.0/20"),  # Akamai/Linode SG
-    # ── Bytespider / ByteDance ───────────────────────────────────────────────
+    # Singapore — Wangsu/CDNetworks (missed by db-ip lite)
+    ipaddress.ip_network("43.172.0.0/15"),
+    # Singapore — Alibaba Cloud SG
+    ipaddress.ip_network("47.82.0.0/15"),
+    ipaddress.ip_network("47.128.0.0/16"),
+    ipaddress.ip_network("8.222.0.0/16"),
+    ipaddress.ip_network("47.245.0.0/16"),
+    # Singapore — Tencent Cloud SG
+    ipaddress.ip_network("43.129.0.0/16"),
+    ipaddress.ip_network("43.134.0.0/16"),
+    ipaddress.ip_network("43.156.0.0/16"),
+    # Singapore — AWS ap-southeast-1
+    ipaddress.ip_network("13.212.0.0/15"),
+    ipaddress.ip_network("18.136.0.0/15"),
+    ipaddress.ip_network("18.138.0.0/15"),
+    ipaddress.ip_network("52.76.0.0/15"),
+    # Singapore — DigitalOcean SG
+    ipaddress.ip_network("128.199.192.0/19"),
+    ipaddress.ip_network("68.183.160.0/19"),
+    ipaddress.ip_network("139.59.192.0/18"),
+    # Other known scrapers
     ipaddress.ip_network("47.128.32.0/20"),    # Bytespider / ByteDance
     ipaddress.ip_network("110.249.200.0/22"),  # Bytespider alternate
 ]
-_BLOCKED_UAS = ("bytespider", "petalbot", "ccbot", "omgili", "dataforseo", "scrapy", "python-httpx", "go-http-client")
+_BLOCKED_UAS = (
+    # Named bad bots
+    "bytespider", "petalbot", "ccbot", "omgili", "dataforseo", "scrapy",
+    "seranking", "mj12bot", "dotbot", "blexbot", "seznambot",
+    # Raw HTTP clients — never a real browser
+    "python-httpx", "python-requests", "go-http-client", "java/",
+    "curl/", "wget/", "libwww", "okhttp", "apache-httpclient", "aiohttp",
+    "httpx", "mechanize", "lwp-", "guzzle", "restsharp",
+    # Headless browsers
+    "headlesschrome", "phantomjs", "selenium",
+    # Chinese mobile apps — zero legitimate traffic on a UK tax calculator
+    "micromessenger", "mqqbrowser", "ucbrowser", "quark/", "sogou",
+    "liebaofast", "360 alitephone", "oppobrowser", "vivo browser",
+    "miuibrowser", "huaweibrowser", "baiduboxapp", "baidubrowser",
+    "qqbrowser", "2345browser", "lbbrowser", "maxthon",
+)
+# Paths that are not HTML pages — skip browser fingerprint check for these
+_STATIC_PATHS = ("/static/", "/robots.txt", "/sitemap", "/ads.txt", "/favicon", "/.well-known")
 # Known legitimate crawlers — exempt from browser fingerprint check
 _GOOD_BOTS = (
     "googlebot", "google-inspectiontool", "adsbot-google", "mediapartners-google",
@@ -106,6 +124,16 @@ def block_scrapers():
     ip_str = _get_real_ip()
     if ip_str in _HONEYPOT_BLOCKED:
         abort(403)
+
+    # Country-level block (covers all ISPs, clouds, and residential IPs)
+    try:
+        country = _geo.country(ip_str).country.iso_code
+        if country in _BLOCKED_COUNTRIES:
+            abort(403)
+    except Exception:
+        pass
+
+    # Specific subnet block
     try:
         ip_obj = ipaddress.ip_address(ip_str)
         for subnet in _BLOCKED_SUBNETS:
@@ -124,11 +152,11 @@ def block_scrapers():
     if any(g in ua for g in _GOOD_BOTS):
         return
 
-    # Browser fingerprint check — real browsers always send Accept-Language.
-    # Scrapers using requests/httpx/curl rarely do unless explicitly configured.
-    # Only applies to HTML page requests (not assets, API calls, etc.)
-    accept = request.headers.get("Accept", "")
-    if "text/html" in accept:
+    # Browser fingerprint check — real browsers ALWAYS send Accept-Language.
+    # Raw HTTP clients (Java, Go, curl, requests) never do.
+    # Skip only for static assets and known non-HTML paths.
+    path = request.path
+    if not any(path.startswith(p) for p in _STATIC_PATHS):
         if not request.headers.get("Accept-Language"):
             abort(403)
 
@@ -190,8 +218,8 @@ TOOL_CARDS = [
 
 GUIDES: Dict[str, Dict] = {
     "employer-ni-changes-2025": {
-        "title": "Employer NI Changes April 2025 — Rate Up to 15%, Threshold Down to £5,000",
-        "description": "From April 2025, employer NI rises from 13.8% to 15% and the secondary threshold drops from £9,100 to £5,000/year. See what this means for your payroll costs.",
+        "title": "Employer NI Changes 2025/26: 15% Rate, £5,000 Threshold and Cost by Salary",
+        "description": "Employer NI changed on 6 April 2025: rate 13.8% to 15% and threshold £9,100 to £5,000. See what the NI rise means at £30k, £35k and £50k salaries, then compare full employer cost.",
         "topic": "Employer NI",
         "sections": [
             {
@@ -299,8 +327,8 @@ GUIDES: Dict[str, Dict] = {
         ],
     },
     "auto-enrolment-pension-costs": {
-        "title": "Auto-enrolment pension costs 2025/26: 3% minimum, qualifying earnings £6,240–£50,270",
-        "description": "Employer auto-enrolment costs explained: minimum 3% on qualifying earnings £6,240–£50,270. A £30k salary costs ~£716/yr; a £50k salary costs ~£1,321/yr. Full breakdown with enrolment rules.",
+        "title": "Auto-Enrolment Pension Costs for Employers 2025/26 | What Employers Must Pay",
+        "description": "Auto-enrolment pension costs for UK employers: minimum 3% on qualifying earnings from £6,240 to £50,270. See what auto-enrolment costs at common salaries and how it affects total employer cost.",
         "topic": "Pensions",
         "sections": [
             {
@@ -763,7 +791,7 @@ GUIDES: Dict[str, Dict] = {
                 "heading": "Hiring in Nottingham: employer cost overview for 2025/26",
                 "paragraphs": [
                     "Nottingham's employment mix spans healthcare, retail, financial services and a growing digital sector, with the University of Nottingham and Nottingham Trent University producing a consistent graduate pipeline. Employer costs follow national rules — 15% NI above £5,000, minimum 3% pension — applied to salary levels that sit broadly in line with other East Midlands cities.",
-                    "For office-based and professional service roles, salaries commonly range from £24,000 for graduate and administrative positions to £50,000 for experienced managers and specialists. At £35,000 — a common Nottingham mid-market salary — total employer cost before overheads is approximately £39,501 per year: £35,000 salary plus £4,500 employer NI plus approximately £863 employer pension.",
+                    "For office-based and professional service roles, salaries commonly range from £24,000 for graduate and administrative positions to £50,000 for experienced managers and specialists. At £35,000 — a common Nottingham mid-market salary — total employer cost before overheads is approximately £40,363 per year: £35,000 salary plus £4,500 employer NI plus approximately £863 employer pension.",
                     "Healthcare roles, whether NHS or private, add a further consideration: many NHS contracts have fixed salary scales, so the employer cost variable is primarily NI and pension rather than negotiated salary. At the NHS Band 5 starting point of approximately £28,407, employer NI is approximately £3,511 per year and pension (at minimum 3%) is approximately £667 per year.",
                 ],
             },
@@ -1042,7 +1070,7 @@ GUIDES: Dict[str, Dict] = {
                 "heading": "What does hiring your first employee actually cost?",
                 "paragraphs": [
                     "Many first-time employers focus on the salary figure and miss the mandatory add-ons. In 2025/26, every UK employer must pay employer National Insurance on top of gross salary — 15% on earnings above £5,000 — and once your employee is eligible, you must also make auto-enrolment pension contributions of at least 3% of their qualifying earnings. These two items alone typically add 14–17% on top of the headline salary.",
-                    "At a £28,000 starting salary, the true employer cost before overheads is approximately £32,153 per year: £28,000 salary, £3,450 employer NI and £653 employer pension. If you are hiring at £35,000, the total reaches approximately £39,501 before any equipment, software or workspace costs. Use the employer cost calculator to model your specific salary.",
+                    "At a £28,000 starting salary, the true employer cost before overheads is approximately £32,153 per year: £28,000 salary, £3,450 employer NI and £653 employer pension. If you are hiring at £35,000, the total reaches approximately £40,363 before any equipment, software or workspace costs. Use the employer cost calculator to model your specific salary.",
                     "Beyond the statutory costs, factor in one-off hiring costs that do not appear in the recurring model: job board fees (typically £100–£600 per post), any recruitment agency fees (often 10–20% of first-year salary for specialist roles), and the time cost of onboarding. The statutory costs on this page are the recurring floor — the true cost of hiring your first employee is higher when setup costs are included.",
                 ],
             },
@@ -1258,8 +1286,8 @@ GSC_INTENT_PAGES: Dict[str, Dict] = {
         ],
     },
     "/ni-change-calculator": {
-        "title": "NI Rise Calculator UK 2025/26 | Employer NI Change After April 2025",
-        "description": "Free NI rise calculator for UK employers. April 2025 raised employer NI from 13.8% to 15% and cut the threshold from £9,100 to £5,000. Compare your 2025/26 cost against 2024/25 for any salary.",
+        "title": "National Insurance Rise Calculator UK 2025/26 | Before & After April 2025 by Salary",
+        "description": "NI change calculator: see exact 2024/25 vs 2025/26 employer NI for any salary. £30k: rose from £2,884 to £3,750 (+£866). £50k: rose from £5,640 to £6,750 (+£1,110). Rate 13.8%→15%, threshold £9,100→£5,000.",
         "h1": "NI rise calculator for UK employers (2025/26)",
         "badge": "NI rise / NI change",
         "intro": "From 6 April 2025, employer National Insurance rose from 13.8% to 15% and the secondary threshold fell from £9,100 to £5,000 per year. Both changes hit at once, which means lower-paid employees now attract employer NI on a much larger portion of their salary. At £30,000, the annual NI bill rose from approximately £2,884 to £3,750 — an increase of £866 per employee. At £35,000, the rise is around £915. Use the full employer cost calculator below to run your specific salary and see the exact 2025/26 versus 2024/25 comparison.",
@@ -1796,8 +1824,8 @@ HOURS_SCENARIO_PAGES: Dict[str, Dict] = {
     "cost-of-employing-someone-20-hours-a-week": {
         "hours": 20,
         "annual_salary_nlw": round(_NLW * _HOURS_PER_YEAR(20)),
-        "title": "Cost of Employing Someone 20 Hours a Week UK (2025/26)",
-        "description": "Employer cost for a 20-hour part-time employee in the UK. NI, pension and true total cost at NLW and common pay rates. 2025/26 figures.",
+        "title": "Cost of Employing Someone 20 Hours a Week (2025/26)",
+        "description": "Employing someone 20 hrs/week at National Living Wage costs ~£14,047/yr total: £12,698 salary + £1,155 employer NI + £194 pension. See full on-costs breakdown for any hourly rate.",
         "h1": "Cost of employing someone 20 hours a week (2025/26)",
         "badge": "Part-time · 20 hrs/wk",
         "intro": "A 20-hour-per-week employee working at the National Living Wage (£12.71/hour) earns approximately £12,698 per year. The employer NI secondary threshold of £5,000 is not reduced for part-time hours, so employer NI applies on £7,698 at 15% — adding approximately £1,155 per year. Minimum pension adds a further £194 on qualifying earnings above £6,240. Total statutory employer cost above salary: approximately £1,349 per year. Use the calculator for any salary.",
@@ -1836,8 +1864,8 @@ HOURS_SCENARIO_PAGES: Dict[str, Dict] = {
     "cost-of-employing-someone-37-5-hours-a-week": {
         "hours": 37.5,
         "annual_salary_nlw": round(_NLW * round(37.5 * 52)),
-        "title": "Cost of Employing Someone 37.5 Hours a Week UK (2025/26)",
-        "description": "True employer cost for a standard 37.5-hour full-time employee. NI, pension, total cost. UK 2025/26.",
+        "title": "Cost of Employing Someone 37.5 Hours a Week (2025/26)",
+        "description": "Employing someone 37.5 hrs/week at National Living Wage (£12.71/hr) costs ~£28,309/yr total: £24,785 salary + £2,968 employer NI + £556 pension. See full breakdown for any salary.",
         "h1": "Cost of employing someone 37.5 hours a week (2025/26)",
         "badge": "Full-time · 37.5 hrs/wk",
         "intro": "A standard full-time employee working 37.5 hours per week earns approximately £24,785 per year at the National Living Wage. Employer NI on £18,810 above the £5,000 secondary threshold adds approximately £2,968 per year. Auto-enrolment pension at the 3% minimum adds approximately £556 per year on qualifying earnings. Total statutory employer cost: approximately £28,309 per year at NLW — around 14% above gross salary.",
@@ -2329,8 +2357,8 @@ def home():
         "landing.html",
         **with_meta(
             context,
-            title="Cost to Employer Calculator UK (2025/26) | Employer NI, Pension & Hiring Cost",
-            description="UK cost to employer calculator for salary, employer NI, pension and total hiring cost. See true payroll cost by employee salary, with Employment Allowance and 2024/25 comparison included.",
+            title="UK Cost to Employer Calculator 2025/26 | Salary + NI + Pension = True Hiring Cost",
+            description="Employer cost calculator UK for 2025/26. Calculate salary cost to employer including employer NI, pension and overheads. Check £30k, £35k and £50k examples or run the full calculator.",
             breadcrumbs=[{"name": "Home", "url": f"{SITE_URL}/"}],
         ),
     )
@@ -2354,8 +2382,8 @@ def calculator_page():
         "calculator.html",
         **with_meta(
             context,
-            title="UK Employer Cost Calculator (2025/26) | Salary, NI, Pension & Total Cost",
-            description="Calculate employer cost in the UK for any salary, including employer National Insurance, auto-enrolment pension and total payroll cost per month and year.",
+            title="Employer Cost Calculator UK 2025/26 | Salary Cost to Employer, NI and Pension",
+            description="Calculate total employer cost for any UK salary. Includes employer NI at 15%, auto-enrolment pension, Employment Allowance and overheads, with monthly and annual results for hiring decisions.",
             breadcrumbs=[
                 {"name": "Home", "url": f"{SITE_URL}/"},
                 {"name": "Calculator", "url": f"{SITE_URL}/calculator"},
@@ -2763,8 +2791,8 @@ def cost_of_hiring_hub():
         "cost_of_hiring_hub.html",
         **with_meta(
             {"role_list": role_list, "hours_list": hours_list, "industry_list": industry_list, "scenario_list": scenario_list, "tools_block": _TOOLS_BLOCK_DEFAULT},
-            title="Cost of Hiring Someone UK (2025/26) — By Role, Hours & Salary | EmployerCalculator.co.uk",
-            description="Browse UK employer hiring costs by job role, hours worked or salary level. Includes NI, pension and total cost for 2025/26. Covers developers, admin, care workers, hospitality and more.",
+            title="Cost of Hiring Someone UK (2025/26) | Employer NI + Pension by Role & Salary",
+            description="How much does it cost to hire someone in the UK? Browse true employer costs by job role (developers, admin, care, hospitality) and hours worked. Salary + NI + pension for 2025/26.",
             breadcrumbs=[
                 {"name": "Home", "url": f"{SITE_URL}/"},
                 {"name": "Cost of hiring", "url": f"{SITE_URL}/cost-of-hiring"},
@@ -2812,11 +2840,11 @@ def cost_page(amount: int):
         "cost_page.html",
         **with_meta(
             context,
-            title=f"Cost of Employing Someone on £{amount:,} (2025/26): {gbp(calc.total_cost)}/year Total",
+            title=f"Cost of Employing Someone on £{amount:,} in 2025/26 | Total Employer Cost {gbp(calc.total_cost)}",
             description=(
-                f"A £{amount:,} salary costs {gbp(calc.total_cost)} per year total in 2025/26 — "
-                f"{gbp(calc.total_cost / 12)} per month. Includes {ni_meta} employer NI at 15%, "
-                f"{gbp(calc.pension_contribution)} pension (3% minimum) and full monthly breakdown."
+                f"How much does it cost to employ someone on £{amount:,}? "
+                f"Total employer cost is {gbp(calc.total_cost)} a year ({gbp(calc.total_cost / 12)} a month), "
+                f"including {ni_meta} employer NI and {gbp(calc.pension_contribution)} minimum pension."
             ),
             breadcrumbs=[
                 {"name": "Home", "url": f"{SITE_URL}/"},
@@ -2863,8 +2891,8 @@ def employer_ni_page(amount: int):
         "employer_ni_page.html",
         **with_meta(
             context,
-            title=f"Employer NI on £{amount:,} (2025/26): {gbp(ni_current.gross_ni)}/year — {gbp(monthly(ni_current.gross_ni))}/month",
-            description=f"Employer NI on a £{amount:,} salary is {gbp(ni_current.gross_ni)}/year ({gbp(monthly(ni_current.gross_ni))}/month) in 2025/26. Up {gbp(ni_current.gross_ni - ni_previous['gross_ni'])} from 2024/25. Rate 15% above £5,000. Employment Allowance offset included.",
+            title=f"Employer NI on £{amount:,} Salary in 2025/26 | {gbp(ni_current.gross_ni)} per Year",
+            description=f"Employer NI on a £{amount:,} salary is {gbp(ni_current.gross_ni)} a year ({gbp(monthly(ni_current.gross_ni))} a month) for 2025/26. See the NI formula, 2024/25 comparison and related total employer cost.",
             breadcrumbs=[
                 {"name": "Home", "url": f"{SITE_URL}/"},
                 {"name": "Employer NI by salary", "url": f"{SITE_URL}/employer-ni"},
@@ -2994,8 +3022,8 @@ def employer_ni_index():
         "employer_ni_index.html",
         **with_meta(
             context,
-            title="Employer NI Calculator UK 2025/26 — Calculate National Insurance by Salary",
-            description="Calculate employer NI on any UK salary. 2025/26: 15% above £5,000. £30k = £3,750/yr · £35k = £4,500/yr · £50k = £6,750/yr · £75k = £10,500/yr. Monthly figures and 2024/25 comparison. Free.",
+            title="Employer NI Calculator UK 2025/26 | Employer National Insurance by Salary",
+            description="Employer NI calculator UK for 2025/26. Check employer National Insurance by salary, monthly NI, 2024/25 comparison and links to full employer cost pages.",
             breadcrumbs=[
                 {"name": "Home", "url": f"{SITE_URL}/"},
                 {"name": "Employer NI by salary", "url": f"{SITE_URL}/employer-ni"},
@@ -3040,8 +3068,8 @@ def cost_index():
         "cost_index.html",
         **with_meta(
             context,
-            title="Cost of Employing Someone UK (2025/26) — Employer NI, Pension & Total Cost by Salary",
-            description="What does it cost to employ someone in the UK? Salary + employer NI (15% above £5k) + pension (3%). £30k = £34,464/yr · £35k = £39,501/yr · £50k = £58,063/yr. Includes 2024/25 NI comparison.",
+            title="Cost of Employing Someone UK 2025/26 | Employer Cost by Salary",
+            description="Cost of employing someone in the UK by salary. Browse employer cost pages with employer NI, pension and monthly totals, then open the full employer cost calculator for any salary.",
             breadcrumbs=[
                 {"name": "Home", "url": f"{SITE_URL}/"},
                 {"name": "Cost of employing", "url": f"{SITE_URL}/cost-of-employing"},
@@ -4000,13 +4028,15 @@ def full_vs_part_time():
 @app.route("/team-cost-planner")
 @app.route("/team-payroll-calculator")
 @app.route("/payroll-cost-calculator-multiple-employees")
+@app.route("/payroll-planner")
+@app.route("/payroll-cost-planner")
 def team_cost_planner():
     return render_template(
         "team_cost_planner.html",
         **with_meta(
             {"tools_block": _TOOLS_BLOCK_DEFAULT},
-            title="Team Payroll Cost Planner UK 2025/26 — Model Multiple Employees",
-            description="Plan total payroll costs for your whole team. Add multiple employees, set individual salaries and pension rates, and calculate total employer NI, pension and overhead burden for 2025/26. Includes Employment Allowance.",
+            title="Payroll Planner UK 2025/26 | Team Payroll Cost Calculator",
+            description="Payroll planner for UK employers. Add multiple employees to estimate team payroll cost, employer NI, pension, Employment Allowance and overheads in one calculator.",
             breadcrumbs=[
                 {"name": "Home", "url": f"{SITE_URL}/"},
                 {"name": "Calculators", "url": f"{SITE_URL}/calculators"},

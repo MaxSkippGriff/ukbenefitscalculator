@@ -1,0 +1,29 @@
+{# Reusable "Tools worth considering" block
+   Usage: {% include "partials/tools_block.html" %}
+   Requires: tools_block list in context. Each item:
+     { name, short_desc, href (optional), cta (optional), is_affiliate (optional), enabled (optional) }
+   Links are only rendered if href is set AND enabled is true.
+   Affiliate disclosure is only shown if at least one active affiliate link exists.
+#}
+{% if tools_block %}
+{% set active_affiliate = tools_block | selectattr("is_affiliate") | selectattr("enabled") | list %}
+<section class="section" style="padding-top:0.75rem;padding-bottom:1.5rem;">
+  <div class="badge">Tools</div>
+  <h2 style="font-size:1.15rem;margin-bottom:0.35rem;">Tools worth considering</h2>
+  <p style="font-size:0.875rem;color:var(--text-secondary);margin-bottom:1rem;max-width:640px;">If you are moving from estimating employer costs to actually running payroll, accounting or staff administration, these are types of tools commonly used by UK employers. We do not endorse any specific product — this is an editorial summary only.</p>
+  <div style="display:grid;gap:0.65rem;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));">
+    {% for tool in tools_block %}
+    {% set is_live = tool.href and tool.enabled %}
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:0.9rem 1.1rem;">
+      <div style="font-weight:600;font-size:0.9rem;color:var(--text-primary);margin-bottom:0.25rem;">
+        {{ tool.name }}
+      </div>
+      <p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:{% if is_live %}0.6rem{% else %}0{% endif %};line-height:1.5;">{{ tool.short_desc }}</p>
+      {% if is_live %}
+      <a href="{{ tool.href }}"{% if tool.is_affiliate %} rel="sponsored noopener" target="_blank"{% else %} rel="noopener" target="_blank"{% endif %} onclick="window.trackEvent && window.trackEvent('tools_block_click',{tool:'{{ tool.name|replace("'","") }}',page:'{{ request.path }}'});" style="font-size:0.8rem;font-weight:600;color:var(--accent);text-decoration:none;">{{ tool.cta or "Learn more" }} →</a>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}

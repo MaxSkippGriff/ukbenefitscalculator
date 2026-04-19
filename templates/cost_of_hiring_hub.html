@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="section">
+  <div class="badge">UK employer costs · {{ tax_year }}</div>
+  <h1>Cost of hiring someone UK ({{ tax_year }})</h1>
+  <p>Browse employer costs by job role, industry sector, hours worked or scenario. Every page uses {{ tax_year }} employer NI rates (15% above £5,000), minimum auto-enrolment pension (3%) and current National Living Wage figures (£12.71/hr). Use the full calculator to model any specific situation.</p>
+
+  <section class="card" style="padding:1rem 1.15rem; margin-top:1rem;">
+    <h2 style="font-size:1.05rem; margin-bottom:0.75rem;">Cost of hiring by job role</h2>
+    <div class="grid-3">
+      {% for role in role_list %}
+      <a href="/{{ role.slug }}" style="display:block;padding:0.85rem;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--radius);text-decoration:none;transition:border-color 0.2s ease,box-shadow 0.2s ease;" onmouseover="this.style.borderColor='var(--accent)';this.style.boxShadow='0 2px 8px rgba(0,0,0,0.06)'" onmouseout="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
+        <div style="font-weight:600;color:var(--text-primary);margin-bottom:0.2rem;font-size:0.9rem;">{{ role.title }}</div>
+        <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:0.3rem;">{{ role.range }}</div>
+        <div style="font-size:0.82rem;color:var(--accent);font-weight:600;">From ~£{{ "{:,}".format(role.example_cost) }}/yr &rarr;</div>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="card" style="padding:1rem 1.15rem; margin-top:0.9rem;">
+    <h2 style="font-size:1.05rem; margin-bottom:0.75rem;">Cost of employing by industry sector</h2>
+    <div class="grid-3">
+      {% for ind in industry_list %}
+      <a href="/{{ ind.slug }}" style="display:block;padding:0.85rem;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--radius);text-decoration:none;transition:border-color 0.2s ease,box-shadow 0.2s ease;" onmouseover="this.style.borderColor='var(--accent)';this.style.boxShadow='0 2px 8px rgba(0,0,0,0.06)'" onmouseout="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
+        <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--accent);margin-bottom:0.25rem;">{{ ind.badge }}</div>
+        <div style="font-weight:600;color:var(--text-primary);margin-bottom:0.2rem;font-size:0.9rem;">{{ ind.title }}</div>
+        <div style="font-size:0.8rem;color:var(--text-secondary);">{{ ind.range }} &rarr;</div>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="card" style="padding:1rem 1.15rem; margin-top:0.9rem;">
+    <h2 style="font-size:1.05rem; margin-bottom:0.75rem;">Cost of employing by hours worked (at NLW)</h2>
+    <div class="pill-grid">
+      {% for h in hours_list %}
+      <a href="/{{ h.slug }}" class="pill">{{ h.label }} &middot; NLW &asymp; £{{ "{:,}".format(h.nlw_salary) }}/yr</a>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="card" style="padding:1rem 1.15rem; margin-top:0.9rem;">
+    <h2 style="font-size:1.05rem; margin-bottom:0.75rem;">Employment scenario comparisons</h2>
+    <div class="grid-3">
+      {% for sc in scenario_list %}
+      <a href="/{{ sc.slug }}" style="display:block;padding:0.85rem;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--radius);text-decoration:none;transition:border-color 0.2s ease;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+        <div style="font-weight:600;color:var(--text-primary);margin-bottom:0.2rem;font-size:0.9rem;">{{ sc.title }}</div>
+        <div style="font-size:0.8rem;color:var(--text-secondary);">{{ sc.desc }}</div>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="card" style="padding:1rem 1.15rem; margin-top:0.9rem;">
+    <h2 style="font-size:1.05rem; margin-bottom:0.6rem;">Cost by salary or hourly rate</h2>
+    <div class="pill-grid">
+      <a class="pill" href="/cost-of-employing">Cost by annual salary</a>
+      <a class="pill" href="/employer-cost-at-minimum-wage-per-hour">Cost at NLW (£12.71/hr)</a>
+      <a class="pill" href="/employer-cost-at-13-pounds-per-hour">Cost at £13/hr</a>
+      <a class="pill" href="/employer-cost-at-15-pounds-per-hour">Cost at £15/hr</a>
+      <a class="pill" href="/employer-cost-at-20-pounds-per-hour">Cost at £20/hr</a>
+      <a class="pill" href="/employer-ni">Employer NI by salary</a>
+    </div>
+  </section>
+
+  {% if tools_block %}
+  <section class="card" style="padding:1rem 1.15rem; margin-top:0.9rem;">
+    <h2 style="font-size:1.05rem; margin-bottom:0.4rem;">Payroll software</h2>
+    <p style="font-size:0.87rem;color:var(--text-secondary);margin-bottom:0.75rem;">Once costs are modelled, you will need payroll software to run the actual pay.</p>
+    <div class="pill-grid">
+      {% for tool in tools_block %}{% if tool.enabled %}<a class="pill" href="{{ tool.href }}" target="_blank" rel="noopener{% if tool.is_affiliate %} sponsored{% endif %}">{{ tool.name }} &rarr;</a>{% endif %}{% endfor %}
+      <a class="pill" href="/payroll-software-uk">Compare payroll software</a>
+    </div>
+  </section>
+  {% endif %}
+
+  <p style="font-size:0.82rem; color:var(--text-tertiary); margin-top:0.9rem;">UK only. {{ tax_year }} rates. All figures are estimates for planning. <a href="/methodology" style="color:var(--accent);">Methodology</a>.</p>
+</section>
+{% endblock %}

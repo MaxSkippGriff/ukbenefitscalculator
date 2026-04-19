@@ -104,7 +104,7 @@ def save_extras(data):
 
 def call_claude(prompt: str) -> str:
     response = CLIENT.chat.completions.create(
-        model="gpt-4o",
+        model="gpt-4o-mini",
         max_tokens=4000,
         messages=[
             {"role": "system", "content": SYSTEM},

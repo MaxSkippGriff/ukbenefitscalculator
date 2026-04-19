@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-{% block title %}UK Salary Pages Hub (2025/26) | AfterTaxSalary.co.uk{% endblock %}
+{% block title %}UK Salary Pages Hub ({{ tax_year }}) | AfterTaxSalary.co.uk{% endblock %}
 {% block meta_description %}Browse UK salary after-tax pages by pay band and region. Compare monthly and annual take-home across England, Scotland, Wales and Northern Ireland.{% endblock %}
 {% block canonical %}<link rel="canonical" href="{{ canonical_url }}">{% endblock %}
 
 {% block head_extra %}
 <meta property="og:type" content="website">
 <meta property="og:url" content="{{ canonical_url }}">
-<meta property="og:title" content="UK Salary Pages Hub (2025/26)">
+<meta property="og:title" content="UK Salary Pages Hub ({{ tax_year }})">
 <meta property="og:description" content="Find salary after-tax pages by salary band and UK region.">
 {% endblock %}
 

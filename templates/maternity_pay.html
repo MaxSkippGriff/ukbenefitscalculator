@@ -5,7 +5,7 @@
 {
   "@context": "https://schema.org",
   "@type": "WebApplication",
-  "name": "Statutory Maternity Pay Calculator 2025/26",
+  "name": "Statutory Maternity Pay Calculator {{ tax_year }}",
   "url": "{{ canonical_url }}",
   "description": "Calculate SMP schedule: 6 weeks at 90% AWE plus 33 weeks at the flat rate. Includes employer HMRC recovery at 92%.",
   "applicationCategory": "FinanceApplication",
@@ -73,8 +73,8 @@
 <div class="calc-wrap">
   <div class="calc-header">
     <div class="badge">Maternity pay calculator</div>
-    <h1>Statutory Maternity Pay Calculator 2025/26</h1>
-    <p>Calculate total SMP payable over 39 weeks, the HMRC recovery amount, and the net cost to the employer. Uses the 2025/26 statutory flat rate of £184.03/week. Results update live.</p>
+    <h1>Statutory Maternity Pay Calculator {{ tax_year }}</h1>
+    <p>Calculate total SMP payable over 39 weeks, the HMRC recovery amount, and the net cost to the employer. Uses the {{ tax_year }} statutory flat rate of £184.03/week. Results update live.</p>
   </div>
 
   <div class="calc-grid">
@@ -153,7 +153,7 @@
 
     <details class="faq-item">
       <summary>How long does statutory maternity pay last?</summary>
-      <div class="faq-answer">SMP is paid for up to 39 weeks. The first 6 weeks are paid at 90% of the employee's average weekly earnings. The remaining 33 weeks are paid at the statutory flat rate of £184.03 per week (or 90% of AWE, whichever is lower) for 2025/26.</div>
+      <div class="faq-answer">SMP is paid for up to 39 weeks. The first 6 weeks are paid at 90% of the employee's average weekly earnings. The remaining 33 weeks are paid at the statutory flat rate of £184.03 per week (or 90% of AWE, whichever is lower) for {{ tax_year }}.</div>
     </details>
 
     <details class="faq-item">

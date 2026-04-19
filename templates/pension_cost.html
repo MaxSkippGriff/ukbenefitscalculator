@@ -1,17 +1,17 @@
 {% extends "base.html" %}
 
-{% block title %}Employer Pension Cost Calculator 2025/26 | EmployerCalculator.co.uk{% endblock %}
+{% block title %}Employer Pension Cost Calculator {{ tax_year }} | EmployerCalculator.co.uk{% endblock %}
 
-{% block meta_description %}Calculate employer and employee auto-enrolment pension costs for 2025/26. Uses qualifying earnings band (£6,240–£50,270) to show exact pension contributions.{% endblock %}
+{% block meta_description %}Calculate employer and employee auto-enrolment pension costs for {{ tax_year }}. Uses qualifying earnings band (£6,240–£50,270) to show exact pension contributions.{% endblock %}
 
 {% block jsonld %}
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "WebApplication",
-  "name": "Employer Pension Cost Calculator 2025/26",
+  "name": "Employer Pension Cost Calculator {{ tax_year }}",
   "url": "{{ canonical_url }}",
-  "description": "Calculate auto-enrolment employer pension contributions on qualifying earnings (£6,240–£50,270). Updated for 2025/26.",
+  "description": "Calculate auto-enrolment employer pension contributions on qualifying earnings (£6,240–£50,270). Updated for {{ tax_year }}.",
   "applicationCategory": "FinanceApplication",
   "operatingSystem": "Any",
   "inLanguage": "en-GB",
@@ -76,8 +76,8 @@
 {% block content %}
 <div class="calc-wrap">
   <div class="calc-header">
-    <h1>Employer Pension Cost Calculator 2025/26</h1>
-    <p>Calculate auto-enrolment pension contributions using 2025/26 qualifying earnings (£6,240&ndash;£50,270).</p>
+    <h1>Employer Pension Cost Calculator {{ tax_year }}</h1>
+    <p>Calculate auto-enrolment pension contributions using {{ tax_year }} qualifying earnings (£6,240&ndash;£50,270).</p>
   </div>
 
   <div class="calc-grid">
@@ -115,7 +115,7 @@
       </div>
 
       <div style="margin-top: 1rem; padding: 0.7rem 0.85rem; background: var(--surface-alt); border-radius: var(--radius-sm); font-size: 0.78rem; color: var(--text-secondary);">
-        <strong>2025/26 qualifying earnings:</strong> £6,240 &ndash; £50,270 &bull; Minimum total: 8% (3% employer)
+        <strong>{{ tax_year }} qualifying earnings:</strong> £6,240 &ndash; £50,270 &bull; Minimum total: 8% (3% employer)
       </div>
     </div>
 
@@ -150,7 +150,7 @@
           </div>
         </div>
         <div class="result-note" id="result-note">
-          Qualifying earnings for 2025/26: £6,240 to £50,270. Pension contributions are on earnings within this band, not total salary.
+          Qualifying earnings for {{ tax_year }}: £6,240 to £50,270. Pension contributions are on earnings within this band, not total salary.
         </div>
       </div>
 
@@ -165,7 +165,7 @@
         <details class="faq-item">
           <summary>What are qualifying earnings for auto-enrolment?</summary>
           <div class="faq-answer">
-            Qualifying earnings are the portion of pay used to calculate pension contributions. For 2025/26, this is earnings between £6,240 and £50,270 per year. Contributions are applied to earnings within this range only — not total salary — which is why the effective pension percentage appears lower than the stated rate for higher earners.
+            Qualifying earnings are the portion of pay used to calculate pension contributions. For {{ tax_year }}, this is earnings between £6,240 and £50,270 per year. Contributions are applied to earnings within this range only — not total salary — which is why the effective pension percentage appears lower than the stated rate for higher earners.
           </div>
         </details>
 
@@ -243,7 +243,7 @@
     // Sacrifice note
     document.getElementById('sacrifice-note').classList.toggle('visible', sacrifice);
 
-    var baseNote = 'Qualifying earnings for 2025/26: \u00a36,240 to \u00a350,270. Pension contributions are on earnings within this band, not total salary.';
+    var baseNote = 'Qualifying earnings for {{ tax_year }}: \u00a36,240 to \u00a350,270. Pension contributions are on earnings within this band, not total salary.';
     if (sacrifice) {
       var niSaving = employeeContrib * EMPLOYER_NI_RATE;
       baseNote += ' Estimated employer NI saving from salary sacrifice: ' + moneyDec(niSaving) + ' per year.';

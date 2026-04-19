@@ -5,9 +5,9 @@
 {
   "@context": "https://schema.org",
   "@type": "WebApplication",
-  "name": "Statutory Redundancy Pay Calculator 2025/26",
+  "name": "Statutory Redundancy Pay Calculator {{ tax_year }}",
   "url": "{{ canonical_url }}",
-  "description": "Calculate statutory redundancy pay by age, years of service and weekly pay. Weekly pay cap £700 for 2025/26.",
+  "description": "Calculate statutory redundancy pay by age, years of service and weekly pay. Weekly pay cap £700 for {{ tax_year }}.",
   "applicationCategory": "FinanceApplication",
   "operatingSystem": "Any",
   "inLanguage": "en-GB",
@@ -71,8 +71,8 @@
 <div class="calc-wrap">
   <div class="calc-header">
     <div class="badge">Statutory redundancy calculator</div>
-    <h1>Statutory Redundancy Pay Calculator 2025/26</h1>
-    <p>Calculate the statutory redundancy pay entitlement based on age, years of service and weekly pay, using the 2025/26 weekly pay cap of £700. Results update live.</p>
+    <h1>Statutory Redundancy Pay Calculator {{ tax_year }}</h1>
+    <p>Calculate the statutory redundancy pay entitlement based on age, years of service and weekly pay, using the {{ tax_year }} weekly pay cap of £700. Results update live.</p>
   </div>
 
   <div class="calc-grid">
@@ -93,7 +93,7 @@
       <div class="field field-prefix">
         <label for="weeklyPay">Gross weekly pay</label>
         <input type="number" id="weeklyPay" value="600" min="0" max="99999" step="1" inputmode="numeric">
-        <div class="hint">Capped at £700 for 2025/26 statutory calculation.</div>
+        <div class="hint">Capped at £700 for {{ tax_year }} statutory calculation.</div>
       </div>
     </div>
 
@@ -135,7 +135,7 @@
       </div>
 
       <div class="result-note">
-        Weekly pay capped at £700 for 2025/26. Maximum statutory redundancy pay: £21,000. Not financial or legal advice.
+        Weekly pay capped at £700 for {{ tax_year }}. Maximum statutory redundancy pay: £21,000. Not financial or legal advice.
       </div>
     </div>
   </div>
@@ -146,12 +146,12 @@
 
     <details class="faq-item">
       <summary>How is statutory redundancy pay calculated?</summary>
-      <div class="faq-answer">Statutory redundancy pay is based on your age, continuous years of service (up to 20), and weekly pay (capped at £700 for 2025/26). You get half a week's pay for each full year worked when under 22, one week's pay for each year aged 22–40, and one and a half week's pay for each year aged 41 or over.</div>
+      <div class="faq-answer">Statutory redundancy pay is based on your age, continuous years of service (up to 20), and weekly pay (capped at £700 for {{ tax_year }}). You get half a week's pay for each full year worked when under 22, one week's pay for each year aged 22–40, and one and a half week's pay for each year aged 41 or over.</div>
     </details>
 
     <details class="faq-item">
       <summary>What is the maximum statutory redundancy pay?</summary>
-      <div class="faq-answer">For 2025/26, the maximum is £21,000 — based on 20 qualifying years × 1.5 weeks × £700 weekly pay cap. This applies to employees aged 41 or over with at least 20 years' service.</div>
+      <div class="faq-answer">For {{ tax_year }}, the maximum is £21,000 — based on 20 qualifying years × 1.5 weeks × £700 weekly pay cap. This applies to employees aged 41 or over with at least 20 years' service.</div>
     </details>
 
     <details class="faq-item">
@@ -160,10 +160,20 @@
     </details>
   </div>
 
-  <!-- Cross-link -->
-  <div class="cross-link">
-    <p>Calculate total employer cost for any salary</p>
-    <a href="/calculator">Employer cost calculator &rarr;</a>
+  <!-- Related tools -->
+  <div class="faq-section" style="margin-top:1.5rem;">
+    <h2>Related calculators and guides</h2>
+    <div class="pill-grid" style="margin-bottom:0.75rem;">
+      <a class="pill" href="/calculator">Employer cost calculator</a>
+      <a class="pill" href="/notice-period">Notice period calculator</a>
+      <a class="pill" href="/unfair-dismissal">Unfair dismissal compensation</a>
+      <a class="pill" href="/employer-ni">Employer NI by salary</a>
+      <a class="pill" href="/guides/employer-ni-changes-2025">Employer NI changes 2025</a>
+      <a class="pill" href="/guides/employment-allowance-guide">Employment Allowance guide</a>
+      <a class="pill" href="/guides/redundancy-process-guide">Redundancy process guide</a>
+      <a class="pill" href="/cost-of-employing">Total cost of employing</a>
+    </div>
+    <p style="font-size:0.82rem; color:var(--text-tertiary); margin:0.5rem 0 0;">Not financial or legal advice. Confirm details with HMRC or a qualified employment solicitor.</p>
   </div>
 </div>
 {% endblock %}

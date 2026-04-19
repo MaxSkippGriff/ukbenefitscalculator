@@ -1,15 +1,15 @@
 {% extends "base.html" %}
 
-{% block title %}Unfair Dismissal Compensation Calculator 2025/26 | EmployerCalculator.co.uk{% endblock %}
+{% block title %}Unfair Dismissal Compensation Calculator {{ tax_year }} | EmployerCalculator.co.uk{% endblock %}
 
-{% block meta_description %}Estimate unfair dismissal compensation for 2025/26. Calculates basic award (statutory redundancy method) and compensatory award using the £700/week cap and £105,707 compensatory limit.{% endblock %}
+{% block meta_description %}Estimate unfair dismissal compensation for {{ tax_year }}. Calculates basic award (statutory redundancy method) and compensatory award using the £700/week cap and £105,707 compensatory limit.{% endblock %}
 
 {% block jsonld %}
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "WebApplication",
-  "name": "Unfair Dismissal Compensation Calculator 2025/26",
+  "name": "Unfair Dismissal Compensation Calculator {{ tax_year }}",
   "url": "{{ canonical_url }}",
   "description": "Estimate unfair dismissal compensation: basic award plus compensatory award. Updated for Employment Rights Act 2025 changes.",
   "applicationCategory": "FinanceApplication",
@@ -77,8 +77,8 @@
 {% block content %}
 <div class="calc-wrap">
   <div class="calc-header">
-    <h1>Unfair Dismissal Compensation Calculator 2025/26</h1>
-    <p>Estimate basic and compensatory award amounts using 2025/26 statutory limits. For indicative purposes only.</p>
+    <h1>Unfair Dismissal Compensation Calculator {{ tax_year }}</h1>
+    <p>Estimate basic and compensatory award amounts using {{ tax_year }} statutory limits. For indicative purposes only.</p>
   </div>
 
   <div class="calc-grid">
@@ -111,7 +111,7 @@
       </div>
 
       <div style="margin-top: 1rem; padding: 0.7rem 0.85rem; background: var(--surface-alt); border-radius: var(--radius-sm); font-size: 0.78rem; color: var(--text-secondary); line-height: 1.5;">
-        <strong>2025/26 caps:</strong> Weekly pay £700 &bull; Compensatory award £105,707 &bull; Max service 20 years
+        <strong>{{ tax_year }} caps:</strong> Weekly pay £700 &bull; Compensatory award £105,707 &bull; Max service 20 years
       </div>
     </div>
 
@@ -183,14 +183,14 @@
         <details class="faq-item">
           <summary>What is the basic award for unfair dismissal?</summary>
           <div class="faq-answer">
-            The basic award is calculated in the same way as statutory redundancy pay &mdash; using age, years of service (up to 20) and weekly pay (capped at £700 for 2025/26). It is the minimum compensation for an unfair dismissal claim regardless of actual financial loss.
+            The basic award is calculated in the same way as statutory redundancy pay &mdash; using age, years of service (up to 20) and weekly pay (capped at £700 for {{ tax_year }}). It is the minimum compensation for an unfair dismissal claim regardless of actual financial loss.
           </div>
         </details>
 
         <details class="faq-item">
           <summary>How is the compensatory award calculated?</summary>
           <div class="faq-answer">
-            The compensatory award compensates for actual financial loss caused by the unfair dismissal, including lost earnings, loss of benefits and future loss of earnings. It is capped at the lower of 52 weeks&apos; gross pay or £105,707 for 2025/26. Tribunals may reduce awards for contributory fault or failure to mitigate.
+            The compensatory award compensates for actual financial loss caused by the unfair dismissal, including lost earnings, loss of benefits and future loss of earnings. It is capped at the lower of 52 weeks&apos; gross pay or £105,707 for {{ tax_year }}. Tribunals may reduce awards for contributory fault or failure to mitigate.
           </div>
         </details>
 

@@ -9,6 +9,38 @@
   "description": "Employer National Insurance on a £{{ "{:,}".format(salary) }} salary for {{ tax_year }}, calculated at 15% above the £5,000 secondary threshold."
 }
 </script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "How much employer NI do I pay on a £{{ '{:,}'.format(salary) }} salary?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "For {{ tax_year }}, employer NI on a £{{ '{:,}'.format(salary) }} salary is {{ ni_current.gross_ni | money }} per year ({{ ni_current.gross_ni | monthly }} per month) at the {{ ni_rate }}% rate on earnings above £{{ '{:,}'.format(ni_threshold) }}."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is the employer NI rate for {{ tax_year }}?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The employer National Insurance rate for {{ tax_year }} is {{ ni_rate }}% on employee earnings above £{{ '{:,}'.format(ni_threshold) }} per year (£{{ '{:.2f}'.format(ni_threshold/52) }}/week secondary threshold)."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is the total cost of employing someone on £{{ '{:,}'.format(salary) }}?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "See the full employer cost breakdown for £{{ '{:,}'.format(salary) }} including pension and overheads at employercalculator.co.uk/cost/{{ salary }}."
+      }
+    }
+  ]
+}
+</script>
 {% endblock %}
 
 {% block content %}
@@ -16,6 +48,13 @@
   <div class="badge">Employer NI</div>
   <h1>Employer NI on £{{ "{:,}".format(salary) }} salary ({{ tax_year }})</h1>
   <p>For {{ tax_year }}, the employer National Insurance due on a <strong>£{{ "{:,}".format(salary) }}</strong> salary is <strong>{{ ni_current.gross_ni|money }}</strong> per year ({{ ni_current.gross_ni|monthly }} per month) before any Employment Allowance offset. This is calculated at 15% on earnings above the £5,000 secondary threshold — a change from the 13.8% rate and £9,100 threshold that applied in 2024/25.</p>
+
+  <div class="pill-grid" style="margin-top:0.8rem;">
+    <a class="pill" href="/cost/{{ salary }}">Full employer cost on £{{ "{:,}".format(salary) }}</a>
+    <a class="pill" href="/calculator?salary={{ salary }}">Open £{{ "{:,}".format(salary) }} in calculator</a>
+    <a class="pill" href="/guides/employer-ni-changes-2025">Employer NI changes guide</a>
+    <a class="pill" href="/team-cost-planner">Payroll planner</a>
+  </div>
 
   <div class="card" style="padding:1rem 1.1rem; margin-top:0.9rem;">
     <h2 style="font-size:1.15rem;">NI summary</h2>
@@ -34,12 +73,12 @@
   </div>
 
   <div class="card" style="padding:1rem 1.1rem; margin-top:0.9rem; overflow-x:auto;">
-    <h2 style="font-size:1.15rem;">2024/25 vs 2025/26 comparison</h2>
+    <h2 style="font-size:1.15rem;">2024/25 vs {{ tax_year }} comparison</h2>
     <p style="margin-bottom:0.5rem; font-size:0.9rem; color:var(--text-secondary);">Both the rate and threshold changed on 6 April 2025, increasing employer NI cost at virtually every salary level.</p>
     <table style="width:100%; border-collapse:collapse; margin-top:0.4rem;">
       <tr><th style="text-align:left; border-bottom:1px solid var(--border); padding:0.5rem 0.2rem; font-size:0.72rem; text-transform:uppercase; color:var(--text-tertiary);">Tax year</th><th style="text-align:left; border-bottom:1px solid var(--border); padding:0.5rem 0.2rem; font-size:0.72rem; text-transform:uppercase; color:var(--text-tertiary);">Rate</th><th style="text-align:left; border-bottom:1px solid var(--border); padding:0.5rem 0.2rem; font-size:0.72rem; text-transform:uppercase; color:var(--text-tertiary);">Threshold</th><th style="text-align:right; border-bottom:1px solid var(--border); padding:0.5rem 0.2rem; font-size:0.72rem; text-transform:uppercase; color:var(--text-tertiary);">NI due</th></tr>
       <tr><td style="padding:0.45rem 0.2rem; border-bottom:1px solid var(--border);">2024/25</td><td style="padding:0.45rem 0.2rem; border-bottom:1px solid var(--border);">13.8%</td><td style="padding:0.45rem 0.2rem; border-bottom:1px solid var(--border);">£9,100</td><td style="padding:0.45rem 0.2rem; border-bottom:1px solid var(--border); text-align:right;">{{ ni_previous.gross_ni|money }}</td></tr>
-      <tr><td style="padding:0.45rem 0.2rem; border-bottom:1px solid var(--border); font-weight:600;">2025/26</td><td style="padding:0.45rem 0.2rem; border-bottom:1px solid var(--border); font-weight:600;">15%</td><td style="padding:0.45rem 0.2rem; border-bottom:1px solid var(--border); font-weight:600;">£5,000</td><td style="padding:0.45rem 0.2rem; border-bottom:1px solid var(--border); text-align:right; font-weight:600;">{{ ni_current.gross_ni|money }}</td></tr>
+      <tr><td style="padding:0.45rem 0.2rem; border-bottom:1px solid var(--border); font-weight:600;">{{ tax_year }}</td><td style="padding:0.45rem 0.2rem; border-bottom:1px solid var(--border); font-weight:600;">15%</td><td style="padding:0.45rem 0.2rem; border-bottom:1px solid var(--border); font-weight:600;">£5,000</td><td style="padding:0.45rem 0.2rem; border-bottom:1px solid var(--border); text-align:right; font-weight:600;">{{ ni_current.gross_ni|money }}</td></tr>
       <tr><td style="padding:0.45rem 0.2rem; border-bottom:1px solid var(--border); color:var(--accent);">Increase</td><td colspan="2" style="padding:0.45rem 0.2rem; border-bottom:1px solid var(--border);"></td><td style="padding:0.45rem 0.2rem; border-bottom:1px solid var(--border); text-align:right; color:var(--accent);">{{ (ni_current.gross_ni - ni_previous.gross_ni)|money }}</td></tr>
     </table>
   </div>
@@ -53,6 +92,17 @@
   <div class="card" style="padding:1rem 1.1rem; margin-top:0.9rem;">
     <h2 style="font-size:1.15rem;">Under-21 and apprentice relief</h2>
     <p style="margin-bottom:0;">Under-21 employees and apprentices under 25 attract 0% employer NI up to the upper secondary threshold (£{{ "{:,}".format(ni_current.upper_secondary_threshold|int) }}), then 15% above that. Use the <a href="/calculator" style="color:var(--accent);">full calculator</a> to model relief scenarios.</p>
+  </div>
+
+  <div class="card" style="padding:1rem 1.1rem; margin-top:0.9rem; background:var(--accent-light); border-color:var(--accent);">
+    <h2 style="font-size:1rem; margin-bottom:0.35rem;">See total employer cost — not just NI</h2>
+    <p style="font-size:0.87rem; color:var(--text-secondary); margin-bottom:0.6rem;">Employer NI is one part of the picture. The full employer cost includes pension, overheads and the Employment Allowance offset. Use the links below to get the complete cost for this salary.</p>
+    <div class="pill-grid">
+      <a class="pill" href="/cost/{{ salary }}">Full cost — £{{ "{:,}".format(salary) }} salary</a>
+      <a class="pill" href="/calculator?salary={{ salary }}">Open in full calculator</a>
+      <a class="pill" href="/pension-cost">Pension cost calculator</a>
+      <a class="pill" href="/payroll-software-uk">Payroll software for UK employers</a>
+    </div>
   </div>
 
   <div class="card" style="padding:1rem 1.1rem; margin-top:0.9rem;">
@@ -91,7 +141,7 @@
   <div class="card" style="padding:1rem 1.1rem; margin-top:0.9rem; background:var(--surface-alt);">
     <h2 style="font-size:1.05rem;">Methodology</h2>
     <p style="margin-bottom:0.2rem;">Tax year {{ tax_year }}. Employer NI calculated at 15% on earnings above the £5,000 secondary threshold per HMRC guidance. 2024/25 comparison uses 13.8% above £9,100. Employment Allowance eligibility must be confirmed separately. Estimates only — not financial or legal advice.</p>
-    <p style="margin-bottom:0; font-size:0.83rem; color:var(--text-tertiary);">Source: <a href="https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2025-to-2026" rel="noopener" target="_blank" style="color:var(--accent);">HMRC Rates and Thresholds 2025/26</a></p>
+    <p style="margin-bottom:0; font-size:0.83rem; color:var(--text-tertiary);">Source: <a href="https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2025-to-2026" rel="noopener" target="_blank" style="color:var(--accent);">HMRC Rates and Thresholds {{ tax_year }}</a></p>
   </div>
 </section>
 {% endblock %}

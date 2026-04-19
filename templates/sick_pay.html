@@ -1,17 +1,17 @@
 {% extends "base.html" %}
 
-{% block title %}Statutory Sick Pay Calculator 2025/26 | EmployerCalculator.co.uk{% endblock %}
+{% block title %}Statutory Sick Pay Calculator {{ tax_year }} | EmployerCalculator.co.uk{% endblock %}
 
-{% block meta_description %}Calculate Statutory Sick Pay (SSP) for 2025/26. Enter weekly earnings, sick days and working pattern to find total SSP payable, daily rate and eligibility.{% endblock %}
+{% block meta_description %}Calculate Statutory Sick Pay (SSP) for {{ tax_year }}. Enter weekly earnings, sick days and working pattern to find total SSP payable, daily rate and eligibility.{% endblock %}
 
 {% block jsonld %}
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "WebApplication",
-  "name": "Statutory Sick Pay Calculator 2025/26",
+  "name": "Statutory Sick Pay Calculator {{ tax_year }}",
   "url": "{{ canonical_url }}",
-  "description": "Calculate SSP at £116.75 per week for 2025/26. Check eligibility, waiting days, daily rate and total sick pay due.",
+  "description": "Calculate SSP at £116.75 per week for {{ tax_year }}. Check eligibility, waiting days, daily rate and total sick pay due.",
   "applicationCategory": "FinanceApplication",
   "operatingSystem": "Any",
   "inLanguage": "en-GB",
@@ -70,8 +70,8 @@
 {% block content %}
 <div class="calc-wrap">
   <div class="calc-header">
-    <h1>Statutory Sick Pay Calculator 2025/26</h1>
-    <p>Calculate SSP entitlement based on 2025/26 rates. SSP is £116.75 per week for up to 28 weeks.</p>
+    <h1>Statutory Sick Pay Calculator {{ tax_year }}</h1>
+    <p>Calculate SSP entitlement based on {{ tax_year }} rates. SSP is £116.75 per week for up to 28 weeks.</p>
   </div>
 
   <div class="calc-grid">
@@ -100,7 +100,7 @@
       </div>
 
       <div style="margin-top: 1rem; padding: 0.7rem 0.85rem; background: var(--surface-alt); border-radius: var(--radius-sm); font-size: 0.78rem; color: var(--text-secondary);">
-        <strong>2025/26 rates:</strong> SSP £116.75/week &bull; LEL £123/week &bull; Max 28 weeks
+        <strong>{{ tax_year }} rates:</strong> SSP £116.75/week &bull; LEL £123/week &bull; Max 28 weeks
       </div>
     </div>
 
@@ -138,7 +138,7 @@
           </div>
         </div>
         <div class="result-note">
-          SSP is paid at £116.75 per week for 2025/26 for up to 28 weeks. Employers cannot recover SSP from HMRC (recovery scheme ended in 2014).
+          SSP is paid at £116.75 per week for {{ tax_year }} for up to 28 weeks. Employers cannot recover SSP from HMRC (recovery scheme ended in 2014).
         </div>
       </div>
 
@@ -153,7 +153,7 @@
         <details class="faq-item">
           <summary>Who qualifies for statutory sick pay?</summary>
           <div class="faq-answer">
-            Employees who earn at least £123 per week (the lower earnings limit for 2025/26), have been ill for at least 4 consecutive days (including non-working days), and are under State Pension age qualify for SSP. Agency workers and those on zero-hours contracts may also qualify if they meet the earnings threshold.
+            Employees who earn at least £123 per week (the lower earnings limit for {{ tax_year }}), have been ill for at least 4 consecutive days (including non-working days), and are under State Pension age qualify for SSP. Agency workers and those on zero-hours contracts may also qualify if they meet the earnings threshold.
           </div>
         </details>
 
@@ -209,7 +209,7 @@
       ineligibleNotice.style.display = 'block';
       ineligibleText.textContent =
         'Weekly earnings of ' + moneyDec(weeklyEarnings) +
-        ' are below the Lower Earnings Limit of \u00a3123.00 per week for 2025/26. ' +
+        ' are below the Lower Earnings Limit of \u00a3123.00 per week for {{ tax_year }}. ' +
         'SSP is only payable to employees earning at least \u00a3123 per week.';
       setText('kpi-eligible', 'No');
       setText('kpi-waiting', '3');

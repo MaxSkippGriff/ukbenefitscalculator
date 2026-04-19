@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Pro Rata Salary Calculator 2025/26 | EmployerCalculator.co.uk{% endblock %}
+{% block title %}Pro Rata Salary Calculator {{ tax_year }} | EmployerCalculator.co.uk{% endblock %}
 
 {% block meta_description %}Calculate pro-rata salary quickly for part-time employees. Enter full-time salary and working days or hours to get the proportional annual, monthly and weekly pay.{% endblock %}
 
@@ -9,7 +9,7 @@
 {
   "@context": "https://schema.org",
   "@type": "WebApplication",
-  "name": "Pro Rata Salary Calculator 2025/26",
+  "name": "Pro Rata Salary Calculator {{ tax_year }}",
   "url": "{{ canonical_url }}",
   "description": "Calculate pro-rata salary for part-time workers by days or hours per week. Free UK pro-rata salary converter.",
   "applicationCategory": "FinanceApplication",
@@ -71,7 +71,7 @@
 {% block content %}
 <div class="calc-wrap">
   <div class="calc-header">
-    <h1>Pro Rata Salary Calculator 2025/26</h1>
+    <h1>Pro Rata Salary Calculator {{ tax_year }}</h1>
     <p>Calculate the proportional salary for a part-time employee based on days or hours worked per week.</p>
   </div>
 

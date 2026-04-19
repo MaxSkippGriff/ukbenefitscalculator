@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-{% block title %}Take-Home Pay in {{ city_name }} (2025/26) - Salary After Tax Examples{% endblock %}
-{% block meta_description %}Take-home pay guide for {{ city_name }}. Compare salary levels and monthly net pay after tax, NI, pension and student loan assumptions in 2025/26.{% endblock %}
+{% block title %}Take-Home Pay in {{ city_name }} ({{ tax_year }}) - Salary After Tax Examples{% endblock %}
+{% block meta_description %}Take-home pay guide for {{ city_name }}. Compare salary levels and monthly net pay after tax, NI, pension and student loan assumptions in {{ tax_year }}.{% endblock %}
 {% block canonical %}<link rel="canonical" href="{{ canonical_url }}">{% endblock %}
 
 {% block head_extra %}
 <meta property="og:type" content="website">
 <meta property="og:url" content="{{ canonical_url }}">
-<meta property="og:title" content="Take-Home Pay in {{ city_name }} (2025/26) – Salary After Tax Examples">
+<meta property="og:title" content="Take-Home Pay in {{ city_name }} ({{ tax_year }}) – Salary After Tax Examples">
 <meta property="og:description" content="City-focused UK salary take-home pay page for {{ city_name }}.">
 <meta name="twitter:card" content="summary_large_image">
 {% if not city_indexable %}
@@ -53,7 +53,7 @@
 {% block content %}
 <section class="max-w-6xl mx-auto px-4 sm:px-6 py-10">
   <nav class="text-sm text-slate-500 mb-4"><a href="/" class="hover:text-blue-600">Home</a> / <span class="text-slate-700">{{ city_name }}</span></nav>
-  <h1 class="text-4xl font-extrabold text-slate-900">Take-home pay in {{ city_name }} (2025/26)</h1>
+  <h1 class="text-4xl font-extrabold text-slate-900">Take-home pay in {{ city_name }} ({{ tax_year }})</h1>
 
   <p class="mt-4 text-slate-600">This page helps you sanity-check salary offers in {{ city_name }} using UK PAYE assumptions. The key figure for practical planning is monthly net pay after income tax, National Insurance, student loan and pension effects, not gross salary alone.</p>
   <p class="mt-3 text-slate-600">For {{ city_name }}, common decisions are shaped by {{ city_context }}. That makes scenario testing important before committing to role changes or relocation. The salary table below is server-rendered with default assumptions so it is indexable and easy to compare.</p>

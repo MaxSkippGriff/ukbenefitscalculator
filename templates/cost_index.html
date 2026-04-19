@@ -11,8 +11,21 @@
 {% block content %}
 <section class="section">
   <div class="badge">Cost of employing</div>
-  <h1>Cost of employing someone by salary ({{ tax_year }})</h1>
-  <p>For {{ tax_year }}, total employer cost combines salary, <strong>employer NI at 15%</strong> above £5,000, and <strong>minimum employer pension at 3%</strong> of qualifying earnings. Select a salary for full annual and monthly totals.</p>
+  <h1>Cost of employing someone in the UK by salary ({{ tax_year }})</h1>
+  <p>This page is for people searching <strong>cost of employing someone</strong> or <strong>how much does it cost to employ someone in the UK</strong>. Pick a salary to see the baseline employer cost with employer NI and minimum pension, then move to the <a href="/calculator" style="color:var(--accent);">full employer cost calculator</a> if you need overheads or Employment Allowance.</p>
+
+  <div style="background:var(--accent-light);border:1.5px solid var(--accent);border-radius:var(--radius);padding:1rem 1.2rem;margin-top:0.85rem;">
+    <div style="font-size:0.72rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.5rem;">Quick answers — employer cost in {{ tax_year }}</div>
+    <div style="display:grid;gap:0.5rem;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));font-size:0.87rem;">
+      <div><strong>£25,000 salary:</strong> <span style="color:var(--text-secondary);">~£28,563/yr total employer cost</span></div>
+      <div><strong>£30,000 salary:</strong> <span style="color:var(--text-secondary);">~£34,464/yr total employer cost</span></div>
+      <div><strong>£35,000 salary:</strong> <span style="color:var(--text-secondary);">~£39,501/yr total employer cost</span></div>
+      <div><strong>£40,000 salary:</strong> <span style="color:var(--text-secondary);">~£45,063/yr total employer cost</span></div>
+      <div><strong>£50,000 salary:</strong> <span style="color:var(--text-secondary);">~£58,063/yr total employer cost</span></div>
+      <div><strong>£75,000 salary:</strong> <span style="color:var(--text-secondary);">~£87,063/yr total employer cost</span></div>
+    </div>
+    <p style="margin:0.55rem 0 0;font-size:0.8rem;color:var(--text-secondary);">Formula: salary + (salary − £5,000) × 15% NI + (qualifying earnings) × 3% pension. No overheads or Employment Allowance applied above.</p>
+  </div>
 
   <div class="card" style="padding:1rem 1.1rem; margin-top:1rem; overflow-x:auto;">
     <h2 style="font-size:1.1rem; margin-bottom:0.6rem;">Employer cost quick reference ({{ tax_year }})</h2>
@@ -71,11 +84,29 @@
   </div>
 
   <div style="margin-top:1.25rem;">
-    <p style="font-size:0.9rem; color:var(--text-secondary);">Need a salary not listed? Use the <a href="/calculator" style="color:var(--accent);">full employer cost calculator</a> for any amount. Also see <a href="/employer-ni" style="color:var(--accent);">employer NI by salary</a> for NI-only breakdowns.</p>
+    <p style="font-size:0.9rem; color:var(--text-secondary);">Need a salary not listed? Use the <a href="/calculator" style="color:var(--accent);">full employer cost calculator</a> for any amount. Want NI only? Go to <a href="/employer-ni" style="color:var(--accent);">employer NI by salary</a>. Planning a whole team? Use the <a href="/team-cost-planner" style="color:var(--accent);">payroll planner</a>.</p>
   </div>
 
+  <section class="card" style="padding:1rem 1.15rem; margin-top:1rem;">
+    <h2 style="font-size:1.05rem; margin-bottom:0.55rem;">Choose the right page for the job</h2>
+    <div class="grid-3">
+      <div>
+        <h3 style="font-size:0.95rem; margin-bottom:0.25rem;">Cost of employing by salary</h3>
+        <p style="font-size:0.85rem; color:var(--text-secondary); margin:0;">Best if you want a fast answer for a specific salary such as £30,000, £35,000 or £50,000.</p>
+      </div>
+      <div>
+        <h3 style="font-size:0.95rem; margin-bottom:0.25rem;">Full employer cost calculator</h3>
+        <p style="font-size:0.85rem; color:var(--text-secondary); margin:0;">Best if you need custom pension, overheads, hourly pay or Employment Allowance assumptions.</p>
+      </div>
+      <div>
+        <h3 style="font-size:0.95rem; margin-bottom:0.25rem;">Employer NI by salary</h3>
+        <p style="font-size:0.85rem; color:var(--text-secondary); margin:0;">Best if your query is specifically about employer NI rather than total salary cost to employer.</p>
+      </div>
+    </div>
+  </section>
+
   <div class="card" style="padding:1rem 1.1rem; margin-top:1rem;">
-    <h2 style="font-size:1.05rem; margin-bottom:0.45rem;">Hiring cost playbook for 2025/26 budgets</h2>
+    <h2 style="font-size:1.05rem; margin-bottom:0.45rem;">Hiring cost playbook for {{ tax_year }} budgets</h2>
     <p style="font-size:0.88rem;color:var(--text-secondary);line-height:1.7;margin:0 0 0.7rem;">For ranking pages to be useful, they need to answer the decision question, not just the formula. Use this framework when reviewing offers or headcount requests: baseline statutory cost first, then realistic overhead assumptions, then allowance eligibility.</p>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.65rem;" class="cost-playbook-grid">
       <div style="background:var(--surface-alt);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.75rem 0.85rem;">
@@ -112,7 +143,7 @@
       </div>
       <div class="card" style="padding:1rem 1.1rem;">
         <h3 style="font-family:var(--font-display);font-size:0.95rem;font-weight:500;letter-spacing:-0.01em;margin-bottom:0.5rem;">Employment Allowance</h3>
-        <p style="font-size:0.88rem;color:var(--text-secondary);line-height:1.65;margin:0;">Eligible employers can claim up to £10,500 off their employer NI bill per year (2025/26). Most limited companies with at least one employee who is not a sole director qualify. This effectively reduces employer NI to zero for smaller employers up to a certain payroll size.</p>
+        <p style="font-size:0.88rem;color:var(--text-secondary);line-height:1.65;margin:0;">Eligible employers can claim up to £10,500 off their employer NI bill per year ({{ tax_year }}). Most limited companies with at least one employee who is not a sole director qualify. This effectively reduces employer NI to zero for smaller employers up to a certain payroll size.</p>
       </div>
       <div class="card" style="padding:1rem 1.1rem;">
         <h3 style="font-family:var(--font-display);font-size:0.95rem;font-weight:500;letter-spacing:-0.01em;margin-bottom:0.5rem;">Other employer costs</h3>
@@ -142,12 +173,21 @@
   {% endif %}
 
   <section class="card" style="padding:1rem 1.25rem; margin-top:1.5rem;">
-    <h2 style="font-size:1rem; margin-bottom:0.6rem;">Related guides</h2>
+    <h2 style="font-size:1rem; margin-bottom:0.6rem;">Related tools and guides</h2>
     <div class="pill-grid">
+      <a class="pill" href="/calculator">Full employer cost calculator</a>
+      <a class="pill" href="/employer-ni">Employer NI by salary</a>
+      <a class="pill" href="/ni-change-calculator">NI change calculator</a>
       <a class="pill" href="/guides/employer-ni-changes-2025">Employer NI changes April 2025</a>
-      <a class="pill" href="/guides/employment-allowance-guide">Employment Allowance 2025/26</a>
+      <a class="pill" href="/guides/employment-allowance-guide">Employment Allowance {{ tax_year }}</a>
       <a class="pill" href="/guides/true-cost-of-hiring">True cost of hiring</a>
+      <a class="pill" href="/guides/auto-enrolment-pension-costs">Auto-enrolment pension costs</a>
+      <a class="pill" href="/team-cost-planner">Payroll planner</a>
+      <a class="pill" href="/payroll-software-uk">Best payroll software UK</a>
+      <a class="pill" href="/employer-salary-cost-calculator-uk">Employer salary cost calculator</a>
+      <a class="pill" href="/employee-cost-calculator-uk">Employee cost calculator UK</a>
     </div>
+    <p style="font-size:0.82rem; color:var(--text-tertiary); margin-top:0.75rem;">Want the employee's take-home view? <a href="https://aftertaxsalary.co.uk" rel="noopener" target="_blank" style="color:var(--accent);">AfterTaxSalary.co.uk</a> calculates net pay after income tax and employee NI for any UK salary.</p>
   </section>
 </section>
 {% endblock %}

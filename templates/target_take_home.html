@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% block title %}Target Monthly Take-Home Calculator (UK, 2025/26) | AfterTaxSalary{% endblock %}
-{% block meta_description %}Enter your target net monthly pay and estimate the gross salary required in each UK tax region for 2025/26.{% endblock %}
+{% block title %}Target Monthly Take-Home Calculator (UK, {{ tax_year }}) | AfterTaxSalary{% endblock %}
+{% block meta_description %}Enter your target net monthly pay and estimate the gross salary required in each UK tax region for {{ tax_year }}.{% endblock %}
 {% block canonical %}<link rel="canonical" href="{{ canonical_url }}">{% endblock %}
 {% block head_extra %}
 <meta property="og:type" content="website">
 <meta property="og:url" content="{{ canonical_url }}">
-<meta property="og:title" content="Target Monthly Take-Home Calculator (UK, 2025/26)">
+<meta property="og:title" content="Target Monthly Take-Home Calculator (UK, {{ tax_year }})">
 <meta property="og:description" content="Find the gross salary required for your desired net monthly take-home.">
 <meta name="twitter:card" content="summary_large_image">
 {% endblock %}
@@ -20,7 +20,7 @@
 {% block content %}
 <section class="max-w-5xl mx-auto px-4 sm:px-6 py-10">
   <nav class="text-sm text-slate-500 mb-4"><a href="/" class="hover:text-blue-600">Home</a> / <span class="text-slate-700">Target Take-Home</span></nav>
-  <h1 class="text-4xl font-extrabold text-slate-900">Target Monthly Take-Home (UK, 2025/26)</h1>
+  <h1 class="text-4xl font-extrabold text-slate-900">Target Monthly Take-Home (UK, {{ tax_year }})</h1>
   <p class="mt-3 text-slate-600">Set your desired net monthly pay and estimate the gross salary required.</p>
 
   <div class="grid md:grid-cols-2 gap-6 mt-8">

@@ -7,6 +7,13 @@
   <p>{{ page.intro }}</p>
   <p style="font-size:0.9rem; color:var(--text-secondary);">UK scope: England, Scotland, Wales and Northern Ireland employer payroll planning for the {{ tax_year }} tax year.</p>
 
+  <div class="pill-grid" style="margin-top:0.8rem;">
+    <a class="pill" href="{{ page.primary_cta.url }}">{{ page.primary_cta.label }}</a>
+    <a class="pill" href="/calculator">Full employer cost calculator</a>
+    <a class="pill" href="/cost-of-employing">Cost by salary</a>
+    <a class="pill" href="/employer-ni">Employer NI by salary</a>
+  </div>
+
   <div class="grid-3" style="margin-top:1rem;">
     <div class="card" style="padding:1rem;">
       <h2 style="font-size:1rem; margin-bottom:0.35rem;">Sample total cost</h2>
@@ -16,12 +23,22 @@
     <div class="card" style="padding:1rem;">
       <h2 style="font-size:1rem; margin-bottom:0.35rem;">Employer NI</h2>
       <p style="font-size:1.35rem; font-family:var(--font-display); color:var(--text-primary); margin-bottom:0.2rem;">{{ sample_calc.employer_ni.ni_due|money }}</p>
-      <p style="font-size:0.82rem; color:var(--text-tertiary); margin:0;">15% above £5,000 secondary threshold (2025/26)</p>
+      <p style="font-size:0.82rem; color:var(--text-tertiary); margin:0;">15% above £5,000 secondary threshold ({{ tax_year }})</p>
     </div>
     <div class="card" style="padding:1rem;">
       <h2 style="font-size:1rem; margin-bottom:0.35rem;">Pension + overheads</h2>
       <p style="font-size:1.35rem; font-family:var(--font-display); color:var(--text-primary); margin-bottom:0.2rem;">{{ (sample_calc.pension_contribution + sample_calc.overheads)|money }}</p>
       <p style="font-size:0.82rem; color:var(--text-tertiary); margin:0;">Baseline employer pension plus configured overheads</p>
+    </div>
+  </div>
+
+  <div style="background:var(--accent-light);border:1.5px solid var(--accent);border-radius:var(--radius);padding:1rem 1.2rem;margin-top:0.9rem;">
+    <div style="font-size:0.72rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem;">Key assumptions — UK {{ tax_year }}</div>
+    <div style="font-size:0.87rem;color:var(--text-secondary);display:grid;gap:0.3rem;">
+      <div>Employer NI: <strong style="color:var(--text-primary);">15%</strong> on earnings above the <strong style="color:var(--text-primary);">£5,000</strong> secondary threshold</div>
+      <div>Employer pension: minimum <strong style="color:var(--text-primary);">3%</strong> on qualifying earnings <strong style="color:var(--text-primary);">£6,240–£50,270</strong></div>
+      <div>Employment Allowance: up to <strong style="color:var(--text-primary);">£10,500</strong> off the NI bill for eligible employers</div>
+      <div>Worked examples: £30k salary → <strong style="color:var(--text-primary);">£34,464/yr</strong> · £35k → <strong style="color:var(--text-primary);">£40,363/yr</strong> · £50k → <strong style="color:var(--text-primary);">£58,063/yr</strong></div>
     </div>
   </div>
 
@@ -38,6 +55,7 @@
     <h2 style="font-size:1.05rem; margin-bottom:0.5rem;">Use the live tools</h2>
     <div class="pill-grid">
       <a class="pill" href="{{ page.primary_cta.url }}">{{ page.primary_cta.label }}</a>
+      {% if page.secondary_cta %}<a class="pill" href="{{ page.secondary_cta.url }}"{% if page.secondary_cta.url.startswith('http') %} target="_blank" rel="noopener"{% endif %}>{{ page.secondary_cta.label }}</a>{% endif %}
       <a class="pill" href="/cost-of-employing">Cost of employing by salary</a>
       <a class="pill" href="/employer-ni">Employer NI by salary</a>
       <a class="pill" href="/pension-cost">Auto-enrolment pension calculator</a>
@@ -49,7 +67,7 @@
     <div class="grid-3">
       <div>
         <p style="font-size:0.78rem; color:var(--text-tertiary); margin-bottom:0.2rem;">Employer NI</p>
-        <p style="font-size:0.88rem; color:var(--text-secondary); margin:0;">15% above £5,000 secondary threshold for 2025/26.</p>
+        <p style="font-size:0.88rem; color:var(--text-secondary); margin:0;">15% above £5,000 secondary threshold for {{ tax_year }}.</p>
       </div>
       <div>
         <p style="font-size:0.78rem; color:var(--text-tertiary); margin-bottom:0.2rem;">Auto-enrolment pension</p>
@@ -57,7 +75,7 @@
       </div>
       <div>
         <p style="font-size:0.78rem; color:var(--text-tertiary); margin-bottom:0.2rem;">Employment Allowance</p>
-        <p style="font-size:0.88rem; color:var(--text-secondary); margin:0;">Up to £10,500 relief in 2025/26 for eligible employers.</p>
+        <p style="font-size:0.88rem; color:var(--text-secondary); margin:0;">Up to £10,500 relief in {{ tax_year }} for eligible employers.</p>
       </div>
     </div>
   </section>
@@ -87,6 +105,6 @@
   </section>
   {% endif %}
 
-  <p style="font-size:0.82rem; color:var(--text-tertiary); margin-top:0.9rem;">UK coverage only. Last reviewed: {{ now.strftime('%d %B %Y') }}. Estimates use 2025/26 assumptions and are for planning, not legal or tax advice.</p>
+  <p style="font-size:0.82rem; color:var(--text-tertiary); margin-top:0.9rem;">UK coverage only. Last reviewed: {{ now.strftime('%d %B %Y') }}. Estimates use {{ tax_year }} assumptions and are for planning, not legal or tax advice.</p>
 </section>
 {% endblock %}

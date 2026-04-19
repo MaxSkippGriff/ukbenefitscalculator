@@ -1,33 +1,58 @@
 {% extends "base.html" %}
-{% block title %}Editorial Standards{% endblock %}
-{% block meta_description %}Editorial and quality standards used for UK salary and tax content on AfterTaxSalary.{% endblock %}
-{% block canonical %}<link rel="canonical" href="{{ site_url }}/editorial-standards">{% endblock %}
 {% block content %}
-<section class="max-w-4xl mx-auto px-4 sm:px-6 py-12">
-  <h1 class="text-4xl font-extrabold text-slate-900">Editorial Standards</h1>
-  <div class="card p-6 mt-6 text-slate-600">
-    <p class="leading-relaxed mb-4">AfterTaxSalary publishes calculator pages, salary pages and guides for UK salary planning. Our editorial standard is practical accuracy: pages should help a user make a better decision about take-home pay, not just restate tax definitions.</p>
-    <ul class="list-disc pl-6 space-y-1">
-      <li>We prioritize factual accuracy and plain-English clarity.</li>
-      <li>Rates and thresholds are based on official public sources.</li>
-      <li>Guides are reviewed and updated when tax-year assumptions change.</li>
-      <li>We avoid unsupported claims and do not provide personal financial advice.</li>
-      <li>Every page should be useful without requiring JavaScript for core text.</li>
+<section class="section">
+  <div class="badge">Editorial</div>
+  <h1>Editorial Standards</h1>
+  <p>EmployerCalculator.co.uk publishes employer cost calculators, employer NI guides, payroll planning pages and supporting editorial content for UK employers, HR teams and payroll professionals. Our standard is practical accuracy: every page should help a user make a better-informed decision about hiring costs or payroll obligations.</p>
+
+  <article class="card" style="padding:1rem 1.25rem;margin-top:0.9rem;">
+    <h2>Accuracy and sourcing</h2>
+    <ul style="padding-left:1.25rem;font-size:0.9rem;color:var(--text-secondary);line-height:1.8;margin-top:0.25rem;">
+      <li>Rates, thresholds and legislative references are checked against official HMRC and GOV.UK sources.</li>
+      <li>Guides and calculators are reviewed and updated when tax-year assumptions change.</li>
+      <li>We prioritise factual accuracy and plain British English over marketing language.</li>
+      <li>We do not provide personal financial or legal advice.</li>
+      <li>Every page should be useful without requiring JavaScript for core explanatory content.</li>
     </ul>
-  </div>
-  <div class="card p-6 mt-6 text-slate-600">
-    <h2 class="text-2xl font-bold text-slate-900 mb-3">How we write and review content</h2>
-    <ul class="list-disc pl-6 space-y-2">
-      <li>Pages are written in plain British English and checked for practical readability.</li>
-      <li>Calculator assumptions and guide explanations are reviewed together so content matches current tool logic.</li>
-      <li>We prefer worked examples, comparison links and actionable explanations over generic tax definitions.</li>
-      <li>We update titles, metadata and internal links when a page’s purpose changes (for example, new tax-year assumptions or new comparison tools).</li>
+  </article>
+
+  <article class="card" style="padding:1rem 1.25rem;margin-top:0.9rem;">
+    <h2>How we research and write content</h2>
+    <ul style="padding-left:1.25rem;font-size:0.9rem;color:var(--text-secondary);line-height:1.8;margin-top:0.25rem;">
+      <li>Content is written in plain British English and reviewed for practical readability by a UK employer audience.</li>
+      <li>Calculator assumptions and written guide explanations are reviewed together so tool logic and editorial content remain consistent.</li>
+      <li>We prefer worked examples, rate comparisons and actionable guidance over generic definitions.</li>
+      <li>We update titles, assumptions and internal links when tax-year rules change or when a page's stated purpose becomes inaccurate.</li>
+      <li>Sources used are linked and listed on the <a href="/sources" style="color:var(--accent);font-weight:600;">sources page</a>. Methodology details are on the <a href="/methodology" style="color:var(--accent);font-weight:600;">methodology page</a>.</li>
     </ul>
-  </div>
-  <div class="card p-6 mt-6 text-slate-600">
-    <h2 class="text-2xl font-bold text-slate-900 mb-3">Corrections and feedback</h2>
-    <p class="leading-relaxed">If you spot a mistake in a guide or think a calculator assumption is unclear, contact us via the <a href="/contact" class="text-blue-600 font-semibold hover:underline">contact page</a>. We review correction requests and update pages where appropriate. For calculation-method details, see the <a href="/methodology" class="text-blue-600 font-semibold hover:underline">methodology page</a>.</p>
-    <p class="mt-3 text-sm text-slate-500">Last reviewed: 23 February 2026.</p>
-  </div>
+  </article>
+
+  <article class="card" style="padding:1rem 1.25rem;margin-top:0.9rem;">
+    <h2>Commercial relationships and editorial independence</h2>
+    <p>Some pages on this site may include links to third-party tools or services — for example, payroll software providers. Where those links are affiliate links, they are disclosed clearly on the relevant page. We may receive a commission if a reader purchases through an affiliate link, at no extra cost to them.</p>
+    <ul style="padding-left:1.25rem;font-size:0.9rem;color:var(--text-secondary);line-height:1.8;margin-top:0.25rem;">
+      <li>Commercial relationships do not influence the factual content of our guides or calculator logic.</li>
+      <li>Product descriptions are factual summaries based on publicly available information — they are not endorsements.</li>
+      <li>We do not accept payment in exchange for editorial coverage or favourable placement.</li>
+      <li>Affiliate links are marked with <code>rel="sponsored"</code> in the HTML and disclosed in text on the relevant page.</li>
+      <li>Readers should always check provider pricing, features and terms directly before making a decision.</li>
+    </ul>
+  </article>
+
+  <article class="card" style="padding:1rem 1.25rem;margin-top:0.9rem;">
+    <h2>Corrections and feedback</h2>
+    <p>If you find a factual error in a guide, a calculation assumption that appears incorrect, or content that does not reflect the current tax year, please contact us via the <a href="/contact" style="color:var(--accent);font-weight:600;">contact page</a>. We review all substantive correction requests and update pages where appropriate.</p>
+    <p style="margin-bottom:0;font-size:0.82rem;color:var(--text-tertiary);">Last reviewed: March 2026. Applies to {{ tax_year }} content.</p>
+  </article>
+
+  <section class="card" style="padding:1rem 1.25rem;margin-top:0.9rem;">
+    <h2 style="font-size:1rem;margin-bottom:0.6rem;">Related</h2>
+    <div class="pill-grid">
+      <a class="pill" href="/about">About this site</a>
+      <a class="pill" href="/methodology">Methodology</a>
+      <a class="pill" href="/sources">Sources</a>
+      <a class="pill" href="/payroll-software-uk">Payroll software guide</a>
+    </div>
+  </section>
 </section>
 {% endblock %}

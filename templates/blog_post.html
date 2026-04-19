@@ -19,7 +19,7 @@
   "headline": "{{ post.title }}",
   "description": "{{ post.description }}",
   "datePublished": "{{ post.date_iso }}",
-  "author": {"@type":"Organization","name":"AfterTaxSalary"},
+  "author": {"@type": "Organization", "name": "EmployerCalculator Editorial", "url": "{{ site_url }}/about"},
   "mainEntityOfPage": "{{ site_url }}/blog/{{ post.slug }}"
 }
 </script>
@@ -51,7 +51,7 @@
   <p class="mt-4 text-lg text-slate-500">{{ post.description }}</p>
 
   <div class="card p-5 mt-6 border-blue-200 bg-blue-50/60">
-    <h2 class="font-bold text-slate-900 mb-2">Quick examples (2025/26)</h2>
+    <h2 class="font-bold text-slate-900 mb-2">Quick examples ({{ tax_year }})</h2>
     <p class="text-sm text-slate-700">Typical default take-home figures for fast context before reading.</p>
     <div class="grid sm:grid-cols-3 gap-3 mt-3">
       {% for row in examples %}
@@ -93,7 +93,7 @@
   </div>
 
   <div class="card p-5 mt-8">
-    <h3 class="font-bold text-slate-900 mb-2">2025/26 factual reference points</h3>
+    <h3 class="font-bold text-slate-900 mb-2">{{ tax_year }} factual reference points</h3>
     <p class="text-sm text-slate-600 mb-3">Use these current tax-year figures as context while reading this article.</p>
     <details class="rounded-xl border border-slate-200 p-4 mb-3">
       <summary class="cursor-pointer font-semibold text-slate-800">rUK income tax bands</summary>

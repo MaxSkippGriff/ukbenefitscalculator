@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="section">
+  <div class="badge">{{ page.badge }}</div>
+  <h1>{{ page.h1 }}</h1>
+  <p>{{ page.intro }}</p>
+
+  <section class="card" style="padding:1rem 1.15rem; margin-top:1rem;">
+    <h2 style="font-size:1.05rem; margin-bottom:0.75rem;">PAYE employee vs contractor — cost comparison</h2>
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:0.87rem;">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border);">
+            <th style="text-align:left;padding:0.5rem 0.75rem 0.5rem 0;font-weight:600;color:var(--text-secondary);">Employee salary</th>
+            <th style="text-align:right;padding:0.5rem 0.75rem;font-weight:600;color:var(--text-secondary);">Employer NI</th>
+            <th style="text-align:right;padding:0.5rem 0.75rem;font-weight:600;color:var(--text-secondary);">Pension</th>
+            <th style="text-align:right;padding:0.5rem 0.75rem;font-weight:600;color:var(--text-secondary);">Total employer cost</th>
+            <th style="text-align:right;padding:0.5rem 0 0.5rem 0.75rem;font-weight:600;color:var(--accent);">Equiv. day rate</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for ex in examples %}
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:0.55rem 0.75rem 0.55rem 0;font-weight:500;font-variant-numeric:tabular-nums;">£{{ "{:,}".format(ex.salary) }}</td>
+            <td style="padding:0.55rem 0.75rem;text-align:right;font-variant-numeric:tabular-nums;">£{{ "{:,.0f}".format(ex.employer_ni) }}</td>
+            <td style="padding:0.55rem 0.75rem;text-align:right;font-variant-numeric:tabular-nums;">£{{ "{:,.0f}".format(ex.pension) }}</td>
+            <td style="padding:0.55rem 0.75rem;text-align:right;font-weight:600;font-variant-numeric:tabular-nums;">£{{ "{:,.0f}".format(ex.total_employer_cost) }}</td>
+            <td style="padding:0.55rem 0 0.55rem 0.75rem;text-align:right;font-weight:600;color:var(--accent);font-variant-numeric:tabular-nums;">£{{ ex.equivalent_day_rate }}/day</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:0.78rem;color:var(--text-tertiary);margin-top:0.65rem;margin-bottom:0;">Total employer cost includes £3,000 overheads. Day rate equivalent = total cost &divide; 230 working days. {{ tax_year }} rates.</p>
+  </section>
+
+  <section class="card" style="padding:1rem 1.15rem; margin-top:0.9rem;">
+    <h2 style="font-size:1.05rem; margin-bottom:0.5rem;">Key differences</h2>
+    <div class="grid-3">
+      <div>
+        <p style="font-size:0.78rem; color:var(--text-tertiary); margin-bottom:0.2rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">PAYE employee</p>
+        <ul style="font-size:0.85rem;color:var(--text-secondary);padding-left:1rem;margin:0;">
+          <li style="margin-bottom:0.3rem;">Employer NI at 15% above £5,000</li>
+          <li style="margin-bottom:0.3rem;">Minimum pension 3%</li>
+          <li style="margin-bottom:0.3rem;">Holiday pay (28 days statutory)</li>
+          <li style="margin-bottom:0.3rem;">Sick pay obligations (SSP)</li>
+          <li style="margin-bottom:0.3rem;">Unfair dismissal rights after 2 years</li>
+          <li>Employment Allowance available</li>
+        </ul>
+      </div>
+      <div>
+        <p style="font-size:0.78rem; color:var(--text-tertiary); margin-bottom:0.2rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">Outside IR35 contractor</p>
+        <ul style="font-size:0.85rem;color:var(--text-secondary);padding-left:1rem;margin:0;">
+          <li style="margin-bottom:0.3rem;">No employer NI on fees</li>
+          <li style="margin-bottom:0.3rem;">No pension obligations</li>
+          <li style="margin-bottom:0.3rem;">No holiday pay liability</li>
+          <li style="margin-bottom:0.3rem;">No SSP</li>
+          <li style="margin-bottom:0.3rem;">Day rate premium reflects these savings</li>
+          <li>IR35 assessment required (medium/large engagers)</li>
+        </ul>
+      </div>
+      <div>
+        <p style="font-size:0.78rem; color:var(--text-tertiary); margin-bottom:0.2rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">Inside IR35 contractor</p>
+        <ul style="font-size:0.85rem;color:var(--text-secondary);padding-left:1rem;margin:0;">
+          <li style="margin-bottom:0.3rem;">PAYE deductions apply</li>
+          <li style="margin-bottom:0.3rem;">Employer NI at 15%</li>
+          <li style="margin-bottom:0.3rem;">No holiday/sick pay rights</li>
+          <li style="margin-bottom:0.3rem;">No unfair dismissal protection</li>
+          <li style="margin-bottom:0.3rem;">Contractor retains flexibility</li>
+          <li>Costlier than outside IR35</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" style="padding:1rem 1.15rem; margin-top:0.9rem;">
+    <h2 style="font-size:1.05rem; margin-bottom:0.5rem;">Calculate your options</h2>
+    <div class="pill-grid">
+      <a class="pill" href="{{ page.primary_cta.url }}">{{ page.primary_cta.label }}</a>
+      <a class="pill" href="{{ page.secondary_cta.url }}">{{ page.secondary_cta.label }}</a>
+      <a class="pill" href="/cost-of-employing">Cost by salary</a>
+      <a class="pill" href="/employer-ni">Employer NI by salary</a>
+      <a class="pill" href="/first-employee-cost-uk">First employee cost</a>
+    </div>
+  </section>
+
+  {% if faq_items %}
+  <section class="card" style="padding:1rem 1.15rem; margin-top:0.9rem;">
+    <h2 style="font-size:1.05rem; margin-bottom:0.6rem;">Frequently asked questions</h2>
+    <div class="faq-list">
+      {% for item in faq_items %}
+      <details class="faq-item">
+        <summary>{{ item.q }}</summary>
+        <div class="faq-answer">{{ item.a }}</div>
+      </details>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  <p style="font-size:0.82rem; color:var(--text-tertiary); margin-top:0.9rem;">UK only. Last reviewed: {{ now.strftime('%d %B %Y') }}. Not legal or tax advice. IR35 status depends on specific contract terms and working practices.</p>
+</section>
+{% endblock %}

@@ -1,10 +1,21 @@
-"""EmployerCalculator.co.uk deterministic calculation engine for 2025/26."""
+"""EmployerCalculator.co.uk deterministic calculation engine — multi-year support."""
 
 from __future__ import annotations
 
+import datetime
 from dataclasses import dataclass
 from typing import Dict, List
 
+
+def active_tax_year() -> str:
+    """Return the currently-active UK tax year label based on today's date.
+    2025/26 is the default until 5 April 2026; 2026/27 becomes active from 6 April 2026.
+    """
+    today = datetime.date.today()
+    return "2026/27" if today >= datetime.date(2026, 4, 6) else "2025/26"
+
+
+# Legacy constant — use active_tax_year() for per-request dynamic labelling.
 TAX_YEAR = "2025/26"
 
 # 2025/26 employer NI

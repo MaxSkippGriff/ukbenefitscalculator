@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="section">
+  <div class="badge">{{ page.badge }}</div>
+  <h1>{{ page.h1 }}</h1>
+  <p>{{ page.intro }}</p>
+  <p style="font-size:0.9rem; color:var(--text-secondary);">UK scope. {{ tax_year }} rates. Employer NI at 15% above £5,000, minimum pension 3% on qualifying earnings. Figures are estimates for planning.</p>
+
+  {% if levels_data %}
+  <section class="card" style="padding:1rem 1.15rem; margin-top:1rem;">
+    <h2 style="font-size:1.05rem; margin-bottom:0.75rem;">Employer cost by level — {{ page.badge }}</h2>
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:0.87rem;">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border);">
+            <th style="text-align:left;padding:0.5rem 0.75rem 0.5rem 0;font-weight:600;color:var(--text-secondary);">Level</th>
+            <th style="text-align:left;padding:0.5rem 0.75rem;font-weight:600;color:var(--text-secondary);">Salary range</th>
+            <th style="text-align:right;padding:0.5rem 0.75rem;font-weight:600;color:var(--text-secondary);">Example salary</th>
+            <th style="text-align:right;padding:0.5rem 0.75rem;font-weight:600;color:var(--text-secondary);">Employer NI</th>
+            <th style="text-align:right;padding:0.5rem 0.75rem;font-weight:600;color:var(--text-secondary);">Min pension</th>
+            <th style="text-align:right;padding:0.5rem 0 0.5rem 0.75rem;font-weight:600;color:var(--accent);">Total cost</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in levels_data %}
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:0.55rem 0.75rem 0.55rem 0;font-weight:500;">{{ row.level }}</td>
+            <td style="padding:0.55rem 0.75rem;color:var(--text-secondary);">{{ row.salary_range }}</td>
+            <td style="padding:0.55rem 0.75rem;text-align:right;font-variant-numeric:tabular-nums;">£{{ "{:,}".format(row.example) }}</td>
+            <td style="padding:0.55rem 0.75rem;text-align:right;font-variant-numeric:tabular-nums;">£{{ "{:,.0f}".format(row.ni) }}</td>
+            <td style="padding:0.55rem 0.75rem;text-align:right;font-variant-numeric:tabular-nums;">£{{ "{:,.0f}".format(row.pension) }}</td>
+            <td style="padding:0.55rem 0 0.55rem 0.75rem;text-align:right;font-weight:600;color:var(--accent);font-variant-numeric:tabular-nums;"><a href="/calculator?salary={{ row.example }}" style="color:var(--accent);text-decoration:none;">£{{ "{:,.0f}".format(row.total) }}</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:0.78rem;color:var(--text-tertiary);margin-top:0.65rem;margin-bottom:0;">Total cost = salary + employer NI + pension. No overheads included. {{ tax_year }} rates. <a href="/methodology" style="color:var(--accent);">Methodology</a>.</p>
+  </section>
+  {% endif %}
+
+  <div class="grid-3" style="margin-top:1rem;">
+    <div class="card" style="padding:1rem;">
+      <h2 style="font-size:1rem; margin-bottom:0.35rem;">Example salary</h2>
+      <p style="font-size:1.35rem; font-family:var(--font-display); color:var(--text-primary); margin-bottom:0.2rem;">{{ sample_calc.salary|money }}</p>
+      <p style="font-size:0.82rem; color:var(--text-tertiary); margin:0;">Gross annual salary at example rate</p>
+    </div>
+    <div class="card" style="padding:1rem;">
+      <h2 style="font-size:1rem; margin-bottom:0.35rem;">Employer NI</h2>
+      <p style="font-size:1.35rem; font-family:var(--font-display); color:var(--text-primary); margin-bottom:0.2rem;">{{ sample_calc.employer_ni.ni_due|money }}</p>
+      <p style="font-size:0.82rem; color:var(--text-tertiary); margin:0;">15% above £5,000 secondary threshold</p>
+    </div>
+    <div class="card" style="padding:1rem;">
+      <h2 style="font-size:1rem; margin-bottom:0.35rem;">Total employer cost</h2>
+      <p style="font-size:1.35rem; font-family:var(--font-display); color:var(--text-primary); margin-bottom:0.2rem;">{{ sample_calc.total_cost|money }}</p>
+      <p style="font-size:0.82rem; color:var(--text-tertiary); margin:0;">Salary + NI + pension + £2,000 overheads</p>
+    </div>
+  </div>
+
+  <section class="card" style="padding:1rem 1.15rem; margin-top:0.9rem;">
+    <h2 style="font-size:1.05rem; margin-bottom:0.5rem;">Key facts</h2>
+    <ul style="padding-left:1.1rem; margin:0; color:var(--text-secondary);">
+      {% for bullet in page.bullets %}
+      <li style="margin-bottom:0.4rem;">{{ bullet }}</li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section class="card" style="padding:1rem 1.15rem; margin-top:0.9rem;">
+    <h2 style="font-size:1.05rem; margin-bottom:0.5rem;">Calculate this hire</h2>
+    <div class="pill-grid">
+      <a class="pill" href="{{ page.primary_cta.url }}">{{ page.primary_cta.label }}</a>
+      {% if page.secondary_cta %}<a class="pill" href="{{ page.secondary_cta.url }}">{{ page.secondary_cta.label }}</a>{% endif %}
+      <a class="pill" href="/cost-of-hiring">All roles</a>
+      <a class="pill" href="/cost-of-employing">Cost by salary</a>
+      <a class="pill" href="/employer-ni">NI by salary</a>
+      <a class="pill" href="/payroll-software-uk">Payroll software</a>
+    </div>
+  </section>
+
+  {% if tools_block %}
+  <section class="card" style="padding:1rem 1.15rem; margin-top:0.9rem;">
+    <h2 style="font-size:1.05rem; margin-bottom:0.6rem;">Next step: payroll software</h2>
+    <p style="font-size:0.87rem;color:var(--text-secondary);margin-bottom:0.75rem;">Once you have modelled the cost, you will need payroll software to run the actual pay. These are the most commonly used options for UK employers.</p>
+    <div class="grid-3">
+      {% for tool in tools_block %}
+      {% if tool.enabled %}
+      <div class="card" style="padding:0.85rem;">
+        <div style="font-weight:600;font-size:0.9rem;margin-bottom:0.3rem;">{{ tool.name }}</div>
+        <p style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:0.55rem;">{{ tool.short_desc }}</p>
+        <a href="{{ tool.href }}" target="_blank" rel="noopener{% if tool.is_affiliate %} sponsored{% endif %}" style="font-size:0.8rem;font-weight:600;color:var(--accent);">{{ tool.cta }} &rarr;</a>
+      </div>
+      {% endif %}
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  {% if faq_items %}
+  <section class="card" style="padding:1rem 1.15rem; margin-top:0.9rem;">
+    <h2 style="font-size:1.05rem; margin-bottom:0.6rem;">Frequently asked questions</h2>
+    <div class="faq-list">
+      {% for item in faq_items %}
+      <details class="faq-item">
+        <summary>{{ item.q }}</summary>
+        <div class="faq-answer">{{ item.a }}</div>
+      </details>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  <p style="font-size:0.82rem; color:var(--text-tertiary); margin-top:0.9rem;">UK only. Last reviewed: {{ now.strftime('%d %B %Y') }}. Salary benchmarks are indicative. Employer cost figures use {{ tax_year }} statutory rates. Not financial or legal advice.</p>
+</section>
+{% endblock %}

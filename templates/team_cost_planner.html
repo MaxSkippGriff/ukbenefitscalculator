@@ -1,0 +1,584 @@
+{% extends "base.html" %}
+
+{% block head_extra %}
+<style>
+  .planner-wrap { max-width: var(--max-w); margin: 0 auto; padding: 2.5rem 1.25rem; }
+  .planner-header { margin-bottom: 1.5rem; }
+  .planner-header h1 { font-size: clamp(1.75rem, 4vw, 2.5rem); margin-bottom: 0.6rem; }
+  .planner-header p { color: var(--text-secondary); max-width: 680px; }
+
+  /* Settings bar */
+  .settings-bar {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 1rem 1.25rem;
+    display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end;
+    margin-bottom: 1.25rem;
+  }
+  .settings-bar label { font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 0.3rem; }
+  .settings-bar input, .settings-bar select {
+    padding: 0.42rem 0.7rem; border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm); font-size: 0.9rem;
+    background: var(--bg); color: var(--text-primary);
+    font-family: var(--font-body); width: 120px;
+    transition: border-color var(--transition);
+  }
+  .settings-bar input:focus, .settings-bar select:focus {
+    outline: none; border-color: var(--accent);
+  }
+  .settings-toggle {
+    display: flex; align-items: center; gap: 0.5rem;
+    font-size: 0.87rem; font-weight: 500; cursor: pointer;
+    padding: 0.42rem 0; user-select: none;
+  }
+  .settings-toggle input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+
+  /* Table */
+  .employee-table-wrap { overflow-x: auto; margin-bottom: 1rem; }
+  .employee-table {
+    width: 100%; border-collapse: collapse;
+    font-size: 0.88rem; min-width: 640px;
+  }
+  .employee-table thead th {
+    text-align: left; padding: 0.6rem 0.75rem;
+    font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.04em; color: var(--text-tertiary);
+    border-bottom: 2px solid var(--border); white-space: nowrap;
+  }
+  .employee-table tbody tr { border-bottom: 1px solid var(--border); }
+  .employee-table tbody tr:last-child { border-bottom: none; }
+  .employee-table tbody td { padding: 0.55rem 0.75rem; vertical-align: middle; }
+  .employee-table .row-num {
+    font-size: 0.78rem; color: var(--text-tertiary); font-weight: 600;
+    width: 28px; text-align: center;
+  }
+  .employee-table input {
+    padding: 0.38rem 0.55rem; border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm); font-size: 0.88rem;
+    background: var(--bg); color: var(--text-primary);
+    font-family: var(--font-body); width: 100%;
+    transition: border-color var(--transition);
+  }
+  .employee-table input:focus { outline: none; border-color: var(--accent); }
+  .employee-table .col-name { min-width: 120px; }
+  .employee-table .col-salary { width: 130px; }
+  .employee-table .col-pension { width: 90px; }
+  .employee-table .col-overheads { width: 100px; }
+  .employee-table .col-ni { width: 100px; }
+  .employee-table .col-total { width: 110px; font-weight: 600; color: var(--text-primary); }
+  .employee-table .col-del { width: 36px; text-align: center; }
+  .output-cell { font-variant-numeric: tabular-nums lining-nums; color: var(--text-secondary); }
+  .output-cell.total-cell { color: var(--accent); font-weight: 700; }
+  .btn-del {
+    background: none; border: none; cursor: pointer; padding: 0.3rem;
+    color: var(--text-tertiary); border-radius: var(--radius-sm);
+    transition: color var(--transition), background var(--transition);
+    display: flex; align-items: center;
+  }
+  .btn-del:hover { color: var(--destructive); background: var(--destructive-light); }
+  .btn-del svg { width: 16px; height: 16px; }
+
+  /* Add row / presets */
+  .table-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 1.5rem; align-items: center; }
+  .btn-add {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    padding: 0.48rem 1rem; border-radius: 999px;
+    background: var(--accent); color: white; border: none;
+    font-size: 0.85rem; font-weight: 600; cursor: pointer;
+    font-family: var(--font-body); transition: background var(--transition);
+  }
+  .btn-add:hover { background: var(--accent-hover); }
+  .btn-preset {
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    padding: 0.4rem 0.85rem; border-radius: 999px;
+    background: var(--surface); border: 1.5px solid var(--border);
+    font-size: 0.8rem; font-weight: 500; cursor: pointer; color: var(--text-secondary);
+    font-family: var(--font-body); transition: all var(--transition);
+  }
+  .btn-preset:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+  .btn-clear {
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    padding: 0.4rem 0.85rem; border-radius: 999px;
+    background: var(--surface); border: 1.5px solid var(--border);
+    font-size: 0.8rem; font-weight: 500; cursor: pointer; color: var(--text-tertiary);
+    font-family: var(--font-body); transition: all var(--transition);
+    margin-left: auto;
+  }
+  .btn-clear:hover { color: var(--destructive); border-color: var(--destructive); background: var(--destructive-light); }
+
+  /* Summary panel */
+  .summary-panel {
+    background: var(--surface); border: 1.5px solid var(--border-strong);
+    border-top: 3px solid var(--accent);
+    border-radius: var(--radius); padding: 1.25rem 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .summary-panel h2 { font-size: 1.1rem; margin-bottom: 1rem; }
+  .summary-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+  .summary-metric { padding: 0.75rem; background: var(--bg); border-radius: var(--radius-sm); }
+  .summary-metric .metric-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-tertiary); margin-bottom: 0.25rem; }
+  .summary-metric .metric-value { font-size: 1.25rem; font-family: var(--font-body); font-variant-numeric: tabular-nums lining-nums; color: var(--text-primary); font-weight: 600; }
+  .summary-metric .metric-monthly { font-size: 0.78rem; color: var(--text-tertiary); margin-top: 0.15rem; }
+  .summary-metric.highlight { background: var(--accent-light); border: 1px solid var(--accent); }
+  .summary-metric.highlight .metric-value { color: var(--accent); }
+  .allowance-note {
+    font-size: 0.83rem; color: var(--text-secondary);
+    background: var(--accent-light); border-left: 3px solid var(--accent);
+    padding: 0.6rem 0.9rem; border-radius: var(--radius-sm); margin-top: 0.75rem;
+  }
+  .allowance-note strong { color: var(--accent); }
+
+  /* Assumptions box */
+  .assumptions-box {
+    background: var(--accent-light); border: 1.5px solid var(--accent);
+    border-radius: var(--radius); padding: 1rem 1.2rem; margin-bottom: 1.5rem;
+  }
+  .assumptions-box .abox-title { font-size: 0.72rem; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.4rem; }
+  .assumptions-box .abox-grid { display: grid; gap: 0.3rem; font-size: 0.87rem; color: var(--text-secondary); }
+  .assumptions-box strong { color: var(--text-primary); }
+
+  /* Content sections */
+  .content-section { margin-bottom: 1.5rem; }
+  .content-section h2 { font-size: 1.35rem; margin-bottom: 0.6rem; }
+  .content-section p { color: var(--text-secondary); margin-bottom: 0.7rem; }
+  .example-table-wrap { overflow-x: auto; margin: 1rem 0; }
+  .example-table { width: 100%; border-collapse: collapse; font-size: 0.87rem; }
+  .example-table th {
+    text-align: left; padding: 0.55rem 0.85rem;
+    background: var(--surface-alt); border: 1px solid var(--border);
+    font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-secondary);
+  }
+  .example-table td { padding: 0.55rem 0.85rem; border: 1px solid var(--border); font-variant-numeric: tabular-nums lining-nums; }
+  .example-table tr:hover td { background: var(--accent-light); }
+
+  @media (max-width: 640px) {
+    .settings-bar { gap: 0.75rem; }
+    .settings-bar input, .settings-bar select { width: 100px; }
+    .summary-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "UK Team Payroll Cost Planner",
+  "url": "{{ site_url }}/team-cost-planner",
+  "description": "Plan total payroll costs for your whole team. Model multiple employees with individual salaries, pension rates and overheads. Includes employer NI (15%, {{ tax_year }}) and Employment Allowance calculation.",
+  "applicationCategory": "FinanceApplication",
+  "operatingSystem": "Any",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "GBP" },
+  "featureList": ["Multiple employee modelling", "Employer NI {{ tax_year }}", "Employment Allowance", "Pension contributions", "Per-employee overheads", "Total payroll burden"],
+  "inLanguage": "en-GB"
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="planner-wrap">
+  <div class="planner-header">
+    <div class="badge">Team cost planner · UK {{ tax_year }}</div>
+    <h1>Payroll planner UK for team employer costs</h1>
+    <p>Use this payroll planner to estimate the total cost of employing a team in the UK. Add each employee's salary, pension and overhead assumptions to see employer NI, Employment Allowance impact and total payroll cost live as you type.</p>
+    <div class="pill-grid" style="margin-top:0.8rem;">
+      <a class="pill" href="/calculator">Single employee calculator</a>
+      <a class="pill" href="/cost-of-employing">Cost by salary</a>
+      <a class="pill" href="/employer-ni">Employer NI by salary</a>
+      <a class="pill" href="/guides/auto-enrolment-pension-costs">Auto-enrolment costs</a>
+    </div>
+  </div>
+
+  <div class="settings-bar">
+    <div>
+      <label for="defaultPension">Default pension %</label>
+      <input type="number" id="defaultPension" value="3" min="0" max="20" step="0.5">
+    </div>
+    <div>
+      <label for="defaultOverheads">Default overheads (£/yr)</label>
+      <input type="number" id="defaultOverheads" value="0" min="0" step="500">
+    </div>
+    <div style="padding-bottom:0.2rem;">
+      <label class="settings-toggle">
+        <input type="checkbox" id="useAllowance" checked>
+        <span>Apply Employment Allowance (up to £10,500)</span>
+      </label>
+    </div>
+  </div>
+
+  <div class="employee-table-wrap">
+    <table class="employee-table" id="employeeTable">
+      <thead>
+        <tr>
+          <th class="row-num">#</th>
+          <th class="col-name">Employee / role</th>
+          <th class="col-salary">Salary (£/yr)</th>
+          <th class="col-pension">Pension %</th>
+          <th class="col-overheads">Overheads (£)</th>
+          <th class="col-ni">Employer NI</th>
+          <th class="col-pension">Pension cost</th>
+          <th class="col-total">Total cost</th>
+          <th class="col-del"></th>
+        </tr>
+      </thead>
+      <tbody id="employeeRows">
+        <!-- rows injected by JS -->
+      </tbody>
+    </table>
+  </div>
+
+  <div class="table-actions">
+    <button class="btn-add" id="btnAddRow">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="10" y1="3" x2="10" y2="17"/><line x1="3" y1="10" x2="17" y2="10"/></svg>
+      Add employee
+    </button>
+    <button class="btn-preset" data-preset="small">5-person team (mixed)</button>
+    <button class="btn-preset" data-preset="dev">Dev team (£40k–£75k)</button>
+    <button class="btn-preset" data-preset="retail">Retail team (NLW–£28k)</button>
+    <button class="btn-clear" id="btnClear">Clear all</button>
+  </div>
+
+  <div class="summary-panel" id="summaryPanel">
+    <h2>Team cost summary</h2>
+    <div class="summary-grid">
+      <div class="summary-metric">
+        <div class="metric-label">Employees</div>
+        <div class="metric-value" id="sumCount">0</div>
+        <div class="metric-monthly">team members</div>
+      </div>
+      <div class="summary-metric">
+        <div class="metric-label">Total salaries</div>
+        <div class="metric-value" id="sumSalaries">£0</div>
+        <div class="metric-monthly" id="sumSalariesMo">£0/month</div>
+      </div>
+      <div class="summary-metric">
+        <div class="metric-label">Employer NI</div>
+        <div class="metric-value" id="sumNI">£0</div>
+        <div class="metric-monthly" id="sumNIMo">£0/month</div>
+      </div>
+      <div class="summary-metric">
+        <div class="metric-label">Pension contributions</div>
+        <div class="metric-value" id="sumPension">£0</div>
+        <div class="metric-monthly" id="sumPensionMo">£0/month</div>
+      </div>
+      <div class="summary-metric">
+        <div class="metric-label">Overheads</div>
+        <div class="metric-value" id="sumOverheads">£0</div>
+        <div class="metric-monthly" id="sumOverheadsMo">£0/month</div>
+      </div>
+      <div class="summary-metric highlight">
+        <div class="metric-label">Total employer cost</div>
+        <div class="metric-value" id="sumTotal">£0</div>
+        <div class="metric-monthly" id="sumTotalMo">£0/month</div>
+      </div>
+    </div>
+    <div class="allowance-note" id="allowanceNote" style="display:none;"></div>
+  </div>
+
+  <div class="assumptions-box">
+    <div class="abox-title">UK {{ tax_year }} calculation assumptions</div>
+    <div class="abox-grid">
+      <div>Employer NI: <strong>15%</strong> on earnings above the <strong>£5,000</strong> secondary threshold (Class 1, {{ tax_year }})</div>
+      <div>Employer pension: minimum <strong>3%</strong> on qualifying earnings between <strong>£6,240</strong> and <strong>£50,270</strong> per year</div>
+      <div>Employment Allowance: up to <strong>£10,500</strong> off total employer NI bill for eligible businesses (not sole director)</div>
+      <div>Overheads: optional per-employee cost (equipment, software, workspace, etc.) — set your own figure</div>
+    </div>
+  </div>
+
+  <div class="content-section">
+    <h2>How to use this planner</h2>
+    <p>Enter each employee's annual salary, pension contribution rate, and any per-employee overheads. The planner calculates the correct employer NI for each individual, adds minimum statutory pension on qualifying earnings, then sums the result into a team payroll view. If Employment Allowance is ticked, up to £10,500 is offset from the total NI bill.</p>
+    <p>Use the presets to load a typical team profile quickly, then adjust individual rows to match your actual headcount and salaries. The summary panel updates live as you type.</p>
+  </div>
+
+  <div class="content-section">
+    <h2>What's included in total employer cost?</h2>
+    <div class="example-table-wrap">
+      <table class="example-table">
+        <thead>
+          <tr>
+            <th>Component</th>
+            <th>Rate / basis</th>
+            <th>Example (£35,000 salary)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Gross salary</td><td>As contracted</td><td>£35,000</td></tr>
+          <tr><td>Employer NI</td><td>15% on earnings above £5,000</td><td>£4,500</td></tr>
+          <tr><td>Employer pension</td><td>3% on £6,240–£50,270</td><td>£863</td></tr>
+          <tr><td>Overheads</td><td>Your estimate</td><td>£0–£5,000+</td></tr>
+          <tr><td><strong>Total per employee</strong></td><td></td><td><strong>≈ £40,363</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Employment Allowance can reduce the employer NI bill by up to £10,500 for eligible employers (limited companies with more than one employee where the sole director is not the only employee, and most other businesses with a total NI bill under £100,000 in the previous tax year).</p>
+  </div>
+
+  <div class="content-section">
+    <h2>Frequently asked questions</h2>
+    <div class="faq-list">
+      <details class="faq-item">
+        <summary>How is employer NI calculated for a team?</summary>
+        <div class="faq-answer">Employer NI is calculated individually for each employee at 15% on their earnings above the secondary threshold of £5,000 per year. The per-employee NI amounts are then summed to give total team NI. Employment Allowance (up to £10,500) is then deducted from the total NI bill — it is a single team-level offset, not per-employee.</div>
+      </details>
+      <details class="faq-item">
+        <summary>Can I claim Employment Allowance for my whole team?</summary>
+        <div class="faq-answer">Employment Allowance is a single annual credit of up to £10,500 that reduces your total employer NI bill across all employees. You cannot claim it per employee. Most businesses with at least one employee who is not also the sole director qualify. The previous year's total employer NI bill must also have been under £100,000. Sole directors with no other employees cannot claim.</div>
+      </details>
+      <details class="faq-item">
+        <summary>Does every employee need to be auto-enrolled in a pension?</summary>
+        <div class="faq-answer">Auto-enrolment applies to employees aged 22–66 who earn more than £10,000 per year. Eligible employees must be enrolled and the employer must contribute at least 3% of qualifying earnings (between £6,240 and £50,270). Employees earning between £6,240 and £10,000, or outside the 22–66 age bracket, can opt in, in which case the employer contribution obligation also applies.</div>
+      </details>
+      <details class="faq-item">
+        <summary>What overheads should I include?</summary>
+        <div class="faq-answer">Common per-employee overheads include: equipment and software licences (£500–£2,000/year), office space allocation (£1,500–£5,000/year in many UK cities), employer liability insurance, recruitment costs amortised over tenure, and training. For a desk-based worker, £2,000–£4,000 per year is a reasonable baseline; remote workers tend to be lower; on-site or specialist roles can be higher.</div>
+      </details>
+      <details class="faq-item">
+        <summary>Does the planner include holiday pay?</summary>
+        <div class="faq-answer">Holiday pay is embedded in the salary figure — a full-time employee is entitled to at least 28 days' paid leave (including bank holidays) per year, which is already factored into the annual salary cost. The planner shows employer NI and pension on gross annual salary, which inherently includes the cost of paid leave. It does not separately model statutory sick pay or parental leave costs.</div>
+      </details>
+    </div>
+  </div>
+
+  <div class="content-section">
+    <h2>Related tools</h2>
+    <div class="grid-3">
+      {% for tool in tools_block[:3] %}
+      <a class="tool-card" href="{{ tool.url }}">
+        <h3>{{ tool.name }}</h3>
+        <p>{{ tool.description }}</p>
+        <span class="tool-tag">{{ tool.tag }}</span>
+      </a>
+      {% endfor %}
+    </div>
+    <div class="pill-grid" style="margin-top:0.8rem;">
+      <a class="pill" href="/calculator">Employer cost calculator</a>
+      <a class="pill" href="/cost/35000">Cost of employing someone on £35,000</a>
+      <a class="pill" href="/employer-ni/35000">Employer NI on £35,000</a>
+      <a class="pill" href="/guides/employer-ni-changes-2025">Employer NI changes 2025</a>
+    </div>
+  </div>
+
+  <div class="cross-link">
+    <div class="cross-link-inner">
+      <p><strong>Single employee?</strong> Use the main calculator for a full breakdown including monthly figures, pension options, and Employment Allowance toggle.</p>
+      <a href="/calculator">Open calculator →</a>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  // ── Constants (UK {{ tax_year }}) ──────────────────────────────────────────────
+  const NI_RATE = 0.15;
+  const NI_THRESHOLD = 5000;
+  const PENSION_LOWER = 6240;
+  const PENSION_UPPER = 50270;
+  const EMPLOYMENT_ALLOWANCE = 10500;
+
+  let rows = [];
+  let nextId = 1;
+
+  // ── Calculation helpers ────────────────────────────────────────────────
+  function calcNI(salary) {
+    return Math.max(0, (salary - NI_THRESHOLD) * NI_RATE);
+  }
+
+  function calcPension(salary, pensionRate) {
+    const qualifying = Math.max(0, Math.min(salary, PENSION_UPPER) - PENSION_LOWER);
+    return qualifying * (pensionRate / 100);
+  }
+
+  function calcRow(row) {
+    const salary = row.salary || 0;
+    const pension = row.pension != null ? row.pension : defaultPension();
+    const overheads = row.overheads != null ? row.overheads : defaultOverheads();
+    const ni = calcNI(salary);
+    const pensionCost = calcPension(salary, pension);
+    const total = salary + ni + pensionCost + overheads;
+    return { ni, pensionCost, total };
+  }
+
+  function defaultPension() { return parseFloat(document.getElementById('defaultPension').value) || 3; }
+  function defaultOverheads() { return parseFloat(document.getElementById('defaultOverheads').value) || 0; }
+  function useAllowance() { return document.getElementById('useAllowance').checked; }
+
+  // ── Formatting ──────────────────────────────────────────────────────────
+  function fmt(n) {
+    if (!n) return '£0';
+    return '£' + Math.round(n).toLocaleString('en-GB');
+  }
+  function fmtMo(n) {
+    return fmt(n / 12) + '/mo';
+  }
+
+  // ── Render ──────────────────────────────────────────────────────────────
+  function render() {
+    const tbody = document.getElementById('employeeRows');
+    const dp = defaultPension();
+    const doh = defaultOverheads();
+    tbody.innerHTML = '';
+
+    let totalSalaries = 0, totalNI = 0, totalPension = 0, totalOverheads = 0;
+
+    rows.forEach((row, idx) => {
+      const pension = row.pension != null ? row.pension : dp;
+      const overheads = row.overheads != null ? row.overheads : doh;
+      const { ni, pensionCost, total } = calcRow({ salary: row.salary, pension, overheads });
+
+      totalSalaries += row.salary || 0;
+      totalNI += ni;
+      totalPension += pensionCost;
+      totalOverheads += overheads;
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="row-num">${idx + 1}</td>
+        <td class="col-name"><input type="text" placeholder="e.g. Developer" value="${esc(row.name || '')}" data-id="${row.id}" data-field="name"></td>
+        <td class="col-salary"><input type="number" value="${row.salary || ''}" placeholder="e.g. 35000" min="0" step="1000" data-id="${row.id}" data-field="salary"></td>
+        <td class="col-pension"><input type="number" value="${pension}" min="0" max="20" step="0.5" data-id="${row.id}" data-field="pension"></td>
+        <td class="col-overheads"><input type="number" value="${overheads}" min="0" step="500" data-id="${row.id}" data-field="overheads"></td>
+        <td class="output-cell">${row.salary ? fmt(ni) : '—'}</td>
+        <td class="output-cell">${row.salary ? fmt(pensionCost) : '—'}</td>
+        <td class="output-cell total-cell">${row.salary ? fmt(total) : '—'}</td>
+        <td class="col-del">
+          <button class="btn-del" data-id="${row.id}" title="Remove row">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="4" x2="16" y2="16"/><line x1="16" y1="4" x2="4" y2="16"/></svg>
+          </button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    // Apply Employment Allowance
+    let niAfterAllowance = totalNI;
+    let allowanceApplied = 0;
+    if (useAllowance() && totalNI > 0) {
+      allowanceApplied = Math.min(totalNI, EMPLOYMENT_ALLOWANCE);
+      niAfterAllowance = totalNI - allowanceApplied;
+    }
+
+    const grandTotal = totalSalaries + niAfterAllowance + totalPension + totalOverheads;
+
+    // Update summary
+    document.getElementById('sumCount').textContent = rows.length;
+    document.getElementById('sumSalaries').textContent = fmt(totalSalaries);
+    document.getElementById('sumSalariesMo').textContent = fmtMo(totalSalaries);
+    document.getElementById('sumNI').textContent = fmt(niAfterAllowance);
+    document.getElementById('sumNIMo').textContent = fmtMo(niAfterAllowance);
+    document.getElementById('sumPension').textContent = fmt(totalPension);
+    document.getElementById('sumPensionMo').textContent = fmtMo(totalPension);
+    document.getElementById('sumOverheads').textContent = fmt(totalOverheads);
+    document.getElementById('sumOverheadsMo').textContent = fmtMo(totalOverheads);
+    document.getElementById('sumTotal').textContent = fmt(grandTotal);
+    document.getElementById('sumTotalMo').textContent = fmtMo(grandTotal);
+
+    const noteEl = document.getElementById('allowanceNote');
+    if (useAllowance() && allowanceApplied > 0) {
+      noteEl.style.display = '';
+      noteEl.innerHTML = `<strong>Employment Allowance applied:</strong> £${Math.round(allowanceApplied).toLocaleString('en-GB')} offset from employer NI bill. Gross NI before allowance: ${fmt(totalNI)}.`;
+    } else if (useAllowance() && totalNI === 0) {
+      noteEl.style.display = '';
+      noteEl.innerHTML = `No employer NI to offset — add employees with salaries above £5,000 to see the NI calculation.`;
+    } else {
+      noteEl.style.display = 'none';
+    }
+  }
+
+  function esc(str) {
+    return str.replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  // ── Add row ────────────────────────────────────────────────────────────
+  function addRow(data) {
+    rows.push({
+      id: nextId++,
+      name: data && data.name || '',
+      salary: data && data.salary || null,
+      pension: data && data.pension != null ? data.pension : null,
+      overheads: data && data.overheads != null ? data.overheads : null,
+    });
+    render();
+  }
+
+  // ── Event delegation ───────────────────────────────────────────────────
+  document.getElementById('employeeRows').addEventListener('input', function(e) {
+    const el = e.target;
+    const id = parseInt(el.dataset.id, 10);
+    const field = el.dataset.field;
+    if (!field) return;
+    const row = rows.find(r => r.id === id);
+    if (!row) return;
+    if (field === 'name') row.name = el.value;
+    else if (field === 'salary') row.salary = parseFloat(el.value) || 0;
+    else if (field === 'pension') row.pension = parseFloat(el.value) || 0;
+    else if (field === 'overheads') row.overheads = parseFloat(el.value) || 0;
+    render();
+  });
+
+  document.getElementById('employeeRows').addEventListener('click', function(e) {
+    const btn = e.target.closest('.btn-del');
+    if (!btn) return;
+    const id = parseInt(btn.dataset.id, 10);
+    rows = rows.filter(r => r.id !== id);
+    render();
+  });
+
+  document.getElementById('btnAddRow').addEventListener('click', function() {
+    addRow(null);
+  });
+
+  document.getElementById('btnClear').addEventListener('click', function() {
+    rows = [];
+    render();
+  });
+
+  // Settings bar — re-render on change
+  ['defaultPension', 'defaultOverheads', 'useAllowance'].forEach(function(id) {
+    document.getElementById(id).addEventListener('change', render);
+    document.getElementById(id).addEventListener('input', render);
+  });
+
+  // ── Presets ────────────────────────────────────────────────────────────
+  const PRESETS = {
+    small: [
+      { name: 'Operations manager', salary: 45000 },
+      { name: 'Sales executive', salary: 32000 },
+      { name: 'Admin assistant', salary: 26000 },
+      { name: 'Marketing coordinator', salary: 28000 },
+      { name: 'Customer support', salary: 24000 },
+    ],
+    dev: [
+      { name: 'Senior developer', salary: 75000 },
+      { name: 'Mid developer', salary: 55000 },
+      { name: 'Mid developer', salary: 52000 },
+      { name: 'Junior developer', salary: 38000 },
+      { name: 'QA engineer', salary: 42000 },
+    ],
+    retail: [
+      { name: 'Store manager', salary: 32000 },
+      { name: 'Deputy manager', salary: 26000 },
+      { name: 'Sales assistant', salary: 23810 },
+      { name: 'Sales assistant', salary: 23810 },
+      { name: 'Part-time sales', salary: 12500 },
+    ],
+  };
+
+  document.querySelectorAll('.btn-preset').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      rows = [];
+      const preset = PRESETS[btn.dataset.preset] || [];
+      preset.forEach(addRow);
+    });
+  });
+
+  // ── Init ───────────────────────────────────────────────────────────────
+  // Start with 3 blank rows
+  addRow(null);
+  addRow(null);
+  addRow(null);
+
+})();
+</script>
+{% endblock %}
