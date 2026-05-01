@@ -2,705 +2,1484 @@
 
 {% block head_extra %}
 <style>
-  /* ── PAGE LAYOUT ── */
-  .page-wrap { max-width: var(--max-w); margin: 0 auto; padding: 2rem 1.25rem 3rem; }
-  .page-intro { margin-bottom: 1.5rem; }
-  .page-intro p { color: var(--text-secondary); font-size: 0.95rem; max-width: 640px; margin-top: 0.4rem; }
-
-  /* ── MAIN GRID ── */
-  .calc-layout {
-    display: grid;
-    grid-template-columns: minmax(280px, 420px) 1fr;
-    gap: 1rem; align-items: start;
+  .page-wrap {
+    max-width: var(--max-w);
+    margin: 0 auto;
+    padding: 1.5rem 1.25rem 3rem;
   }
-  @media (max-width: 860px) { .calc-layout { grid-template-columns: 1fr; } }
+  .calc-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(260px, 0.9fr);
+    gap: 1rem;
+    align-items: start;
+    margin-bottom: 1.15rem;
+  }
+  .hero-panel,
+  .trust-panel {
+    background: var(--surface);
+    border: 1.5px solid var(--border-strong);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+  }
+  .hero-panel {
+    padding: 1.2rem 1.25rem 1.1rem;
+  }
+  .eyebrow-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin-bottom: 0.75rem;
+  }
+  .mini-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.72rem;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface-alt);
+    color: var(--text-secondary);
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .mini-pill.accent {
+    color: var(--accent);
+    background: var(--accent-light);
+    border-color: rgba(27,107,74,0.12);
+  }
+  .hero-panel h1 {
+    font-size: clamp(1.7rem, 3.6vw, 2.55rem);
+    margin-bottom: 0.5rem;
+  }
+  .hero-panel p {
+    color: var(--text-secondary);
+    max-width: 62ch;
+    margin-bottom: 0.95rem;
+  }
+  .hero-notes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+  }
+  .hero-note {
+    font-size: 0.76rem;
+    color: var(--text-tertiary);
+    padding: 0.28rem 0.65rem;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+  }
+  .hero-note strong {
+    color: var(--text-secondary);
+  }
+  .trust-panel {
+    padding: 1.05rem 1.1rem;
+    display: grid;
+    gap: 0.8rem;
+  }
+  .trust-block strong {
+    display: block;
+    font-size: 0.9rem;
+    margin-bottom: 0.12rem;
+  }
+  .trust-block p {
+    font-size: 0.83rem;
+    color: var(--text-secondary);
+    line-height: 1.55;
+  }
 
-  /* ── INPUT PANEL ── */
-  .panel {
+  .calc-card {
     background: var(--surface);
     border: 1.5px solid var(--border-strong);
     border-top: 3px solid var(--accent);
     border-radius: var(--radius);
-    box-shadow: var(--shadow-md);
+    box-shadow: var(--shadow-lg);
     overflow: hidden;
+    margin-bottom: 1rem;
   }
-  .panel-head {
-    padding: 1.1rem 1.3rem 0;
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 1rem;
+  .calc-header {
+    padding: 0.8rem 1.1rem 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
   }
-  .panel-head h2 { font-size: 1rem; font-weight: 600; letter-spacing: -0.01em; }
-  .panel-body { padding: 1.1rem 1.3rem 1.3rem; }
-  @media (max-width: 560px) {
-    .panel-head { padding: 0.9rem 1rem 0.85rem; }
-    .panel-head h2 {
-      font-size: 0.95rem;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
+  .calc-header h2 {
+    font-size: 1.18rem;
+    margin-bottom: 0.18rem;
+  }
+  .calc-header p {
+    color: var(--text-secondary);
+    font-size: 0.84rem;
+  }
+  .calc-year-badge {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    background: var(--accent-light);
+    color: var(--accent);
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.28rem 0.7rem;
+    border-radius: var(--radius-sm);
+    letter-spacing: 0.01em;
+    border: 1px solid rgba(27,107,74,0.18);
+    margin-top: 0.15rem;
+  }
+  .calc-split {
+    display: grid;
+    grid-template-columns: minmax(0, 390px) minmax(0, 1fr);
+    margin-top: 0.75rem;
   }
 
-  .field { margin-bottom: 0.9rem; }
-  .field:last-child { margin-bottom: 0; }
-  .field label {
-    display: block; font-size: 0.75rem; text-transform: uppercase;
-    letter-spacing: 0.04em; color: var(--text-secondary); font-weight: 700; margin-bottom: 0.28rem;
+  .calc-inputs {
+    padding: 0.85rem 1.25rem 1.25rem;
+    min-width: 0;
+    overflow: hidden;
   }
-  .field input, .field select {
-    width: 100%; height: 42px; border: 1.5px solid var(--border);
-    border-radius: var(--radius-sm); background: var(--bg);
-    padding: 0 0.75rem; font-family: var(--font-body); font-size: 0.92rem;
-    color: var(--text-primary); transition: border-color 0.15s, box-shadow 0.15s;
+  .field-group + .field-group {
+    margin-top: 0.9rem;
+    padding-top: 0.85rem;
+    border-top: 1px solid var(--border);
+  }
+  .group-label {
+    font-size: 0.73rem;
+    font-weight: 700;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.7rem;
+  }
+  .field {
+    margin-bottom: 0.68rem;
+  }
+  .field:last-child {
+    margin-bottom: 0;
+  }
+  .field label {
+    display: block;
+    font-size: 0.73rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 0.25rem;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+  .field input,
+  .field select {
+    width: 100%;
+    height: 40px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text-primary);
+    padding: 0 0.875rem;
+    font-size: 0.92rem;
+    transition: border-color var(--transition), box-shadow var(--transition);
     -webkit-appearance: none;
   }
   .field select {
-    padding-right: 1.75rem;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='%236B6860'%3E%3Cpath d='M3 5l4 4 4-4'/%3E%3C/svg%3E");
-    background-repeat: no-repeat; background-position: right 0.65rem center;
+    padding-right: 2rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%236B6860'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-color: var(--surface);
   }
-  .field input:focus, .field select:focus {
-    outline: none; border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(27,107,74,0.11);
+  .field input:focus,
+  .field select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(27,107,74,0.12);
   }
-  .field-prefix { position: relative; }
-  .currency-input { position: relative; }
-  .currency-symbol {
-    position: absolute; left: 0.75rem; top: 50%;
-    transform: translateY(-50%); color: var(--text-tertiary); font-size: 0.92rem;
-    pointer-events: none; line-height: 1;
+  .input-wrap {
+    position: relative;
   }
-  .currency-input input { padding-left: 1.5rem; }
-  #salary, #overheads {
-    font-variant-numeric: tabular-nums lining-nums;
-    font-feature-settings: 'tnum' 1, 'lnum' 1;
+  .input-wrap::before {
+    content: attr(data-prefix);
+    position: absolute;
+    left: 0.875rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-tertiary);
+    font-size: 0.92rem;
+    pointer-events: none;
+    z-index: 1;
+    line-height: 1;
   }
-  .hint { color: var(--text-tertiary); font-size: 0.73rem; margin-top: 0.2rem; }
-  .btn-row { display: flex; gap: 0.35rem; flex-wrap: wrap; margin-top: 0.45rem; }
-  .btn-row button {
-    border: 1.5px solid var(--border); background: var(--bg);
-    color: var(--text-secondary); border-radius: 100px;
-    padding: 0.25rem 0.6rem; cursor: pointer; font-size: 0.73rem;
-    font-family: var(--font-body); font-weight: 500;
-    transition: all 0.15s ease;
+  .input-wrap.has-prefix input {
+    padding-left: 1.65rem;
   }
-  .btn-row button:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
-  .btn-row button.qa-active { border-color: var(--accent); color: var(--accent); background: var(--accent-light); font-weight: 600; }
+  .field-choices {
+    display: flex;
+    gap: 0.35rem;
+    margin-top: 0.42rem;
+    flex-wrap: wrap;
+  }
+  .choice-chip {
+    font-size: 0.73rem;
+    font-weight: 500;
+    padding: 0.28rem 0.65rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--bg);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--transition);
+  }
+  .choice-chip:hover,
+  .choice-chip.is-active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-light);
+  }
+  .choice-chip[data-tone="warm"]:hover,
+  .choice-chip[data-tone="warm"].is-active {
+    border-color: var(--accent-warm);
+    color: var(--accent-warm);
+    background: var(--accent-warm-light);
+  }
+  .preset-block {
+    margin-bottom: 0.85rem;
+  }
+  .quick-amounts {
+    display: flex;
+    gap: 0.38rem;
+    margin-top: 0.4rem;
+    flex-wrap: wrap;
+  }
+  .quick-amounts[hidden] {
+    display: none;
+  }
+  .quick-amounts button {
+    font-size: 0.76rem;
+    font-weight: 500;
+    padding: 0.3rem 0.7rem;
+    border: 1.5px solid var(--border);
+    border-radius: 100px;
+    background: var(--bg);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--transition);
+  }
+  .quick-amounts button:hover,
+  .quick-amounts button.qa-active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-light);
+    font-weight: 600;
+  }
+  .more-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--accent);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.1rem 0 0;
+    letter-spacing: 0.01em;
+    margin-top: 0.15rem;
+  }
+  .more-toggle svg {
+    width: 12px;
+    height: 12px;
+    transition: transform 0.2s ease;
+  }
+  .more-toggle.open svg {
+    transform: rotate(180deg);
+  }
+  .more-fields {
+    display: none;
+  }
+  .more-fields.open {
+    display: block;
+  }
+  .boolean-grid {
+    display: grid;
+    gap: 0.55rem;
+  }
+  .checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.75rem 0.85rem;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: #fafaf8;
+  }
+  .checkbox-row input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--accent);
+    flex-shrink: 0;
+  }
+  .checkbox-row span {
+    color: var(--text-primary);
+    font-size: 0.88rem;
+    font-weight: 600;
+    line-height: 1.4;
+  }
 
-  /* ── RESULT PANEL ── */
-  .result-panel {
+  .calc-visual {
     background: var(--surface);
-    border: 1.5px solid var(--border-strong);
-    border-top: 3px solid var(--accent);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow-md);
-    overflow: hidden;
-  }
-
-  /* ── RESULT HEADER (prominent total) ── */
-  .result-head {
-    padding: 1.1rem 1.5rem 0.9rem;
-    border-bottom: 1px solid var(--border);
-  }
-  .result-total-label {
-    font-size: 0.7rem; font-weight: 700; color: var(--text-tertiary);
-    text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.25rem;
-  }
-  .result-total-value {
-    font-family: var(--font-body); font-size: clamp(1.7rem, 3.5vw, 2.3rem);
-    font-weight: 500; color: var(--text-primary); letter-spacing: -0.02em; line-height: 1.1;
-    transition: opacity 0.15s ease;
-    font-variant-numeric: tabular-nums lining-nums;
-    font-feature-settings: 'tnum' 1, 'lnum' 1;
-  }
-  .result-total-sub {
-    font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.2rem;
-    transition: opacity 0.15s ease;
-  }
-
-  /* ── DONUT SECTION ── */
-  .donut-section {
-    display: flex; align-items: center; gap: 2rem;
-    padding: 1.5rem 1.5rem 1.25rem; flex-wrap: wrap;
-    border-bottom: 1px solid var(--border);
+    border-left: 1px solid var(--border);
+    padding: 1rem 1.25rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.8rem;
+    min-width: 0;
   }
   .donut-svg {
-    width: 190px; height: 190px; display: block; flex-shrink: 0;
+    width: 210px;
+    height: 210px;
+    display: block;
+    overflow: visible;
+    filter: drop-shadow(0 4px 12px rgba(26,26,24,0.08));
+    transition: transform 0.3s ease, filter 0.3s ease;
+    flex-shrink: 0;
   }
-  .donut-track { fill: none; stroke: var(--border); stroke-width: 26; }
+  .calc-visual:hover .donut-svg {
+    transform: scale(1.015);
+    filter: drop-shadow(0 6px 18px rgba(26,26,24,0.12));
+  }
+  .donut-track {
+    fill: none;
+    stroke: var(--border);
+    stroke-width: 26;
+  }
   .donut-seg {
-    fill: none; stroke-width: 26;
+    fill: none;
+    stroke-width: 26;
     stroke-dasharray: 0 452;
     stroke-dashoffset: 0;
-    transition: stroke-dasharray 0.45s cubic-bezier(0.4,0,0.2,1),
-                stroke-dashoffset 0.45s cubic-bezier(0.4,0,0.2,1);
+    stroke-linecap: round;
+    transition: stroke-dasharray 0.55s cubic-bezier(0.4,0,0.2,1), stroke-dashoffset 0.55s cubic-bezier(0.4,0,0.2,1), stroke-width 0.22s ease, opacity 0.22s ease;
+  }
+  .donut-seg.seg-muted {
+    opacity: 0.6 !important;
+  }
+  .donut-seg.seg-focus {
+    stroke-width: 29;
   }
   .donut-total-text {
+    font-family: var(--font-display);
+    font-size: 23px;
+    font-weight: 600;
+    fill: var(--text-primary);
+  }
+  .donut-sub-text {
     font-family: var(--font-body);
-    font-size: 18px; font-weight: 500; fill: var(--text-primary);
-    font-variant-numeric: tabular-nums lining-nums;
-    font-feature-settings: 'tnum' 1, 'lnum' 1;
+    font-size: 10px;
+    fill: var(--text-tertiary);
   }
-  .donut-sub-text { font-size: 9px; fill: var(--text-tertiary); font-family: 'DM Sans', system-ui, sans-serif; }
   .donut-month-text {
-    font-size: 9px; fill: var(--text-secondary); font-weight: 600; font-family: 'DM Sans', system-ui, sans-serif;
+    font-family: var(--font-body);
+    font-size: 11.5px;
+    fill: var(--accent);
+    font-weight: 700;
+  }
+  .visual-right {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .visual-kpis {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+  .vk {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0.55rem 0.7rem;
+  }
+  .vk-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex-shrink: 0;
+    margin-top: 0.22rem;
+  }
+  .vk-label {
+    font-size: 0.71rem;
+    color: var(--text-tertiary);
+    font-weight: 500;
+  }
+  .vk-value {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary);
     font-variant-numeric: tabular-nums lining-nums;
     font-feature-settings: 'tnum' 1, 'lnum' 1;
+    letter-spacing: -0.02em;
   }
-
-  .donut-legend { flex: 1; min-width: 180px; }
+  .summary-card {
+    padding: 0.78rem 0.9rem;
+    background: var(--surface-alt);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    font-size: 0.84rem;
+    line-height: 1.55;
+  }
+  .donut-legend {
+    width: 100%;
+  }
   .legend-row {
-    display: flex; align-items: center; gap: 0.5rem;
-    padding: 0.32rem 0; border-bottom: 1px solid var(--border); font-size: 0.82rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.38rem 0.5rem;
+    font-size: 0.79rem;
+    transition: background-color 0.15s ease;
+    border-radius: 5px;
+    cursor: default;
   }
-  .legend-row:last-child { border-bottom: none; }
-  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-  .legend-name { flex: 1; color: var(--text-secondary); }
+  .legend-row:nth-child(even) {
+    background: var(--bg);
+  }
+  .legend-row:hover,
+  .legend-row.legend-active {
+    background: var(--accent-light);
+  }
+  .legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .legend-name {
+    flex: 1;
+    color: var(--text-secondary);
+  }
   .legend-val {
-    font-weight: 600; color: var(--text-primary);
-    font-variant-numeric: tabular-nums lining-nums;
-    font-feature-settings: 'tnum' 1, 'lnum' 1;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1;
   }
-  .legend-pct { color: var(--text-tertiary); font-size: 0.73rem; min-width: 3rem; text-align: right; }
 
-  /* ── KPI STRIP ── */
-  .kpi-strip {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 0; border-bottom: 1px solid var(--border);
+  .calc-footer {
+    border-top: 1px solid var(--border);
+    padding: 0.85rem 1.25rem 1.15rem;
+    background: var(--surface);
   }
-  .kpi {
-    padding: 0.9rem 1.1rem; border-right: 1px solid var(--border);
-  }
-  .kpi:last-child { border-right: none; }
-  .kpi-label { font-size: 0.68rem; text-transform: uppercase; color: var(--text-tertiary); letter-spacing: 0.04em; font-weight: 700; margin-bottom: 0.2rem; }
-  .kpi-value {
-    font-family: var(--font-body); font-size: 1.1rem; letter-spacing: -0.01em; font-weight: 600; transition: opacity 0.15s ease;
-    font-variant-numeric: tabular-nums lining-nums;
-    font-feature-settings: 'tnum' 1, 'lnum' 1;
-  }
-  .kpi-detail { font-size: 0.72rem; color: var(--text-tertiary); margin-top: 0.1rem; }
-
-  /* ── BREAKDOWN TABLES ── */
-  .tables-section { padding: 1rem 1.3rem 1.3rem; }
-  .tables-section h3 { font-size: 0.82rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-tertiary); margin: 0.9rem 0 0.5rem; }
-  .tables-section h3:first-child { margin-top: 0; }
-  .table { width: 100%; border-collapse: collapse; }
-  .table th, .table td { text-align: left; border-bottom: 1px solid var(--border); padding: 0.48rem 0.3rem; font-size: 0.83rem; }
-  .table th { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-tertiary); font-weight: 700; }
-  .table td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
-  .table tr:last-child td { border-bottom: none; font-weight: 600; }
   .assumptions {
-    margin-top: 0.9rem; border: 1px solid var(--border); background: var(--surface-alt);
-    border-radius: var(--radius-sm); padding: 0.75rem 0.9rem;
-    font-size: 0.78rem; color: var(--text-secondary); line-height: 1.65;
+    font-size: 0.78rem;
+    color: var(--text-tertiary);
+    line-height: 1.65;
+    padding: 0.65rem 0.9rem;
+    background: var(--bg);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    margin-bottom: 0.65rem;
+  }
+  .assumptions strong {
+    color: var(--text-secondary);
   }
 
-  /* ── STICKY BAR ── */
-  .sticky-result {
-    position: fixed; bottom: 0; left: 0; right: 0;
-    background: var(--surface); border-top: 2px solid var(--border);
-    box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
-    z-index: 50; transform: translateY(100%);
-    transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+  .result-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: var(--shadow-sm);
+    padding: 1rem 1.05rem;
   }
-  .sticky-result.visible { transform: translateY(0); }
-  .sticky-result-inner {
-    max-width: var(--max-w); margin: 0 auto; padding: 0.75rem 1.25rem;
-    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  .result-block + .result-block {
+    margin-top: 0.9rem;
   }
-  .sr-left { display: flex; align-items: center; gap: 1rem; }
-  .sr-divider { width: 1px; height: 30px; background: var(--border); }
-  .sticky-result .sr-label { font-size: 0.72rem; color: var(--text-tertiary); }
-  .sticky-result .sr-value {
-    font-family: var(--font-body); color: var(--accent); font-size: 1.1rem; letter-spacing: -0.01em;
-    font-variant-numeric: tabular-nums lining-nums;
-    font-feature-settings: 'tnum' 1, 'lnum' 1;
+  .result-block h3 {
+    font-size: 0.76rem;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.75rem;
   }
-  .sticky-result .sr-detail { font-size: 0.75rem; color: var(--text-tertiary); line-height: 1.5; }
-  @media (max-width: 520px) { .sr-divider, .sr-detail-col { display: none; } }
+  .breakdown-list,
+  .note-list {
+    display: grid;
+    gap: 0.55rem;
+  }
+  .breakdown-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.7rem 0.8rem;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: #fcfcfa;
+    font-size: 0.87rem;
+  }
+  .breakdown-row span:first-child {
+    color: var(--text-secondary);
+  }
+  .note-item {
+    padding: 0.82rem 0.95rem;
+    border-left: 3px solid var(--accent);
+    background: rgba(229,243,235,0.55);
+    border-radius: 0 12px 12px 0;
+    color: var(--text-secondary);
+    font-size: 0.86rem;
+  }
+
+  .content-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(250px, 300px);
+    gap: 1rem;
+    align-items: start;
+  }
+  .article-card,
+  .side-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: var(--shadow-sm);
+  }
+  .article-card {
+    padding: 1.35rem 1.35rem 1.45rem;
+  }
+  .article-card h2 {
+    font-size: 1.26rem;
+    margin: 1.2rem 0 0.55rem;
+  }
+  .article-card h2:first-of-type {
+    margin-top: 0;
+  }
+  .article-card p {
+    color: var(--text-secondary);
+    margin-bottom: 0.82rem;
+    max-width: 68ch;
+  }
+  .article-card ul {
+    margin: 0.4rem 0 0.95rem 1.15rem;
+    color: var(--text-secondary);
+  }
+  .article-card li + li {
+    margin-top: 0.4rem;
+  }
+  .side-stack {
+    position: sticky;
+    top: 74px;
+    display: grid;
+    gap: 0.9rem;
+  }
+  .side-card {
+    padding: 1rem 1.05rem;
+  }
+  .side-card h3 {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.7rem;
+  }
+  .source-list,
+  .next-step-list {
+    display: grid;
+    gap: 0.5rem;
+  }
+  .source-link,
+  .next-step-link {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 0.84rem;
+    line-height: 1.45;
+  }
+  .source-link::before,
+  .next-step-link::before {
+    content: "→";
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+  .source-link:hover,
+  .next-step-link:hover {
+    color: var(--accent);
+  }
+  .bottom-grid {
+    margin-top: 1rem;
+    display: grid;
+    gap: 1rem;
+  }
+  .bottom-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: var(--shadow-sm);
+    padding: 1.15rem 1.2rem;
+  }
+  .bottom-card h2 {
+    font-size: 1.12rem;
+    margin-bottom: 0.45rem;
+  }
+  .bottom-card p {
+    color: var(--text-secondary);
+    margin-bottom: 0.75rem;
+  }
+  .bottom-card.notice {
+    background: var(--surface-alt);
+  }
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  @media (max-width: 920px) {
+    .calc-hero,
+    .content-layout {
+      grid-template-columns: 1fr;
+    }
+    .calc-split {
+      grid-template-columns: 1fr;
+    }
+    .calc-visual {
+      border-left: none;
+      border-top: 1px solid var(--border);
+      padding: 1rem 1.1rem 1rem;
+    }
+    .side-stack {
+      position: static;
+    }
+  }
+  @media (max-width: 780px) {
+    .page-wrap {
+      padding: 1rem 0 2.5rem;
+    }
+    .calc-header {
+      padding: 0.75rem 0.95rem 0;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .calc-header h2 {
+      font-size: 1rem;
+    }
+    .calc-header p {
+      font-size: 0.8rem;
+    }
+    .calc-inputs {
+      padding: 0.85rem 1rem 1rem;
+    }
+    .calc-footer {
+      padding: 0.75rem 1rem 1rem;
+    }
+    .visual-kpis {
+      grid-template-columns: 1fr;
+    }
+    .hero-panel,
+    .trust-panel,
+    .article-card,
+    .side-card,
+    .bottom-card,
+    .result-block {
+      border-radius: 14px;
+    }
+  }
+  @media (max-width: 560px) {
+    .hero-panel {
+      padding: 1rem;
+    }
+    .hero-panel h1 {
+      font-size: 1.55rem;
+    }
+    .donut-svg {
+      width: 188px;
+      height: 188px;
+    }
+    .breakdown-row {
+      padding: 0.62rem 0.7rem;
+      font-size: 0.84rem;
+    }
+  }
 </style>
+{% endblock %}
+
+{% block jsonld %}
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "WebApplication",
-  "name": "UK Employer Cost Calculator {{ tax_year }}",
+  "name": {{ page.title|tojson }},
   "url": "{{ canonical_url }}",
-  "description": "Calculate the true employer cost of any UK salary: employer NI at 15%, auto-enrolment pension, Employment Allowance, and total annual cost for {{ tax_year }}.",
+  "description": {{ page.description|tojson }},
   "applicationCategory": "FinanceApplication",
   "operatingSystem": "Any",
   "inLanguage": "en-GB",
   "isAccessibleForFree": true,
-  "keywords": "employer NI calculator, employer national insurance, cost of employing, UK payroll cost, employer cost 2025",
-  "offers": {"@type": "Offer", "price": "0", "priceCurrency": "GBP"},
-  "provider": {"@type": "Organization", "name": "EmployerCalculator.co.uk", "url": "{{ site_url }}"}
+  "provider": {"@type": "Organization", "name": "UK Benefits Calculator", "url": "{{ site_url }}"}
 }
 </script>
+{{ super() }}
 {% endblock %}
 
 {% block content %}
+{% set non_boolean_fields = page.fields | rejectattr("type", "equalto", "boolean") | list %}
+{% set boolean_fields = page.fields | selectattr("type", "equalto", "boolean") | list %}
+{% set main_fields = non_boolean_fields[:4] %}
+{% set advanced_fields = non_boolean_fields[4:] %}
+
 <section class="page-wrap">
-  <div class="page-intro">
-    <div class="badge">Employer cost calculator</div>
-    <h1>Employer cost calculator UK ({{ tax_year }})</h1>
-    <p>Use this employer cost calculator UK page to turn a headline salary into a real employer budget. It shows salary cost to employer with employer NI, auto-enrolment pension, optional overheads and Employment Allowance, plus a direct comparison with 2024/25 so you can measure the April 2025 NI change.</p>
-    <div class="pill-grid" style="margin-top:0.85rem;">
-      <a class="pill" href="/cost-of-employing">Browse cost by salary</a>
-      <a class="pill" href="/employer-ni">Employer NI only</a>
-      <a class="pill" href="/team-cost-planner">Payroll planner</a>
-      <a class="pill" href="/guides/auto-enrolment-pension-costs">Auto-enrolment costs</a>
+  <div class="calc-hero">
+    <div class="hero-panel">
+      <div class="eyebrow-row">
+        <span class="mini-pill accent">Updated for {{ tax_year }}</span>
+        <span class="mini-pill">Independent estimate</span>
+        <span class="mini-pill">Not GOV.UK</span>
+      </div>
+      <h1>{{ page.title }}</h1>
+      <p>{{ page.summary }}</p>
+      <div class="hero-notes">
+        <span class="hero-note"><strong>Fast:</strong> results update as you type</span>
+        <span class="hero-note"><strong>Clear:</strong> chart, totals and breakdown together</span>
+        <span class="hero-note"><strong>Practical:</strong> built for mobile and desktop</span>
+      </div>
+      <div class="pill-grid" style="margin-top:0.9rem;">
+        {% for related in related_calculators[:4] %}
+        <a class="pill" href="{{ related.url }}">{{ related.title }}</a>
+        {% endfor %}
+      </div>
     </div>
+    <aside class="trust-panel">
+      <div class="trust-block">
+        <strong>Core answer first</strong>
+        <p>The result panel keeps the main number, the annual view and the biggest moving parts visible without making you scan the whole page.</p>
+      </div>
+      <div class="trust-block">
+        <strong>What is simplified</strong>
+        <p>Local rules, evidence requirements, sanctions, transitional protection and unusual household details are not fully modelled here.</p>
+      </div>
+      <div class="trust-block">
+        <strong>Verify before acting</strong>
+        <p>Use the official links and methodology after estimating if you need to make a claim or challenge a decision.</p>
+      </div>
+    </aside>
   </div>
 
-  <div class="calc-layout">
+  <section class="calc-card">
+    <div class="calc-header">
+      <div>
+        <h2>{{ page.title }}</h2>
+        <p>Use quick presets, adjust the details, and review the visual breakdown as the estimate changes.</p>
+      </div>
+      <span class="calc-year-badge">{{ tax_year }}</span>
+    </div>
 
-    <!-- INPUT PANEL -->
-    <section class="panel">
-      <div class="panel-head"><h2>Calculator inputs</h2></div>
-      <div class="panel-body">
-        <div class="field field-prefix">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.28rem;">
-            <label for="salary" id="salary-label" style="margin-bottom:0;">Annual salary</label>
-            <div style="display:flex;border:1.5px solid var(--border);border-radius:6px;overflow:hidden;font-size:0.71rem;font-weight:700;letter-spacing:0.02em;">
-              <button type="button" id="mode-annual" style="padding:0.18rem 0.6rem;background:var(--accent);color:white;border:none;cursor:pointer;transition:all 0.15s;">Annual</button>
-              <button type="button" id="mode-hourly" style="padding:0.18rem 0.6rem;background:transparent;color:var(--text-secondary);border:none;cursor:pointer;transition:all 0.15s;">Hourly</button>
+    <div class="calc-split">
+      <div class="calc-inputs">
+        <form method="get">
+          <div class="preset-block">
+            <label class="group-label" for="preset-chip-group">Quick scenarios</label>
+            <div class="quick-amounts" id="preset-chip-group" hidden></div>
+          </div>
+
+          <div class="field-group">
+            <div class="group-label">Main details</div>
+            {% for field in main_fields %}
+            <div class="field" data-field-name="{{ field.name }}" data-field-type="{{ field.type }}">
+              <label for="{{ field.name }}">{{ field.label }}</label>
+              {% if field.type == "select" %}
+              <select id="{{ field.name }}" name="{{ field.name }}">
+                {% for option in field.options %}
+                <option value="{{ option.value }}" {% if form_state[field.name] == option.value %}selected{% endif %}>{{ option.label }}</option>
+                {% endfor %}
+              </select>
+              {% else %}
+              <div class="input-wrap {% if field.prefix %}has-prefix{% endif %}" data-prefix="{{ field.prefix|default('') }}">
+                <input id="{{ field.name }}" name="{{ field.name }}" type="number" min="{{ field.min|default(0) }}" step="{{ field.step|default(1) }}" value="{{ form_state[field.name] }}">
+              </div>
+              {% endif %}
+              <div class="field-choices" data-choices-for="{{ field.name }}"></div>
+            </div>
+            {% endfor %}
+          </div>
+
+          {% if advanced_fields or boolean_fields %}
+          <button type="button" class="more-toggle" id="moreToggle">
+            More options
+            <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+
+          <div class="more-fields" id="moreFields">
+            {% if advanced_fields %}
+            <div class="field-group">
+              <div class="group-label">Extra details</div>
+              {% for field in advanced_fields %}
+              <div class="field" data-field-name="{{ field.name }}" data-field-type="{{ field.type }}">
+                <label for="{{ field.name }}">{{ field.label }}</label>
+                {% if field.type == "select" %}
+                <select id="{{ field.name }}" name="{{ field.name }}">
+                  {% for option in field.options %}
+                  <option value="{{ option.value }}" {% if form_state[field.name] == option.value %}selected{% endif %}>{{ option.label }}</option>
+                  {% endfor %}
+                </select>
+                {% else %}
+                <div class="input-wrap {% if field.prefix %}has-prefix{% endif %}" data-prefix="{{ field.prefix|default('') }}">
+                  <input id="{{ field.name }}" name="{{ field.name }}" type="number" min="{{ field.min|default(0) }}" step="{{ field.step|default(1) }}" value="{{ form_state[field.name] }}">
+                </div>
+                {% endif %}
+                <div class="field-choices" data-choices-for="{{ field.name }}"></div>
+              </div>
+              {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if boolean_fields %}
+            <div class="field-group">
+              <div class="group-label">Assumptions</div>
+              <div class="boolean-grid">
+                {% for field in boolean_fields %}
+                <label class="checkbox-row">
+                  <input type="checkbox" name="{{ field.name }}" value="1" {% if form_state[field.name] %}checked{% endif %}>
+                  <span>{{ field.label }}</span>
+                </label>
+                {% endfor %}
+              </div>
+            </div>
+            {% endif %}
+          </div>
+          {% endif %}
+
+          <button class="sr-only" type="submit">Update estimate</button>
+        </form>
+      </div>
+
+      <div class="calc-visual" id="resultsPanel">
+        <svg class="donut-svg" viewBox="0 0 200 200" role="img" aria-label="{{ estimate_visual.explainer }}">
+          <circle class="donut-track" cx="100" cy="100" r="72"></circle>
+          <circle class="donut-seg" id="seg-0" cx="100" cy="100" r="72" stroke="#1B6B4A" transform="rotate(-90 100 100)"></circle>
+          <circle class="donut-seg" id="seg-1" cx="100" cy="100" r="72" stroke="#5B8DB8" transform="rotate(-90 100 100)"></circle>
+          <circle class="donut-seg" id="seg-2" cx="100" cy="100" r="72" stroke="#D4763C" transform="rotate(-90 100 100)"></circle>
+          <circle class="donut-seg" id="seg-3" cx="100" cy="100" r="72" stroke="#B0A89E" transform="rotate(-90 100 100)"></circle>
+          <text class="donut-total-text" x="100" y="92" text-anchor="middle" id="result-primary-chart">{{ "£{:,.0f}".format(estimate.primary_amount) }}</text>
+          <text class="donut-sub-text" x="100" y="107" text-anchor="middle" id="result-kicker-chart">{{ estimate.primary_label }}</text>
+          <text class="donut-month-text" x="100" y="121" text-anchor="middle" id="result-annual-chart">{{ "£{:,.0f}/yr".format(estimate.secondary_amount) }}</text>
+        </svg>
+
+        <div class="visual-right">
+          <div class="visual-kpis">
+            <div class="vk">
+              <span class="vk-dot"></span>
+              <div>
+                <div class="vk-label">Main estimate</div>
+                <div id="vkPrimary" class="vk-value">{{ "£{:,.2f}".format(estimate.primary_amount) }}</div>
+              </div>
+            </div>
+            <div class="vk">
+              <span class="vk-dot" style="background:var(--c-housing);"></span>
+              <div>
+                <div class="vk-label">Annual view</div>
+                <div id="vkAnnual" class="vk-value">{{ "£{:,.2f}".format(estimate.secondary_amount) }}</div>
+              </div>
+            </div>
+            <div class="vk">
+              <span class="vk-dot" style="background:var(--c-child);"></span>
+              <div>
+                <div class="vk-label">Period used</div>
+                <div id="vkPeriod" class="vk-value" style="font-size:0.9rem;">{{ estimate.primary_label }}</div>
+              </div>
+            </div>
+            <div class="vk">
+              <span class="vk-dot" style="background:var(--c-other);"></span>
+              <div>
+                <div class="vk-label">Estimate type</div>
+                <div class="vk-value" style="font-size:0.9rem;">Planning only</div>
+              </div>
             </div>
           </div>
-          <div class="currency-input">
-            <span class="currency-symbol" aria-hidden="true">£</span>
-            <input id="salary" type="text" value="{{ "{:,}".format(query_state.salary) }}" inputmode="decimal">
-          </div>
-        </div>
-        <div class="btn-row" id="annual-chips">
-          <button type="button" data-salary="25000" onclick="setSalary(25000)">£25k</button>
-          <button type="button" data-salary="35000" onclick="setSalary(35000)">£35k</button>
-          <button type="button" data-salary="50000" onclick="setSalary(50000)">£50k</button>
-          <button type="button" data-salary="75000" onclick="setSalary(75000)">£75k</button>
-          <button type="button" data-salary="100000" onclick="setSalary(100000)">£100k</button>
-        </div>
-        <div class="btn-row" id="hourly-chips" style="display:none;">
-          <button type="button" onclick="setHourlyRate(10)">£10/hr</button>
-          <button type="button" onclick="setHourlyRate(12.50)">£12.50</button>
-          <button type="button" onclick="setHourlyRate(15)">£15/hr</button>
-          <button type="button" onclick="setHourlyRate(20)">£20/hr</button>
-          <button type="button" onclick="setHourlyRate(25)">£25/hr</button>
-        </div>
-        <div class="field" style="margin-top:0.8rem;">
-          <label for="hours-per-week">Hours per week</label>
-          <select id="hours-per-week">
-            <option value="37.5">Full time (37.5h/wk)</option>
-            <option value="35">35h / week</option>
-            <option value="30">4 days (30h/wk)</option>
-            <option value="22.5">3 days (22.5h/wk)</option>
-            <option value="20">Part time (20h/wk)</option>
-            <option value="16">Part time (16h/wk)</option>
-            <option value="custom">Custom...</option>
-          </select>
-          <input id="hours-custom" type="number" min="1" max="80" step="0.5" placeholder="Hours per week" style="display:none;margin-top:0.4rem;width:100%;height:42px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);padding:0 0.75rem;font-family:var(--font-body);font-size:0.92rem;color:var(--text-primary);box-sizing:border-box;">
-          <div id="hours-hint" class="hint" style="display:none;"></div>
-        </div>
-        <div class="field" style="margin-top:1rem;">
-          <label for="pension">Employer pension rate</label>
-          <select id="pension">
-            {% for v in [0,3,4,5,6,8,10] %}
-            <option value="{{ v }}" {% if query_state.pension == v %}selected{% endif %}>{{ v }}%{% if v == 3 %} (auto-enrolment minimum){% endif %}</option>
+
+          <div id="result-summary" class="summary-card">{{ estimate.summary }}</div>
+
+          <div class="donut-legend" id="breakdownLegend">
+            {% for item in estimate_visual.legend %}
+            <div class="legend-row">
+              <span class="legend-dot" style="background:{{ item.color }}"></span>
+              <span class="legend-name">{{ item.label }}</span>
+              <span class="legend-val">{{ "£{:,.2f}".format(item.value) }}</span>
+            </div>
             {% endfor %}
-          </select>
-          <div class="hint">Minimum {{ min_employer_pension }}% on qualifying earnings (£6,240–£50,270).</div>
-        </div>
-        <div class="field field-prefix">
-          <label for="overheads">Annual overheads</label>
-          <div class="currency-input">
-            <span class="currency-symbol" aria-hidden="true">£</span>
-            <input id="overheads" type="text" value="{{ "{:,}".format(query_state.overheads) }}" inputmode="numeric">
           </div>
-          <div class="hint">Equipment, software, workspace, training, etc.</div>
         </div>
-        <div class="field">
-          <label for="allowance">Employment Allowance</label>
-          <select id="allowance">
-            <option value="0" {% if query_state.allowance == 0 %}selected{% endif %}>Not applied</option>
-            <option value="10500" {% if query_state.allowance == 10500 %}selected{% endif %}>Apply up to £10,500</option>
-          </select>
-          <div class="hint">Most single-director companies cannot claim.</div>
+      </div>
+    </div>
+
+    <div class="calc-footer">
+      <div class="assumptions">
+        <strong>Note:</strong> This page keeps the interface quick and consistent across mobile and desktop, but the estimate is still simplified. Check the official sources and the methodology before relying on it for a claim or appeal.
+      </div>
+      <div class="pill-grid">
+        {% for related in related_calculators[:5] %}
+        <a class="pill" href="{{ related.url }}">{{ related.title }}</a>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <div class="result-block">
+    <h3>Breakdown</h3>
+    <div id="result-breakdown" class="breakdown-list">
+      {% for label, value in estimate.breakdown %}
+      <div class="breakdown-row">
+        <span>{{ label }}</span>
+        <strong>{% if "percentage" in label|lower %}{{ "{:,.0f}%".format(value) }}{% else %}{{ "£{:,.2f}".format(value) }}{% endif %}</strong>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="result-block">
+    <h3>Important notes</h3>
+    <div id="result-notes" class="note-list">
+      {% for note in estimate.notes %}
+      <div class="note-item">{{ note }}</div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {% if adsense_client %}
+  <section class="section" style="padding:0 0 1rem;">
+    {% include "partials/adsense_snippet.html" %}
+  </section>
+  {% endif %}
+
+  <div class="content-layout">
+    <article class="article-card">
+      {% for section in page.sections %}
+      <h2>{{ section.heading }}</h2>
+      {% for paragraph in section.paragraphs %}
+      <p>{{ paragraph }}</p>
+      {% endfor %}
+      {% endfor %}
+    </article>
+
+    <aside class="side-stack">
+      <div class="side-card">
+        <h3>Official sources</h3>
+        <div class="source-list">
+          {% for source in page_sources %}
+          <a class="source-link" href="{{ source.url }}" target="_blank" rel="noopener">{{ source.label }}</a>
+          {% endfor %}
         </div>
+      </div>
+      <div class="side-card">
+        <h3>Next steps</h3>
+        <div class="next-step-list">
+          {% for step in next_steps %}
+          <a class="next-step-link" href="{{ step.url }}">{{ step.label }}</a>
+          {% endfor %}
+        </div>
+      </div>
+      {% if related_guides %}
+      <div class="side-card">
+        <h3>Related guides</h3>
+        <div class="next-step-list">
+          {% for guide in related_guides %}
+          <a class="next-step-link" href="/guides/{{ guide.slug }}">{{ guide.title }}</a>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    </aside>
+  </div>
+
+  <div class="bottom-grid">
+    <section class="bottom-card">
+      <h2>Related calculators</h2>
+      <p>People usually check these pages next when they are comparing support, testing a change of circumstances, or trying to explain a low result.</p>
+      <div class="pill-grid">
+        {% for related in related_calculators %}
+        <a class="pill" href="{{ related.url }}">{{ related.title }}</a>
+        {% endfor %}
       </div>
     </section>
 
-    <!-- RESULT PANEL -->
-    <section class="result-panel" id="resultPanel">
-
-      <!-- RESULT HEADER -->
-      <div class="result-head">
-        <div class="result-total-label">Total employer cost / year</div>
-        <div class="result-total-value" id="resultTotalBig">{{ calc.total_cost|money }}</div>
-        <div class="result-total-sub" id="resultTotalSub">{{ calc.total_cost|monthly }} per month &middot; {{ calc.cost_above_salary_pct|percent }} above salary</div>
+    {% if faq_items %}
+    <section class="bottom-card">
+      <h2>Frequently asked questions</h2>
+      <div class="faq-list">
+        {% for item in faq_items %}
+        <details class="faq-item">
+          <summary>{{ item.q }}</summary>
+          <div class="faq-answer">{{ item.a }}</div>
+        </details>
+        {% endfor %}
       </div>
+    </section>
+    {% endif %}
 
-      <!-- DONUT + LEGEND -->
-      <div class="donut-section">
-        <svg class="donut-svg" viewBox="0 0 200 200" role="img" aria-label="Cost breakdown chart">
-          <circle class="donut-track" cx="100" cy="100" r="72"/>
-          <circle class="donut-seg" id="seg-salary"   cx="100" cy="100" r="72" stroke="#1B6B4A" transform="rotate(-90 100 100)"/>
-          <circle class="donut-seg" id="seg-ni"       cx="100" cy="100" r="72" stroke="#D4763C" transform="rotate(-90 100 100)"/>
-          <circle class="donut-seg" id="seg-pension"  cx="100" cy="100" r="72" stroke="#5B8DB8" transform="rotate(-90 100 100)"/>
-          <circle class="donut-seg" id="seg-overhead" cx="100" cy="100" r="72" stroke="#B0A89E" transform="rotate(-90 100 100)"/>
-          <text class="donut-total-text" x="100" y="89" text-anchor="middle" id="donut-total">{{ calc.total_cost|money }}</text>
-          <text class="donut-sub-text"   x="100" y="104" text-anchor="middle">total / year</text>
-          <text class="donut-month-text" x="100" y="118" text-anchor="middle" id="donut-monthly">{{ calc.total_cost|monthly }} / month</text>
-        </svg>
-        <div class="donut-legend">
-          <div class="legend-row">
-            <span class="legend-dot" style="background:#1B6B4A"></span>
-            <span class="legend-name">Salary</span>
-            <span class="legend-val" id="lSalary">{{ calc.salary|money }}</span>
-            <span class="legend-pct" id="lSalaryPct"></span>
-          </div>
-          <div class="legend-row">
-            <span class="legend-dot" style="background:#D4763C"></span>
-            <span class="legend-name">Employer NI</span>
-            <span class="legend-val" id="lNI">{{ calc.employer_ni.ni_due|money }}</span>
-            <span class="legend-pct" id="lNIPct"></span>
-          </div>
-          <div class="legend-row">
-            <span class="legend-dot" style="background:#5B8DB8"></span>
-            <span class="legend-name">Pension</span>
-            <span class="legend-val" id="lPension">{{ calc.pension_contribution|money }}</span>
-            <span class="legend-pct" id="lPensionPct"></span>
-          </div>
-          <div class="legend-row">
-            <span class="legend-dot" style="background:#B0A89E"></span>
-            <span class="legend-name">Overheads</span>
-            <span class="legend-val" id="lOverhead">{{ calc.overheads|money }}</span>
-            <span class="legend-pct" id="lOverheadPct"></span>
-          </div>
-        </div>
-      </div>
-
-      <!-- KPI STRIP -->
-      <div class="kpi-strip">
-        <div class="kpi">
-          <div class="kpi-label">Monthly total</div>
-          <div class="kpi-value" id="monthlyTotal">{{ calc.total_cost|monthly }}</div>
-        </div>
-        <div class="kpi">
-          <div class="kpi-label">Employer NI / month</div>
-          <div class="kpi-value" id="niMonthly">{{ calc.employer_ni.ni_due|monthly }}</div>
-        </div>
-        <div class="kpi">
-          <div class="kpi-label">Cost above salary</div>
-          <div class="kpi-value" id="costAbove">{{ calc.cost_above_salary|money }}</div>
-          <div class="kpi-detail" id="costAbovePct">{{ calc.cost_above_salary_pct|percent }} above</div>
-        </div>
-        <div class="kpi">
-          <div class="kpi-label">EA saving</div>
-          <div class="kpi-value" id="eaSaving">{{ calc.employer_ni.allowance_used|money }}</div>
-        </div>
-        <div class="kpi" id="kpi-hourly" style="display:none;">
-          <div class="kpi-label">Hourly cost</div>
-          <div class="kpi-value" id="hourlyTotal">—</div>
-          <div class="kpi-detail" id="hourlyBasis"></div>
-        </div>
-      </div>
-
-      <!-- BREAKDOWN TABLES -->
-      <div class="tables-section">
-        <h3>Full breakdown</h3>
-        <table class="table" id="breakdownTable">
-          <tr><th>Item</th><th>Annual</th></tr>
-          <tr><td>Gross salary</td><td id="bSalary">{{ calc.salary|money }}</td></tr>
-          <tr><td>Employer NI (gross)</td><td id="bGrossNI">{{ calc.employer_ni.gross_ni|money }}</td></tr>
-          <tr><td>Employment Allowance used</td><td id="bAllowance">−{{ calc.employer_ni.allowance_used|money }}</td></tr>
-          <tr><td>Employer NI due</td><td id="bNIDue">{{ calc.employer_ni.ni_due|money }}</td></tr>
-          <tr><td>Pension contribution</td><td id="bPension">{{ calc.pension_contribution|money }}</td></tr>
-          <tr><td>Overheads</td><td id="bOverheads">{{ calc.overheads|money }}</td></tr>
-          <tr><td><strong>Total employer cost</strong></td><td id="bTotal"><strong>{{ calc.total_cost|money }}</strong></td></tr>
-        </table>
-
-        <h3>Employer NI bands</h3>
-        <table class="table">
-          <tr><th>Earnings band</th><th>Rate</th><th>NI</th></tr>
-          <tr><td>Up to £5,000</td><td>0%</td><td>£0</td></tr>
-          <tr><td>Above £5,000</td><td>15%</td><td id="niBandUpper">{{ calc.employer_ni.gross_ni|money }}</td></tr>
-          <tr><td><strong>Total</strong></td><td></td><td id="niBandTotal"><strong>{{ calc.employer_ni.gross_ni|money }}</strong></td></tr>
-        </table>
-
-        <div class="assumptions" id="assumptions">
-          Tax year {{ tax_year }} · Employer NI 15% above £5,000 · Comparison year 13.8% above £9,100 · Estimates only — not financial or legal advice.
-        </div>
+    <section class="bottom-card notice">
+      <h2>Independent estimate only</h2>
+      <p>This page is written to help you understand the likely direction of the answer quickly, not to replace the official claim process. Local authority rules, evidence requirements, deductions, sanctions, timing and special-case rules can all change the final outcome.</p>
+      <div class="pill-grid">
+        <a class="pill" href="/methodology">Methodology</a>
+        <a class="pill" href="/editorial-standards">Editorial standards</a>
+        <a class="pill" href="/sources">Sources</a>
       </div>
     </section>
   </div>
 </section>
-
-<!-- HOW IT WORKS -->
-<section style="max-width:var(--max-w);margin:2.5rem auto 0;padding:0 1.25rem;">
-  <div style="font-size:0.72rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem;">How it works</div>
-  <h2 style="font-family:var(--font-display);font-size:clamp(1.4rem,3vw,1.85rem);font-weight:500;color:var(--text-primary);letter-spacing:-0.02em;margin:0 0 1.1rem;">Three steps to your employer cost estimate</h2>
-  <div style="display:grid;gap:1rem;grid-template-columns:repeat(3,1fr);" class="ec-steps-grid">
-    <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:1.25rem 1.4rem;">
-      <div style="font-family:var(--font-display);font-size:1.8rem;font-weight:500;color:var(--accent);line-height:1;margin-bottom:0.6rem;">01</div>
-      <div style="font-weight:600;color:var(--text-primary);margin-bottom:0.3rem;font-size:0.95rem;font-family:var(--font-body);">Enter the salary</div>
-      <div style="font-size:0.85rem;color:var(--text-secondary);line-height:1.6;font-family:var(--font-body);">Type any annual gross salary. Use the quick chips for common bands or enter your own figure.</div>
-    </div>
-    <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:1.25rem 1.4rem;">
-      <div style="font-family:var(--font-display);font-size:1.8rem;font-weight:500;color:var(--accent);line-height:1;margin-bottom:0.6rem;">02</div>
-      <div style="font-weight:600;color:var(--text-primary);margin-bottom:0.3rem;font-size:0.95rem;font-family:var(--font-body);">Set pension and overheads</div>
-      <div style="font-size:0.85rem;color:var(--text-secondary);line-height:1.6;font-family:var(--font-body);">Adjust employer pension rate and add any equipment, software or workspace costs.</div>
-    </div>
-    <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:1.25rem 1.4rem;">
-      <div style="font-family:var(--font-display);font-size:1.8rem;font-weight:500;color:var(--accent);line-height:1;margin-bottom:0.6rem;">03</div>
-      <div style="font-weight:600;color:var(--text-primary);margin-bottom:0.3rem;font-size:0.95rem;font-family:var(--font-body);">Read the total cost</div>
-      <div style="font-size:0.85rem;color:var(--text-secondary);line-height:1.6;font-family:var(--font-body);">The donut and KPI strip update live. Apply Employment Allowance if eligible to see the net NI bill.</div>
-    </div>
-  </div>
-  <style>@media(max-width:640px){.ec-steps-grid{grid-template-columns:1fr!important;}}</style>
-</section>
-
-<!-- ABOUT THIS CALCULATOR -->
-<section style="max-width:var(--max-w);margin:2.5rem auto 0;padding:0 1.25rem;">
-  <div style="font-size:0.72rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem;">About</div>
-  <h2 style="font-family:var(--font-display);font-size:clamp(1.4rem,3vw,1.85rem);font-weight:500;color:var(--text-primary);letter-spacing:-0.02em;margin:0 0 0.85rem;">Employer NI calculator {{ tax_year }} — what it calculates</h2>
-  <div style="display:grid;gap:1rem;grid-template-columns:1fr 1fr;" class="ec-about-grid">
-    <div>
-      <p style="font-size:0.92rem;color:var(--text-secondary);line-height:1.7;margin-bottom:0.75rem;">This calculator computes the true employer cost of any UK salary for the {{ tax_year }} tax year. Enter a gross salary and it instantly calculates employer National Insurance at 15% above the £5,000 secondary threshold, auto-enrolment pension on qualifying earnings, and optional overheads — giving you an annual and monthly total.</p>
-      <p style="font-size:0.92rem;color:var(--text-secondary);line-height:1.7;margin-bottom:0;">Employment Allowance can be applied to offset up to £10,500 of the employer NI liability — eligible businesses can toggle this in the inputs to see their net cost after the allowance.</p>
-    </div>
-    <div>
-      <h3 style="font-family:var(--font-display);font-size:1rem;font-weight:500;letter-spacing:-0.02em;margin-bottom:0.55rem;">April 2025 NI rise — what changed</h3>
-      <p style="font-size:0.88rem;color:var(--text-secondary);line-height:1.7;margin-bottom:0.6rem;">From 6 April 2025 the employer NI rate increased from 13.8% to 15% and the secondary threshold was cut from £9,100 to £5,000. This dual change raised employer NI at almost every salary level — the comparison figure shown below the breakdown reflects this year-on-year increase.</p>
-      <p style="font-size:0.88rem;color:var(--text-secondary);line-height:1.7;margin:0;">Employer NI has no upper cap, unlike employee contributions which drop to 2% above £50,270. Reduced rates apply for employees under 21 and apprentices under 25. For pension-only checks, use the <a href="/pension-cost">auto enrolment payroll costs calculator</a>.</p>
-    </div>
-  </div>
-  <style>@media(max-width:640px){.ec-about-grid{grid-template-columns:1fr!important;}}</style>
-</section>
-
-<!-- RELATED PAGES -->
-<section style="max-width:var(--max-w);margin:2rem auto 0;padding:0 1.25rem;">
-  <p style="font-size:0.9rem;color:var(--text-secondary);line-height:1.7;">
-    See pre-calculated totals at every salary level on the <a href="/cost-of-employing" style="color:var(--accent);">employer cost by salary</a> hub, or check NI-only figures on the <a href="/employer-ni" style="color:var(--accent);">employer NI calculator</a>. For pension alone, use the <a href="/pension-cost" style="color:var(--accent);">auto-enrolment cost calculator</a>.
-  </p>
-</section>
-
-<!-- FAQ -->
-{% if faq_items %}
-<section style="max-width:var(--max-w);margin:2.5rem auto 0;padding:0 1.25rem 3rem;">
-  <div style="font-size:0.72rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem;">FAQ</div>
-  <h2 style="font-family:var(--font-display);font-size:clamp(1.4rem,3vw,1.85rem);font-weight:500;color:var(--text-primary);letter-spacing:-0.02em;margin:0 0 1rem;">Frequently asked questions</h2>
-  <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);overflow:hidden;">
-    {% for item in faq_items %}
-    <details style="border-top:{% if loop.first %}none{% else %}1px solid var(--border){% endif %};padding:0.85rem 1.25rem;">
-      <summary style="font-size:0.9rem;font-weight:600;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;color:var(--text-primary);gap:1rem;">
-        {{ item.q }}
-        <span style="font-size:1.1rem;color:var(--text-tertiary);flex-shrink:0;font-weight:400;">+</span>
-      </summary>
-      <p style="font-size:0.88rem;color:var(--text-secondary);line-height:1.7;margin:0.6rem 0 0.1rem;padding-right:1.5rem;">{{ item.a }}</p>
-    </details>
-    {% endfor %}
-  </div>
-</section>
-{% endif %}
-
-{% include "partials/tools_block.html" %}
-
-<!-- STICKY BAR -->
-<div class="sticky-result" id="stickyResult">
-  <div class="sticky-result-inner">
-    <div class="sr-left">
-      <div>
-        <div class="sr-label">Total employer cost</div>
-        <div class="sr-value" id="stickyValue">{{ calc.total_cost|money }} / year</div>
-      </div>
-      <div class="sr-divider"></div>
-      <div class="sr-detail-col">
-        <div class="sr-detail" id="stickyMonth">{{ calc.total_cost|monthly }} / month</div>
-        <div class="sr-detail" id="stickyPct">{{ calc.cost_above_salary_pct|percent }} above salary</div>
-      </div>
-    </div>
-  </div>
-</div>
 {% endblock %}
 
 {% block scripts %}
+<script src="/static/calc-engine.js"></script>
 <script>
-const QE_LOWER = 6240, QE_UPPER = 50270, NI_THRESHOLD = 5000, NI_RATE = 0.15;
-const DONUT_R = 72, DONUT_C = 2 * Math.PI * DONUT_R;
+(function () {
+  var FORMULA = {{ page.formula|tojson }};
+  var FIELDS = {{ page.fields|tojson }};
+  var form = document.querySelector('.calc-inputs form');
+  if (!form || !window.CALC_ENGINE) return;
 
-function parseCurrency(v){ return parseInt(String(v).replace(/[^0-9]/g,''),10) || 0; }
-function parseRate(v){ return parseFloat(String(v).replace(/[^0-9.]/g,'')) || 0; }
-function money(n){ return '£' + Math.round(n).toLocaleString('en-GB'); }
-function money2(n){ return '£' + Number(n).toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2}); }
-function pct(n){ return n.toFixed(1)+'%'; }
-function setText(id,v){ const el=document.getElementById(id); if(el) el.textContent=v; }
-function calcPension(s,r){ return Math.max(0,Math.min(s,QE_UPPER)-QE_LOWER)*(r/100); }
-function calcNI(s,a){ const g=Math.max(0,s-NI_THRESHOLD)*NI_RATE; const u=Math.min(g,a); return{gross:g,used:u,due:Math.max(0,g-u)}; }
+  var CIRC = 452;
+  var SEG_IDS = ['seg-0', 'seg-1', 'seg-2', 'seg-3'];
+  var SEG_COLS = ['#1B6B4A', '#5B8DB8', '#D4763C', '#B0A89E'];
+  var FIELD_QUICK_CHOICES = {
+    children: [
+      { value: 0, label: 'None' },
+      { value: 1, label: '1' },
+      { value: 2, label: '2' },
+      { value: 3, label: '3' },
+      { value: 4, label: '4+' }
+    ],
+    savings: [
+      { value: 0, label: '£0' },
+      { value: 6000, label: '£6k' },
+      { value: 10000, label: '£10k' },
+      { value: 16000, label: '£16k' }
+    ],
+    earnings: [
+      { value: 0, label: '£0' },
+      { value: 800, label: '£800' },
+      { value: 1200, label: '£1.2k' },
+      { value: 1800, label: '£1.8k' }
+    ],
+    housing_cost: [
+      { value: 0, label: '£0' },
+      { value: 600, label: '£600' },
+      { value: 900, label: '£900' },
+      { value: 1200, label: '£1.2k' }
+    ],
+    childcare_cost: [
+      { value: 0, label: '£0' },
+      { value: 300, label: '£300' },
+      { value: 700, label: '£700' },
+      { value: 1200, label: '£1.2k' }
+    ],
+    adjusted_net_income: [
+      { value: 60000, label: '£60k' },
+      { value: 70000, label: '£70k' },
+      { value: 80000, label: '£80k' }
+    ],
+    weekly_income: [
+      { value: 0, label: '£0' },
+      { value: 100, label: '£100' },
+      { value: 200, label: '£200' },
+      { value: 300, label: '£300' }
+    ],
+    monthly_income: [
+      { value: 800, label: '£800' },
+      { value: 1200, label: '£1.2k' },
+      { value: 1600, label: '£1.6k' },
+      { value: 2200, label: '£2.2k' }
+    ],
+    monthly_benefits: [
+      { value: 1200, label: '£1.2k' },
+      { value: 1800, label: '£1.8k' },
+      { value: 2200, label: '£2.2k' }
+    ],
+    daily_living_points: [
+      { value: 0, label: '0' },
+      { value: 8, label: '8' },
+      { value: 12, label: '12' }
+    ],
+    mobility_points: [
+      { value: 0, label: '0' },
+      { value: 8, label: '8' },
+      { value: 12, label: '12' }
+    ],
+    weeks_off: [
+      { value: 1, label: '1 wk' },
+      { value: 4, label: '4 wks' },
+      { value: 12, label: '12 wks' },
+      { value: 28, label: '28 wks' }
+    ],
+    average_weekly_earnings: [
+      { value: 250, label: '£250' },
+      { value: 420, label: '£420' },
+      { value: 600, label: '£600' }
+    ]
+  };
+  var PRESETS_BY_FORMULA = {
+    universal_credit: [
+      { label: 'Single renter', values: { household: 'single', age_band: '25_plus', children: 0, housing_cost: 700, earnings: 900, savings: 0, childcare_cost: 0, health: 'none', first_child_pre_2017: false } },
+      { label: 'Working family', values: { household: 'couple', age_band: '25_plus', children: 2, housing_cost: 950, earnings: 1600, savings: 0, childcare_cost: 450, health: 'none', first_child_pre_2017: true } },
+      { label: 'Health condition', values: { household: 'single', age_band: '25_plus', children: 0, housing_cost: 750, earnings: 0, savings: 0, childcare_cost: 0, health: 'severe', first_child_pre_2017: false } }
+    ],
+    child_benefit: [
+      { label: '1 child', values: { children: 1 } },
+      { label: '2 children', values: { children: 2 } },
+      { label: '3 children', values: { children: 3 } }
+    ],
+    hicbc: [
+      { label: 'Threshold', values: { children: 2, adjusted_net_income: 60000 } },
+      { label: 'Mid taper', values: { children: 2, adjusted_net_income: 70000 } },
+      { label: 'Full charge', values: { children: 2, adjusted_net_income: 80000 } }
+    ],
+    pension_credit: [
+      { label: 'Single pensioner', values: { household: 'single', weekly_income: 180, savings: 0, severe_disability: false, carer: false } },
+      { label: 'Low income couple', values: { household: 'couple', weekly_income: 250, savings: 5000, severe_disability: false, carer: false } },
+      { label: 'With additions', values: { household: 'single', weekly_income: 140, savings: 12000, severe_disability: true, carer: true } }
+    ],
+    pip: [
+      { label: 'No award', values: { daily_living_points: 0, mobility_points: 0 } },
+      { label: 'Standard rates', values: { daily_living_points: 8, mobility_points: 8 } },
+      { label: 'Enhanced rates', values: { daily_living_points: 12, mobility_points: 12 } }
+    ],
+    council_tax_reduction: [
+      { label: 'Low income', values: { monthly_council_tax: 180, monthly_income: 900, savings: 0, on_means_tested_benefit: false, single_adult: false, on_guarantee_pension_credit: false } },
+      { label: 'Single adult', values: { monthly_council_tax: 180, monthly_income: 1500, savings: 0, on_means_tested_benefit: false, single_adult: true, on_guarantee_pension_credit: false } },
+      { label: 'Means-tested benefit', values: { monthly_council_tax: 180, monthly_income: 0, savings: 0, on_means_tested_benefit: true, single_adult: false, on_guarantee_pension_credit: false } }
+    ],
+    housing_benefit: [
+      { label: 'Legacy claimant', values: { weekly_rent: 140, weekly_income: 100, savings: 0, legacy_claimant: true, spare_room: false, pension_age: false } },
+      { label: 'Spare room', values: { weekly_rent: 140, weekly_income: 160, savings: 0, legacy_claimant: true, spare_room: true, pension_age: false } },
+      { label: 'Pension age', values: { weekly_rent: 160, weekly_income: 180, savings: 12000, legacy_claimant: true, spare_room: false, pension_age: true } }
+    ],
+    benefit_cap: [
+      { label: 'Outside London', values: { inside_london: false, household: 'couple', monthly_benefits: 1900 } },
+      { label: 'Inside London', values: { inside_london: true, household: 'couple', monthly_benefits: 2400 } },
+      { label: 'Single adult', values: { inside_london: false, household: 'single', monthly_benefits: 1300 } }
+    ],
+    ssp: [
+      { label: 'Short absence', values: { average_weekly_earnings: 420, weeks_off: 2 } },
+      { label: '1 month off', values: { average_weekly_earnings: 420, weeks_off: 4 } },
+      { label: 'Long absence', values: { average_weekly_earnings: 420, weeks_off: 12 } }
+    ],
+    maternity_comparison: [
+      { label: 'Eligible for both', values: { average_weekly_earnings: 380, employed_long_enough: true, employed_or_self_employed_long_enough: true } },
+      { label: 'MA only', values: { average_weekly_earnings: 260, employed_long_enough: false, employed_or_self_employed_long_enough: true } },
+      { label: 'Lower earnings', values: { average_weekly_earnings: 180, employed_long_enough: true, employed_or_self_employed_long_enough: true } }
+    ],
+    esa: [
+      { label: 'Work-related', values: { group: 'work_related', private_pension_weekly: 0, has_recent_ni_record: true } },
+      { label: 'Support group', values: { group: 'support', private_pension_weekly: 0, has_recent_ni_record: true } },
+      { label: 'Pension deduction', values: { group: 'support', private_pension_weekly: 140, has_recent_ni_record: true } }
+    ]
+  };
 
-let salaryMode = 'annual';
-function getHours(){
-  const el=document.getElementById('hours-per-week');
-  if(!el) return 37.5;
-  if(el.value==='custom') return parseFloat(document.getElementById('hours-custom').value)||37.5;
-  return parseFloat(el.value)||37.5;
-}
-function getEffectiveSalary(){
-  if(salaryMode==='hourly') return Math.round(parseRate(document.getElementById('salary').value)*getHours()*52);
-  return parseCurrency(document.getElementById('salary').value);
-}
-function setMode(mode){
-  const prev=getEffectiveSalary();
-  salaryMode=mode;
-  const aBtn=document.getElementById('mode-annual'), hBtn=document.getElementById('mode-hourly');
-  const salInput=document.getElementById('salary');
-  if(mode==='hourly'){
-    aBtn.style.background='transparent'; aBtn.style.color='var(--text-secondary)';
-    hBtn.style.background='var(--accent)'; hBtn.style.color='white';
-    document.getElementById('salary-label').textContent='Hourly rate';
-    document.getElementById('annual-chips').style.display='none';
-    document.getElementById('hourly-chips').style.display='flex';
-    const rate=prev/(getHours()*52);
-    salInput.value=rate%1===0?String(rate):rate.toFixed(2);
-  } else {
-    aBtn.style.background='var(--accent)'; aBtn.style.color='white';
-    hBtn.style.background='transparent'; hBtn.style.color='var(--text-secondary)';
-    document.getElementById('salary-label').textContent='Annual salary';
-    document.getElementById('annual-chips').style.display='flex';
-    document.getElementById('hourly-chips').style.display='none';
-    const hint=document.getElementById('hours-hint'); if(hint) hint.style.display='none';
-    salInput.value=prev.toLocaleString('en-GB');
+  function fmt(n, decimals) {
+    var abs = Math.abs(Number(n) || 0);
+    var places = typeof decimals === 'number' ? decimals : 2;
+    var out = abs.toLocaleString('en-GB', { minimumFractionDigits: places, maximumFractionDigits: places });
+    return (n < 0 ? '-£' : '£') + out;
   }
-  runCalc();
-}
-function setHourlyRate(rate){
-  document.getElementById('salary').value=rate%1===0?String(rate):rate.toFixed(2);
-  document.querySelectorAll('#hourly-chips button').forEach(b=>b.classList.toggle('qa-active', parseFloat(b.textContent)===rate));
-  runCalc();
-}
 
-function updateDonut(salary, niDue, pension, overheads, total) {
-  const segs = [['seg-salary',salary],['seg-ni',niDue],['seg-pension',pension],['seg-overhead',overheads]];
-  let offset = 0;
-  segs.forEach(([id,val]) => {
-    const len = total > 0 ? Math.max(0,(val/total)*DONUT_C) : 0;
-    const el = document.getElementById(id);
-    if(el){
-      el.style.strokeDasharray = len.toFixed(3)+' '+DONUT_C.toFixed(3);
-      el.style.strokeDashoffset = (-offset).toFixed(3);
+  function fmtCompactCurrency(n) {
+    return fmt(n, Math.abs(n) >= 100 ? 0 : 2);
+  }
+
+  function esc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function findFieldConfig(name) {
+    for (var i = 0; i < FIELDS.length; i++) {
+      if (FIELDS[i].name === name) return FIELDS[i];
     }
-    offset += len;
+    return null;
+  }
+
+  function readInputs() {
+    var inp = {};
+    FIELDS.forEach(function (f) {
+      var el = form.elements[f.name];
+      if (!el) return;
+      if (f.type === 'boolean') {
+        inp[f.name] = !!el.checked;
+      } else if (f.type === 'number') {
+        var v = parseFloat(String(el.value).replace(/[,£]/g, ''));
+        inp[f.name] = isNaN(v) ? (f['default'] || 0) : v;
+      } else {
+        inp[f.name] = el.value || f['default'] || '';
+      }
+    });
+    return inp;
+  }
+
+  function setInputValue(name, value) {
+    var field = findFieldConfig(name);
+    var el = form.elements[name];
+    if (!field || !el) return;
+    if (field.type === 'boolean') {
+      el.checked = !!value;
+      return;
+    }
+    if (field.type === 'number') {
+      el.value = value;
+      return;
+    }
+    el.value = value;
+  }
+
+  function updateChoiceState() {
+    document.querySelectorAll('.field-choices').forEach(function (wrap) {
+      var name = wrap.getAttribute('data-choices-for');
+      var el = form.elements[name];
+      if (!el) return;
+      var current = el.type === 'checkbox' ? String(!!el.checked) : String(el.value);
+      wrap.querySelectorAll('.choice-chip').forEach(function (chip) {
+        chip.classList.toggle('is-active', chip.getAttribute('data-value') === current);
+      });
+    });
+  }
+
+  function renderFieldChoices() {
+    FIELDS.forEach(function (field) {
+      var wrap = document.querySelector('[data-choices-for="' + field.name + '"]');
+      if (!wrap) return;
+      var choices = FIELD_QUICK_CHOICES[field.name];
+      if (!choices && field.type === 'select' && Array.isArray(field.options) && field.options.length <= 4) {
+        choices = field.options.map(function (option) {
+          return { value: option.value, label: option.label };
+        });
+      }
+      if (!choices || !choices.length) {
+        wrap.innerHTML = '';
+        return;
+      }
+      var html = '';
+      choices.forEach(function (choice) {
+        html += '<button type="button" class="choice-chip" data-field="' + esc(field.name) + '" data-value="' + esc(String(choice.value)) + '">' + esc(choice.label) + '</button>';
+      });
+      wrap.innerHTML = html;
+    });
+
+    document.querySelectorAll('.choice-chip').forEach(function (chip) {
+      chip.addEventListener('click', function () {
+        var name = chip.getAttribute('data-field');
+        var value = chip.getAttribute('data-value');
+        var field = findFieldConfig(name);
+        if (!field) return;
+        if (field.type === 'number') value = Number(value);
+        setInputValue(name, value);
+        updateChoiceState();
+        recalculate();
+      });
+    });
+
+    updateChoiceState();
+  }
+
+  function presetMatchesInputs(preset, inputs) {
+    if (!preset || !preset.values) return false;
+    for (var key in preset.values) {
+      if (!Object.prototype.hasOwnProperty.call(preset.values, key)) continue;
+      if (String(inputs[key]) !== String(preset.values[key])) return false;
+    }
+    return true;
+  }
+
+  function updatePresetState() {
+    var current = readInputs();
+    var chips = document.querySelectorAll('#preset-chip-group button');
+    chips.forEach(function (chip, idx) {
+      var preset = (PRESETS_BY_FORMULA[FORMULA] || [])[idx];
+      chip.classList.toggle('qa-active', presetMatchesInputs(preset, current));
+    });
+  }
+
+  function renderPresets() {
+    var wrap = document.getElementById('preset-chip-group');
+    var presets = PRESETS_BY_FORMULA[FORMULA] || [];
+    if (!wrap) return;
+    if (!presets.length) {
+      wrap.hidden = true;
+      return;
+    }
+    wrap.hidden = false;
+    wrap.innerHTML = presets.map(function (preset, idx) {
+      return '<button type="button" data-preset-index="' + idx + '">' + esc(preset.label) + '</button>';
+    }).join('');
+    wrap.querySelectorAll('button').forEach(function (chip) {
+      chip.addEventListener('click', function () {
+        var preset = presets[Number(chip.getAttribute('data-preset-index'))];
+        if (!preset || !preset.values) return;
+        Object.keys(preset.values).forEach(function (key) {
+          setInputValue(key, preset.values[key]);
+        });
+        var moreFields = document.getElementById('moreFields');
+        var moreToggle = document.getElementById('moreToggle');
+        if (moreFields && moreToggle) {
+          var needsAdvanced = Object.keys(preset.values).some(function (key) {
+            return !!document.querySelector('#moreFields [name="' + key + '"]');
+          });
+          if (needsAdvanced) {
+            moreFields.classList.add('open');
+            moreToggle.classList.add('open');
+            moreToggle.firstChild.textContent = 'Fewer options';
+          }
+        }
+        updateChoiceState();
+        updatePresetState();
+        recalculate();
+      });
+    });
+    updatePresetState();
+  }
+
+  function updateDonut(legend) {
+    var cumulative = 0;
+    var total = legend.reduce(function (sum, item) { return sum + Math.max(0, Number(item.value) || 0); }, 0);
+    if (total <= 0) {
+      SEG_IDS.forEach(function (id) {
+        var seg = document.getElementById(id);
+        if (seg) {
+          seg.style.strokeDasharray = '0 452';
+          seg.style.strokeDashoffset = '0';
+        }
+      });
+      return;
+    }
+    legend.forEach(function (item, idx) {
+      var seg = document.getElementById(SEG_IDS[idx]);
+      if (!seg) return;
+      var value = Math.max(0, Number(item.value) || 0);
+      var fraction = value / total;
+      var dash = fraction * CIRC * 0.92;
+      var gap = CIRC - dash;
+      var offset = -(cumulative / total * CIRC * 0.92);
+      seg.style.stroke = item.color || SEG_COLS[idx];
+      seg.style.strokeDasharray = dash + ' ' + gap;
+      seg.style.strokeDashoffset = offset;
+      cumulative += value;
+    });
+    for (var i = legend.length; i < SEG_IDS.length; i++) {
+      var extra = document.getElementById(SEG_IDS[i]);
+      if (extra) {
+        extra.style.strokeDasharray = '0 452';
+        extra.style.strokeDashoffset = '0';
+      }
+    }
+  }
+
+  function bindLegendHover() {
+    var rows = document.querySelectorAll('#breakdownLegend .legend-row');
+    rows.forEach(function (row, idx) {
+      row.addEventListener('mouseenter', function () {
+        document.querySelectorAll('.donut-seg').forEach(function (seg, segIdx) {
+          seg.classList.toggle('seg-focus', segIdx === idx);
+          seg.classList.toggle('seg-muted', segIdx !== idx);
+        });
+        row.classList.add('legend-active');
+      });
+      row.addEventListener('mouseleave', function () {
+        document.querySelectorAll('.donut-seg').forEach(function (seg) {
+          seg.classList.remove('seg-focus');
+          seg.classList.remove('seg-muted');
+        });
+        row.classList.remove('legend-active');
+      });
+    });
+  }
+
+  function updateUI(d) {
+    var el;
+    el = document.getElementById('vkPrimary'); if (el) el.textContent = fmt(d.primary_amount);
+    el = document.getElementById('vkAnnual'); if (el) el.textContent = fmt(d.secondary_amount);
+    el = document.getElementById('vkPeriod'); if (el) el.textContent = d.primary_label;
+    el = document.getElementById('result-summary'); if (el) el.textContent = d.summary;
+    el = document.getElementById('result-primary-chart'); if (el) el.textContent = fmtCompactCurrency(d.primary_amount);
+    el = document.getElementById('result-kicker-chart'); if (el) el.textContent = d.primary_label;
+    el = document.getElementById('result-annual-chart'); if (el) el.textContent = fmtCompactCurrency(d.secondary_amount) + '/yr';
+
+    var legend = (d.visual && d.visual.legend) ? d.visual.legend : [];
+    el = document.getElementById('breakdownLegend');
+    if (el) {
+      var legendHtml = '';
+      legend.forEach(function (item) {
+        legendHtml += '<div class="legend-row">'
+          + '<span class="legend-dot" style="background:' + esc(item.color) + '"></span>'
+          + '<span class="legend-name">' + esc(item.label) + '</span>'
+          + '<span class="legend-val">' + fmt(item.value) + '</span>'
+          + '</div>';
+      });
+      el.innerHTML = legendHtml;
+    }
+    updateDonut(legend);
+    bindLegendHover();
+
+    el = document.getElementById('result-breakdown');
+    if (el) {
+      var breakdownHtml = '';
+      (d.breakdown || []).forEach(function (pair) {
+        var label = pair[0];
+        var value = Number(pair[1]) || 0;
+        var isPercent = label.toLowerCase().indexOf('percentage') !== -1;
+        var formatted = isPercent ? Math.round(value) + '%' : fmt(value);
+        breakdownHtml += '<div class="breakdown-row"><span>' + esc(label) + '</span><strong>' + esc(formatted) + '</strong></div>';
+      });
+      el.innerHTML = breakdownHtml;
+    }
+
+    el = document.getElementById('result-notes');
+    if (el) {
+      var noteHtml = '';
+      (d.notes || []).forEach(function (note) {
+        noteHtml += '<div class="note-item">' + esc(note) + '</div>';
+      });
+      el.innerHTML = noteHtml;
+    }
+  }
+
+  function recalculate() {
+    var d = window.CALC_ENGINE.calculate(FORMULA, readInputs());
+    if (d) updateUI(d);
+    updateChoiceState();
+    updatePresetState();
+  }
+
+  form.querySelectorAll('input, select').forEach(function (el) {
+    el.addEventListener('input', recalculate);
+    el.addEventListener('change', recalculate);
   });
-  setText('donut-total', money(total));
-  setText('donut-monthly', money(total/12)+' / month');
-  setText('lSalary', money(salary));   setText('lNI', money(niDue));
-  setText('lPension', money(pension)); setText('lOverhead', money(overheads));
-  if(total>0){
-    setText('lSalaryPct',  pct((salary/total)*100));
-    setText('lNIPct',      pct((niDue/total)*100));
-    setText('lPensionPct', pct((pension/total)*100));
-    setText('lOverheadPct',pct((overheads/total)*100));
-  }
-}
 
-function updateUrl(salary,pension,overheads,allowance){
-  history.replaceState({},'','/calculator?'+new URLSearchParams({salary,pension,overheads,allowance}));
-}
-
-function runCalc(){
-  const salary      = getEffectiveSalary();
-  const pensionRate = parseFloat(document.getElementById('pension').value||'3');
-  const overheads   = parseCurrency(document.getElementById('overheads').value);
-  const allowance   = parseFloat(document.getElementById('allowance').value||'0');
-  const hours       = getHours();
-  if(salary<=0) return;
-
-  // In annual mode, keep input formatted with commas
-  if(salaryMode==='annual'){
-    const salEl=document.getElementById('salary');
-    const v=parseCurrency(salEl.value);
-    if(v) salEl.value=v.toLocaleString('en-GB');
-    // Show hourly equiv hint if part-time
-    const hint=document.getElementById('hours-hint');
-    if(hint && hours!==37.5){
-      hint.textContent='Equivalent hourly: £'+(salary/(hours*52)).toFixed(2)+'/hr';
-      hint.style.display='block';
-    } else if(hint){ hint.style.display='none'; }
-  }
-
-  const ni      = calcNI(salary,allowance);
-  const pension = calcPension(salary,pensionRate);
-  const total   = salary+ni.due+pension+overheads;
-  const above   = total-salary;
-  const abovePct= (above/salary)*100;
-
-  updateDonut(salary, ni.due, pension, overheads, total);
-
-  // KPI strip
-  setText('monthlyTotal', money(total/12));
-  setText('niMonthly', money(ni.due/12));
-  setText('costAbove', money(above));
-  setText('costAbovePct', pct(abovePct)+' above');
-  setText('eaSaving', money(ni.used));
-
-  // Hourly cost KPI — always show
-  const hourlyCostEl=document.getElementById('kpi-hourly');
-  if(hourlyCostEl){
-    hourlyCostEl.style.display='block';
-    setText('hourlyTotal', money2(total/(hours*52)));
-    setText('hourlyBasis', hours===37.5?'full time':hours+'h/wk');
-  }
-
-  // Breakdown table
-  setText('bSalary', money2(salary));
-  setText('bGrossNI', money2(ni.gross));
-  setText('bAllowance', '−'+money2(ni.used));
-  setText('bNIDue', money2(ni.due));
-  setText('bPension', money2(pension));
-  setText('bOverheads', money2(overheads));
-  document.getElementById('bTotal').innerHTML = '<strong>'+money2(total)+'</strong>';
-  setText('niBandUpper', money2(ni.gross));
-  document.getElementById('niBandTotal').innerHTML = '<strong>'+money2(ni.gross)+'</strong>';
-
-  // Result header
-  setText('resultTotalBig', money(total));
-  setText('resultTotalSub', money(total/12)+' per month · '+pct(abovePct)+' above salary');
-
-  // Sticky bar
-  setText('stickyValue', money(total)+' / year');
-  setText('stickyMonth', money(total/12)+' / month');
-  setText('stickyPct', pct(abovePct)+' above salary');
-
-  updateUrl(salary, pensionRate, overheads, allowance);
-}
-
-function setSalary(val){
-  if(salaryMode!=='annual') setMode('annual');
-  document.getElementById('salary').value = val.toLocaleString('en-GB');
-  document.querySelectorAll('#annual-chips button').forEach(btn => {
-    btn.classList.toggle('qa-active', parseInt(btn.dataset.salary)===val);
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    recalculate();
   });
-  runCalc();
-}
 
-['salary','pension','overheads','allowance'].forEach(id => {
-  document.getElementById(id).addEventListener('input', runCalc);
-  document.getElementById(id).addEventListener('change', runCalc);
-});
-document.getElementById('salary').addEventListener('blur', function(){ if(salaryMode==='annual'){ const v=parseCurrency(this.value); if(v) this.value=v.toLocaleString('en-GB'); } });
-document.getElementById('overheads').addEventListener('blur', function(){ const v=parseCurrency(this.value); if(v) this.value=v.toLocaleString('en-GB'); });
+  var moreToggle = document.getElementById('moreToggle');
+  if (moreToggle) {
+    moreToggle.addEventListener('click', function () {
+      var fields = document.getElementById('moreFields');
+      if (!fields) return;
+      var open = fields.classList.toggle('open');
+      moreToggle.classList.toggle('open', open);
+      moreToggle.firstChild.textContent = open ? 'Fewer options' : 'More options';
+    });
+  }
 
-document.getElementById('mode-annual').addEventListener('click', () => { if(salaryMode!=='annual') setMode('annual'); });
-document.getElementById('mode-hourly').addEventListener('click', () => { if(salaryMode!=='hourly') setMode('hourly'); });
-
-const hoursSelect=document.getElementById('hours-per-week');
-const hoursCustom=document.getElementById('hours-custom');
-hoursSelect.addEventListener('change', () => {
-  if(hoursSelect.value==='custom'){ hoursCustom.style.display='block'; hoursCustom.focus(); }
-  else { hoursCustom.style.display='none'; runCalc(); }
-});
-hoursCustom.addEventListener('input', runCalc);
-
-new IntersectionObserver(([e]) => {
-  document.getElementById('stickyResult').classList.toggle('visible',!e.isIntersecting);
-},{threshold:0.05}).observe(document.getElementById('resultPanel'));
-
-runCalc();
+  renderFieldChoices();
+  renderPresets();
+  recalculate();
+})();
 </script>
 {% endblock %}
