@@ -1,117 +1,103 @@
-"""EmployerCalculator.co.uk Flask application."""
+"""UK Benefits Calculator Flask application."""
 
 from __future__ import annotations
 
 import ipaddress
 import json
+import math
 import os
 from datetime import datetime
-from typing import Dict, List
-
-import geoip2.database as _geoip2db
-_geo = _geoip2db.Reader("/app/dbip-country.mmdb")
+from typing import Any, Dict, List, Optional, Set
 
 from dotenv import load_dotenv
 from flask import Flask, abort, make_response, redirect, render_template, request, send_from_directory, url_for
-from flask_limiter import Limiter
 
-from calculator import (
-    active_tax_year,
-    EMPLOYMENT_ALLOWANCE_2024,
-    EMPLOYMENT_ALLOWANCE_2025,
-    MIN_EMPLOYER_PENSION_RATE,
-    MIN_TOTAL_PENSION_RATE,
-    SECONDARY_THRESHOLD_2024,
-    SECONDARY_THRESHOLD_2025,
-    TAX_YEAR,
-    UPPER_SECONDARY_THRESHOLD,
-    calculate_employer_cost,
-    change_2025_vs_2024,
-    employer_ni_2024,
-    employer_ni_2025,
-    monthly,
-    salary_neighbours,
-    weekly,
-)
+try:
+    from flask_limiter import Limiter
+except Exception:  # pragma: no cover - local fallback
+    class Limiter:  # type: ignore[override]
+        def __init__(self, *args, **kwargs):
+            pass
+
+try:
+    import geoip2.database as _geoip2db
+except Exception:  # pragma: no cover - optional at runtime
+    _geoip2db = None
 
 load_dotenv()
 
 app = Flask(__name__)
+app.config["SECRET_KEY"] = os.getenv("FLASK_SECRET_KEY", "change-me")
 
-CANONICAL_HOST = os.getenv("CANONICAL_HOST", "employercalculator.co.uk").replace("https://", "").replace("http://", "")
+CANONICAL_HOST = os.getenv("CANONICAL_HOST", "ukbenefitscalculator.co.uk").replace("https://", "").replace("http://", "")
 CANONICAL_HOST = CANONICAL_HOST[4:] if CANONICAL_HOST.startswith("www.") else CANONICAL_HOST
+if CANONICAL_HOST == "employercalculator.co.uk":
+    CANONICAL_HOST = "ukbenefitscalculator.co.uk"
 SITE_URL = f"https://{CANONICAL_HOST}"
 GA_MEASUREMENT_ID = os.getenv("GA_MEASUREMENT_ID", "").strip()
 ADSENSE_CLIENT = os.getenv("ADSENSE_CLIENT", "ca-pub-3932111812673824").strip()
-
+ENABLE_ADS = os.getenv("ENABLE_ADS", "false").lower() == "true"
+ADSENSE_SLOT_CONTENT = os.getenv("ADSENSE_SLOT_CONTENT", "").strip()
+ADSENSE_SLOT_CALCULATOR = os.getenv("ADSENSE_SLOT_CALCULATOR", ADSENSE_SLOT_CONTENT).strip()
 
 limiter = Limiter(
     app=app,
     key_func=lambda: (request.headers.get("X-Forwarded-For", "").split(",")[0].strip() or request.remote_addr or ""),
-    default_limits=["30 per minute"],
+    default_limits=["60 per minute"],
     storage_uri="memory://",
     strategy="fixed-window",
 )
 
-# Countries blocked entirely — GeoIP lookup, covers all ISPs/clouds/residential
-_BLOCKED_COUNTRIES = {"SG"}  # Singapore (AdSense invalid click fraud source)
+_geo = None
+if _geoip2db:
+    for candidate in ("/app/dbip-country.mmdb", os.path.join(os.path.dirname(__file__), "dbip-country.mmdb")):
+        if os.path.exists(candidate):
+            try:
+                _geo = _geoip2db.Reader(candidate)
+                break
+            except Exception:
+                _geo = None
 
-# Specific subnets blocked — SG ranges the GeoIP lite DB misses + other known scrapers
+_BLOCKED_COUNTRIES = {"SG"}
 _BLOCKED_SUBNETS = [
-    # Singapore — Wangsu/CDNetworks (missed by db-ip lite)
     ipaddress.ip_network("43.172.0.0/15"),
-    # Singapore — Alibaba Cloud SG
     ipaddress.ip_network("47.82.0.0/15"),
     ipaddress.ip_network("47.128.0.0/16"),
     ipaddress.ip_network("8.222.0.0/16"),
     ipaddress.ip_network("47.245.0.0/16"),
-    # Singapore — Tencent Cloud SG
     ipaddress.ip_network("43.129.0.0/16"),
     ipaddress.ip_network("43.134.0.0/16"),
     ipaddress.ip_network("43.156.0.0/16"),
-    # Singapore — AWS ap-southeast-1
     ipaddress.ip_network("13.212.0.0/15"),
     ipaddress.ip_network("18.136.0.0/15"),
     ipaddress.ip_network("18.138.0.0/15"),
     ipaddress.ip_network("52.76.0.0/15"),
-    # Singapore — DigitalOcean SG
     ipaddress.ip_network("128.199.192.0/19"),
     ipaddress.ip_network("68.183.160.0/19"),
     ipaddress.ip_network("139.59.192.0/18"),
-    # Other known scrapers
-    ipaddress.ip_network("47.128.32.0/20"),    # Bytespider / ByteDance
-    ipaddress.ip_network("110.249.200.0/22"),  # Bytespider alternate
+    ipaddress.ip_network("47.128.32.0/20"),
+    ipaddress.ip_network("110.249.200.0/22"),
 ]
 _BLOCKED_UAS = (
-    # Named bad bots
     "bytespider", "petalbot", "ccbot", "omgili", "dataforseo", "scrapy",
     "seranking", "mj12bot", "dotbot", "blexbot", "seznambot",
-    # Raw HTTP clients — never a real browser
     "python-httpx", "python-requests", "go-http-client", "java/",
     "curl/", "wget/", "libwww", "okhttp", "apache-httpclient", "aiohttp",
     "httpx", "mechanize", "lwp-", "guzzle", "restsharp",
-    # Headless browsers
     "headlesschrome", "phantomjs", "selenium",
-    # Chinese mobile apps — zero legitimate traffic on a UK tax calculator
-    "micromessenger", "mqqbrowser", "ucbrowser", "quark/", "sogou",
-    "liebaofast", "360 alitephone", "oppobrowser", "vivo browser",
-    "miuibrowser", "huaweibrowser", "baiduboxapp", "baidubrowser",
-    "qqbrowser", "2345browser", "lbbrowser", "maxthon",
 )
-# Paths that are not HTML pages — skip browser fingerprint check for these
-_STATIC_PATHS = ("/static/", "/robots.txt", "/sitemap", "/ads.txt", "/favicon", "/.well-known")
-# Known legitimate crawlers — exempt from browser fingerprint check
+_STATIC_PATHS = ("/static/", "/robots.txt", "/sitemap", "/ads.txt", "/favicon", "/.well-known", "/api/")
 _GOOD_BOTS = (
     "googlebot", "google-inspectiontool", "adsbot-google", "mediapartners-google",
+    "google-display-ads-bot", "googleother", "google-read-aloud",
     "bingbot", "slurp", "duckduckbot", "baiduspider", "yandexbot",
     "applebot", "facebot", "linkedinbot", "twitterbot", "whatsapp",
     "telegrambot", "ia_archiver", "ahrefsbot", "semrushbot",
-    # LLM crawlers
-    "gptbot", "chatgpt-user", "claudebot", "anthropic-ai",
+    "gptbot", "chatgpt-user", "claudebot", "anthropic-ai", "oai-searchbot",
     "google-extended", "gemini", "perplexitybot", "youbot",
     "meta-externalagent", "amazonbot", "cohere-ai", "diffbot",
 )
-_HONEYPOT_BLOCKED: set = set()
+_HONEYPOT_BLOCKED: Set[str] = set()
 
 
 def _get_real_ip() -> str:
@@ -121,19 +107,23 @@ def _get_real_ip() -> str:
 
 @app.before_request
 def block_scrapers():
+    if app.config.get("TESTING"):
+        return None
+    host = (request.host or "").split(":")[0].lower()
+    if host and host not in {CANONICAL_HOST, f"www.{CANONICAL_HOST}", "localhost", "127.0.0.1"}:
+        return None
     ip_str = _get_real_ip()
     if ip_str in _HONEYPOT_BLOCKED:
         abort(403)
 
-    # Country-level block (covers all ISPs, clouds, and residential IPs)
-    try:
-        country = _geo.country(ip_str).country.iso_code
-        if country in _BLOCKED_COUNTRIES:
-            abort(403)
-    except Exception:
-        pass
+    if _geo:
+        try:
+            country = _geo.country(ip_str).country.iso_code
+            if country in _BLOCKED_COUNTRIES:
+                abort(403)
+        except Exception:
+            pass
 
-    # Specific subnet block
     try:
         ip_obj = ipaddress.ip_address(ip_str)
         for subnet in _BLOCKED_SUBNETS:
@@ -143,30 +133,26 @@ def block_scrapers():
         pass
 
     ua = request.headers.get("User-Agent", "").lower()
-
-    # Hard-block known bad bots
-    if any(b in ua for b in _BLOCKED_UAS):
+    if any(token in ua for token in _BLOCKED_UAS):
         abort(403)
+    if any(token in ua for token in _GOOD_BOTS):
+        return None
 
-    # Allow known good crawlers through without further checks
-    if any(g in ua for g in _GOOD_BOTS):
-        return
-
-    # Browser fingerprint check — real browsers ALWAYS send Accept-Language.
-    # Raw HTTP clients (Java, Go, curl, requests) never do.
-    # Skip only for static assets and known non-HTML paths.
-    path = request.path
-    if not any(path.startswith(p) for p in _STATIC_PATHS):
+    path = request.path or ""
+    if request.method == "HEAD":
+        return None
+    if not any(path.startswith(prefix) for prefix in _STATIC_PATHS):
         if not request.headers.get("Accept-Language"):
             abort(403)
+    return None
 
 
 @app.before_request
 def enforce_canonical_host():
     host = (request.host or "").split(":")[0].lower()
-    if not host:
+    if not host or host in {"localhost", "127.0.0.1"}:
         return None
-    if host == f"www.{CANONICAL_HOST}":
+    if host != CANONICAL_HOST:
         target = f"{SITE_URL}{request.full_path if request.query_string else request.path}"
         if target.endswith("?"):
             target = target[:-1]
@@ -178,3009 +164,3317 @@ def enforce_canonical_host():
 def apply_cache_headers(response):
     path = request.path or ""
     if path.startswith("/static/"):
-        # Avoid long-lived stale assets while UI is being iterated quickly.
         response.headers["Cache-Control"] = "public, max-age=300"
     elif path in ("/favicon.ico", "/site.webmanifest", "/apple-touch-icon.png", "/favicon-32x32.png", "/favicon-16x16.png"):
         response.headers["Cache-Control"] = "public, max-age=86400"
     elif path == "/robots.txt":
-        # Keep robots TTL short so search-console live tests refresh quickly.
         response.headers["Cache-Control"] = "public, max-age=60"
     elif response.mimetype == "text/html":
-        # Ensure browsers always fetch latest templates/styles.
         response.headers["Cache-Control"] = "private, no-store, max-age=0, must-revalidate"
     return response
 
-SALARY_AMOUNTS = [
-    18000, 19000, 20000, 21000, 22000, 23000, 24000, 25000, 26000, 27000,
-    28000, 29000, 30000, 31000, 32000, 33000, 34000, 35000, 36000, 37000,
-    38000, 39000, 40000, 41000, 42000, 43000, 44000, 45000, 46000, 47000,
-    48000, 49000, 50000, 51000, 52000, 53000, 54000, 55000, 56000, 57000,
-    58000, 59000, 60000, 61000, 62000, 63000, 64000, 65000, 66000, 67000,
-    68000, 69000, 70000, 71000, 72000, 73000, 74000, 75000, 80000, 85000,
-    90000, 95000, 100000, 110000, 120000, 130000, 140000, 150000, 175000, 200000,
-]
 
-TOOL_CARDS = [
-    {"slug": "team-cost-planner", "title": "Team Payroll Cost Planner", "url": "/team-cost-planner", "description": "Model your entire team. Multiple employees, individual salaries, pension rates and overheads. Employment Allowance offset included.", "tag": "New"},
-    {"slug": "employer-ni-calculator", "title": "Employer NI &amp; Total Cost", "url": "/calculator", "description": "Salary + NI at 15% + pension + overheads. Full employer cost with band breakdown for 2025/26.", "tag": "Live"},
-    {"slug": "holiday-entitlement-calculator", "title": "Holiday Entitlement", "url": "/holiday-entitlement", "description": "Statutory and contractual holiday for full-time, part-time and mid-year starters.", "tag": "Live"},
-    {"slug": "redundancy-pay-calculator", "title": "Redundancy Pay", "url": "/redundancy-pay", "description": "Statutory redundancy by age, service years and weekly pay. Includes PILON.", "tag": "Live"},
-    {"slug": "maternity-pay-calculator", "title": "Statutory Maternity Pay", "url": "/maternity-pay", "description": "6-week higher rate + 33-week lower rate. Employer cost and SMP recovery.", "tag": "Live"},
-    {"slug": "notice-period-calculator", "title": "Notice Period", "url": "/notice-period", "description": "Statutory vs contractual notice, exact end dates, and payment in lieu of notice.", "tag": "Live"},
-    {"slug": "settlement-agreement-calculator", "title": "Settlement Agreement", "url": "/settlement-agreement", "description": "Estimate settlement value: notice, redundancy, compensatory amounts and tax treatment.", "tag": "Live"},
-    {"slug": "pro-rata-salary-calculator", "title": "Pro Rata Salary", "url": "/pro-rata-salary", "description": "Convert full-time salary to part-time equivalent by days or hours per week.", "tag": "Live"},
-    {"slug": "sick-pay-calculator", "title": "Statutory Sick Pay", "url": "/sick-pay", "description": "SSP eligibility, waiting days, weekly amounts and duration for 2025/26.", "tag": "Live"},
-    {"slug": "pension-cost-calculator", "title": "Employer Pension Cost", "url": "/pension-cost", "description": "Auto-enrolment costs on qualifying earnings. Employer minimum, total minimum and opt-out rates.", "tag": "Live"},
-    {"slug": "bradford-factor-calculator", "title": "Bradford Factor", "url": "/bradford-factor", "description": "Absence scoring for HR teams. Input episodes and days to calculate Bradford Factor score.", "tag": "Live"},
-    {"slug": "unfair-dismissal-calculator", "title": "Unfair Dismissal Compensation", "url": "/unfair-dismissal", "description": "Basic award + compensatory award estimates. Updated for Employment Rights Act 2025 changes.", "tag": "Live"},
-    {"slug": "apprenticeship-levy-calculator", "title": "Apprenticeship Levy Calculator", "url": "/apprenticeship-levy-calculator", "description": "Calculate apprenticeship levy liability for any payroll size. 0.5% above £3m wage bill with £15,000 annual allowance.", "tag": "New"},
-]
-
-GUIDES: Dict[str, Dict] = {
-    "employer-ni-changes-2025": {
-        "title": "Employer NI Changes 2025/26: 15% Rate, £5,000 Threshold and Cost by Salary",
-        "description": "Employer NI changed on 6 April 2025: rate 13.8% to 15% and threshold £9,100 to £5,000. See what the NI rise means at £30k, £35k and £50k salaries, then compare full employer cost.",
-        "topic": "Employer NI",
-        "sections": [
-            {
-                "heading": "Employer NI 2025/26: the exact rule changes from 6 April 2025",
-                "paragraphs": [
-                    "If you searched for an NI rise calculator, these are the two numbers that matter for 2025/26: employer Class 1 NI is now 15% (up from 13.8%), and the secondary threshold is now £5,000 (down from £9,100). Both changes started on 6 April 2025 and apply to standard employer NI calculations.",
-                    "Those two changes compound each other. A higher rate means each NIable pound costs more, and a lower threshold means more salary is NIable in the first place. This is why many employers saw a larger payroll cost increase than expected, even before pension, benefits, or recruitment overheads were added.",
-                    "The policy package also increased Employment Allowance from £5,000 to £10,500 and removed the previous £100,000 eligibility cap. That relief is meaningful for eligible employers, but it does not reverse the structural NI rise for every business. Your net outcome depends on payroll size and whether allowance can be fully used.",
-                ],
-            },
-            {
-                "heading": "What the NI rise costs by salary: practical worked examples",
-                "paragraphs": [
-                    "At £30,000 salary, 2025/26 employer NI is approximately £3,750. Under 2024/25 rules, the equivalent NI was about £2,884. That is a rise of roughly £866 per employee per year. At £35,000, NI rises from about £3,575 to £4,500, adding around £915. At £40,000, NI moves from around £4,264 to £5,250, adding around £986.",
-                    "At £50,000 salary, 2025/26 employer NI is around £6,750 compared with about £5,644 under 2024/25 assumptions, a rise near £1,106. At £75,000 salary, NI is around £10,500 versus about £9,094, adding around £1,406. At £100,000 salary, NI is around £14,250 versus about £12,544, adding around £1,706.",
-                    "The pattern is simple: NI rise per employee generally grows with salary, but lower and mid salaries still face material absolute increases because the threshold fell sharply. For budgeting, run your actual salary mix instead of a single midpoint. A team with many £28k–£38k roles can see significant aggregate impact.",
-                ],
-            },
-            {
-                "heading": "From NI-only to true employer cost: what to include in decisions",
-                "paragraphs": [
-                    "NI is only one layer of recurring cost. For realistic hiring decisions, combine salary, employer NI, minimum pension, and your operational overhead assumptions. A £35,000 role can move from a headline salary to a total employer cost in the low-£40k range once statutory and operational components are included.",
-                    "Auto-enrolment pension is usually modelled at a minimum employer contribution of 3% on qualifying earnings between £6,240 and £50,270. Above £50,270, pension qualifying earnings stop increasing for statutory minimum purposes, but employer NI continues with no upper cap. That shifts the cost mix as salaries rise.",
-                    "Use monthly-first outputs for approvals and cashflow planning. Managers, finance teams, and founders usually decide faster with a clear monthly number plus annual total. If your process is still gross-salary-first, payroll pressure tends to appear late in the quarter when commitments are already made.",
-                ],
-            },
-            {
-                "heading": "How to use this as an NI rise calculator in practice",
-                "paragraphs": [
-                    "Step 1: model the role at current 2025/26 settings (15% above £5,000). Step 2: compare against 2024/25 baseline logic (13.8% above £9,100). Step 3: add pension and overhead assumptions. This gives a clean year-on-year variance you can use in budget notes, board packs, and offer sign-off.",
-                    "Step 4: run the same salary with and without Employment Allowance where relevant. For eligible small employers, allowance can materially reduce net NI payable in-year. For larger payrolls, allowance may only offset an early part of annual liability, so do not assume the relief eliminates NI rise impact.",
-                    "Step 5: document assumptions in plain English: tax year, threshold, NI rate, pension basis, allowance treatment, and overhead rule. Most reporting disputes come from assumption mismatch rather than calculation errors. A documented assumptions line makes finance, HR, and payroll conversations materially faster.",
-                ],
-            },
-            {
-                "heading": "Common mistakes to avoid in 2025/26 employer NI planning",
-                "paragraphs": [
-                    "Mistake one is using old thresholds in spreadsheets or offer calculators. A model still using £9,100 as secondary threshold will understate NI in 2025/26. Mistake two is quoting NI-only cost to hiring managers without pension and overheads, which causes recurring under-budgeting across multiple hires.",
-                    "Mistake three is treating Employment Allowance as automatic. Eligibility still matters, and some company structures are excluded. Mistake four is assuming NI behaves like employee NI with an upper-rate reduction. Employer NI does not taper at higher salaries; 15% continues above threshold with no upper limit.",
-                    "Mistake five is not refreshing planning pages in search and internal docs. If your team searches terms like “employer ni calculator 2025/26” or “ni rise calculator”, make sure they land on updated, assumption-led pages. Good decisions come from current-year inputs, consistent assumptions, and clear monthly outputs.",
-                ],
-            },
-        ],
-    },
-    "true-cost-of-hiring": {
-        "title": "The true cost of hiring an employee in the UK (2025/26)",
-        "description": "A practical framework for calculating the full employer cost of hiring in 2025/26.",
-        "topic": "Hiring",
-        "sections": [
-            {
-                "heading": "Salary is only the first line item",
-                "paragraphs": [
-                    "Employer cost starts with salary but quickly expands into NI, pension, onboarding, equipment, software and line-manager time. Most budgeting errors happen when salary is treated as the total cost baseline.",
-                    "In 2025/26, employer NI is 15% above the £5,000 threshold. Auto-enrolment pension adds at least 3% of qualifying earnings. Combined, these statutory items can add a sizeable uplift before any operational overheads.",
-                    "A robust model shows annual and monthly totals and reports cost above salary as a percentage. That percentage is useful for hiring managers who need a quick way to compare role options and timing.",
-                ],
-            },
-            {
-                "heading": "A repeatable cost model",
-                "paragraphs": [
-                    "Start with gross salary, then calculate employer NI on current-year rates and thresholds. Next add minimum employer pension on qualifying earnings. Finally include overhead assumptions that are specific to your organisation.",
-                    "Overheads normally include laptop and peripherals, SaaS licences, security tooling, desk space, and training. For many office-based teams, £2,000 to £5,000 per employee per year is a common planning range.",
-                    "Use one model template across finance and people teams so approval conversations are consistent. This reduces disputes created by conflicting spreadsheets.",
-                ],
-            },
-            {
-                "heading": "Using the model for decisions",
-                "paragraphs": [
-                    "Use monthly-first outputs for cash planning and annual outputs for headcount plans. Managers usually understand monthly burn faster, while finance needs annual totals for forecasting.",
-                    "When comparing candidates or grades, evaluate the full cost delta, not salary delta. The NI and pension increments can materially change affordability near budget limits.",
-                    "Treat the calculator as a decision aid, not legal advice. Employment law and contractual terms can introduce additional obligations beyond baseline statutory cost estimates.",
-                ],
-            },
-        ],
-    },
-    "employment-allowance-guide": {
-        "title": "Employment Allowance 2025/26: eligibility, claiming and examples",
-        "description": "Eligibility rules, payroll claiming process and worked examples for Employment Allowance in 2025/26.",
-        "topic": "Tax relief",
-        "sections": [
-            {
-                "heading": "What Employment Allowance does",
-                "paragraphs": [
-                    "Employment Allowance reduces an eligible employer's annual Class 1 NI bill. For 2025/26 the maximum relief is £10,500, up from £5,000 in 2024/25.",
-                    "The allowance is applied against employer NI liabilities through payroll reporting. It does not reduce employee NI and does not alter gross salary calculations.",
-                    "For eligible small and medium employers, this can remove a large share of NI cost for one or more employees.",
-                ],
-            },
-            {
-                "heading": "Eligibility and exclusions",
-                "paragraphs": [
-                    "Businesses and charities can usually claim, subject to standard HMRC conditions. One key exclusion remains companies where the only paid employee is a director.",
-                    "The previous £100,000 NI cap has been removed, so more employers can qualify in 2025/26 than in prior years.",
-                    "Where group structures exist, payroll teams should confirm allowance treatment is applied correctly across connected entities.",
-                ],
-            },
-            {
-                "heading": "How to claim and monitor",
-                "paragraphs": [
-                    "Claiming is completed in payroll software using the Employment Allowance indicator in your Employer Payment Summary process.",
-                    "Track allowance utilisation monthly. Once fully used, NI liabilities return at the standard rate for subsequent pay periods.",
-                    "Keep internal documentation for audit and handover. The most common issue is not eligibility but inconsistent operational setup.",
-                ],
-            },
-        ],
-    },
-    "auto-enrolment-pension-costs": {
-        "title": "Auto-Enrolment Pension Costs for Employers 2025/26 | What Employers Must Pay",
-        "description": "Auto-enrolment pension costs for UK employers: minimum 3% on qualifying earnings from £6,240 to £50,270. See what auto-enrolment costs at common salaries and how it affects total employer cost.",
-        "topic": "Pensions",
-        "sections": [
-            {
-                "heading": "Minimum contribution framework",
-                "paragraphs": [
-                    "For workplace pensions, the minimum total contribution is 8% of qualifying earnings, with at least 3% paid by the employer. The remaining 5% comes from the employee's own pay plus tax relief. Qualifying earnings are bounded by lower and upper limits set each April.",
-                    "The employer element is not a simple percentage of full gross salary. It is calculated on the slice of salary that falls within the qualifying earnings band, unless the pension scheme uses a more generous certification basis. That means a £20,000 salary and a £50,000 salary do not attract proportionally equal pension costs.",
-                    "In budgeting, pension should always be modelled alongside employer NI because both scale with pay and together move total employer cost materially above the headline salary figure.",
-                ],
-            },
-            {
-                "heading": "Qualifying earnings in practice",
-                "paragraphs": [
-                    "For 2025/26, qualifying earnings run from £6,240 to £50,270 per year. Earnings below the lower threshold are excluded from minimum contribution calculations — so a worker on £12,000 per year has pension calculated on £5,760 (£12,000 minus £6,240), not on the full £12,000.",
-                    "For higher earners above £50,270, only earnings up to the upper limit are included for statutory minimum modelling. An employer contributing the legal minimum on a £70,000 salary pays 3% of £44,030 (£50,270 minus £6,240) — roughly £1,321 per year — not 3% of £70,000. Employers can choose to contribute on full salary as a company policy, but that is a voluntary enhancement above the statutory floor.",
-                    "Understanding the qualifying earnings band logic matters because it avoids over-estimating pension cost for lower salaries and under-estimating it for mid-range ones. The full employer calculator models this band correctly for any salary you enter.",
-                ],
-            },
-            {
-                "heading": "Enrolment eligibility and timing",
-                "paragraphs": [
-                    "Eligible workers are those aged 22 to State Pension Age earning above £10,000 per year from a single employer. They must be enrolled automatically within six weeks of their start date. Workers aged 16–21 or above State Pension Age, or earning between £6,240 and £10,000, have the right to opt into a pension scheme but cannot be enrolled without requesting it.",
-                    "Employees can opt out within one calendar month of being enrolled. If they do, their contributions are refunded and yours stop. Crucially, employers must re-enrol eligible workers every three years regardless of previous opt-outs — this is a legal duty, not a choice.",
-                    "Keep records of enrolment dates, opt-out requests and re-enrolment cycles. The Pensions Regulator carries out compliance checks and the fine for failure to re-enrol can run into thousands of pounds per day for larger employers.",
-                ],
-            },
-            {
-                "heading": "Budgeting and communication",
-                "paragraphs": [
-                    "Set a standard pension assumption in all hiring plans and make exceptions explicit. Using different pension bases across departments — some on qualifying earnings, some on full salary — makes role cost comparisons misleading. Standardise the basis and note it alongside salary when presenting headcount budgets.",
-                    "Where you offer above-minimum employer contributions — common at 5% or 10% — publish the policy clearly so managers can explain total package value accurately in job offers. Higher pension contributions are a genuine differentiator in hiring but only when candidates understand them.",
-                    "Reconcile pension cost forecasts to payroll monthly, especially where salary changes, new starters, opt-outs or opt-ins happen during the year. Pension cost is easy to under-budget mid-year if it is only modelled at the point of hire.",
-                ],
-            },
-        ],
-    },
-    "redundancy-process-guide": {
-        "title": "Redundancy Process UK 2025/26: Step-by-Step Employer Guide With Costs",
-        "description": "A practical employer guide to redundancy process, statutory pay, notice and risk control in 2025.",
-        "topic": "Redundancy",
-        "sections": [
-            {
-                "heading": "Statutory redundancy pay: how the calculation works",
-                "paragraphs": [
-                    "Statutory redundancy pay is calculated using three variables: age, complete years of service (up to 20), and weekly pay (capped at £643 per week from April 2024). The multiplier is 0.5 weeks for each year worked under age 22, 1 week for each year aged 22–40, and 1.5 weeks for each year aged 41 and above.",
-                    "As a worked example: an employee aged 38 with 8 years of service on a £35,000 salary (weekly pay £673, capped at £643) would receive 8 × 1 × £643 = £5,144 in statutory redundancy pay. The first £30,000 of redundancy payments is generally free from income tax.",
-                    "Many employers offer enhanced redundancy terms beyond the statutory minimum, particularly for longer-serving employees. Where enhanced terms exist, document them clearly in employment contracts or a standalone redundancy policy so they are enforceable and consistently applied.",
-                ],
-            },
-            {
-                "heading": "Notice pay and payment in lieu of notice",
-                "paragraphs": [
-                    "Statutory minimum notice is one week for each complete year of service, up to a maximum of 12 weeks. Contracts often specify longer notice periods, in which case the contractual period applies. Notice must be served or bought out — whichever is the right approach depends on the circumstances and contract terms.",
-                    "Payment in lieu of notice (PILON) is taxed as earnings where there is a contractual PILON clause. Where there is no contractual right, tax treatment is more complex; take payroll or legal advice before paying PILON without a clause. Accrued but untaken holiday must also be paid out on termination.",
-                    "Include notice and holiday pay in your redundancy cost model from the outset. Both are legal obligations and are easily missed when the focus is on the headline redundancy payment. For a £35,000 employee with 3 months notice, PILON represents approximately £8,750, which can dwarf the statutory redundancy amount.",
-                ],
-            },
-            {
-                "heading": "Process steps and consultation obligations",
-                "paragraphs": [
-                    "For individual redundancies, employers must follow a fair process: establish a genuine redundancy situation, apply fair selection criteria, consult meaningfully with the affected employee, and consider suitable alternative roles. For 20 or more redundancies in 90 days, collective consultation rules apply and minimum 45-day consultation periods are required.",
-                    "Documentation is as important as the arithmetic. Keep consultation records, scoring evidence, meeting notes and all written communications. Employment tribunals frequently find in employees' favour not because the redundancy was commercially unjustified but because the process was flawed or inconsistently applied.",
-                    "If using a scoring matrix for selection, apply it consistently and document rationale for each decision. Avoid criteria that could be directly or indirectly discriminatory, such as selecting solely on absence records where protected characteristics are linked to the absences.",
-                ],
-            },
-            {
-                "heading": "Total cost modelling for redundancy decisions",
-                "paragraphs": [
-                    "A complete redundancy cost model should include: statutory redundancy pay, contractual notice or PILON, accrued holiday pay, any enhanced terms, settlement agreement value where applicable, and professional support costs. It should also include the ongoing salary saving used to justify the decision.",
-                    "Calculate the payback period: total redundancy cost divided by monthly salary saving gives the number of months before the business breaks even. For a £35,000 role costing £18,000 to exit, with a monthly saving of £2,916, payback is approximately 6.2 months. Decisions made without this figure tend to be harder to defend at senior review.",
-                    "Where settlement is likely, model a realistic settlement scenario alongside the statutory baseline. Settlement agreements typically exceed the statutory minimum in exchange for a waiver of employment tribunal claims. Legal costs, both employer-side and the contribution to employee advice, should be included in the settlement total.",
-                ],
-            },
-            {
-                "heading": "Reducing operational and legal risk",
-                "paragraphs": [
-                    "The most common redundancy legal risks are: failure to consult meaningfully, inconsistent selection criteria, failure to consider alternative roles, and procedural irregularities (wrong notice, wrong pay). Addressing these before the process starts is cheaper than resolving them after an employment tribunal claim.",
-                    "Brief line managers before any employee-facing meetings. Inconsistent messages between HR and line management, or promises made informally by managers, can undermine process integrity. Use a script or talking points for difficult conversations.",
-                    "Where legal risk is elevated — for example where the employee has or may claim a protected characteristic, or where unfair dismissal risk is real — take employment law advice before serving notice. The cost of early legal advice is almost always less than tribunal defence costs.",
-                ],
-            },
-        ],
-    },
-    "employment-rights-act-2025": {
-        "title": "Employment Rights Act 2025: what employers need to know",
-        "description": "Operational implications of Employment Rights Act 2025 reforms for UK employers, including unfair dismissal day one rights, flexible working and zero-hours changes.",
-        "topic": "Legislation",
-        "sections": [
-            {
-                "heading": "The key changes employers need to prepare for",
-                "paragraphs": [
-                    "The Employment Rights Act 2025 introduces the most significant expansion of employee rights in a generation. The headline change is the removal of the two-year qualifying period for unfair dismissal claims, making unfair dismissal protection a day-one right for most employees. The practical implication is that probation periods will need to be better managed and more consistently applied.",
-                    "Other significant changes include: flexible working becoming a default right from day one; zero-hours workers gaining the right to guaranteed hours contracts based on their regularly worked pattern; third-party harassment rules being strengthened; and trade union access rights being expanded.",
-                    "Not all reforms have confirmed implementation dates. Leadership teams should separate confirmed commencement orders from proposals still in consultation. Planning against unconfirmed assumptions creates effort that may need to be re-done when dates slip.",
-                ],
-            },
-            {
-                "heading": "Day-one unfair dismissal: practical implications",
-                "paragraphs": [
-                    "Once day-one unfair dismissal protection is in force, employers cannot simply dismiss employees during a probation period without following a fair process. The government has indicated that probation periods of up to nine months will be the relevant framework, with a statutory procedure expected to apply during that window.",
-                    "In practice, this means probation management needs to become more structured. Clear performance objectives at the start of employment, documented mid-probation reviews, and formal probation failure conversations with evidence all become more important. The risk of an informal 'this isn't working' conversation followed by immediate dismissal is materially higher than under the current two-year qualifying period.",
-                    "Review your probation policy and manager training before implementation. Line managers are often the weakest link in probation management because they are not trained to give honest performance feedback early enough for it to be documented and acted on within the probation window.",
-                ],
-            },
-            {
-                "heading": "Flexible working and zero-hours changes",
-                "paragraphs": [
-                    "Flexible working is already a day-one right to request since April 2024, but the Employment Rights Act extends this by limiting the grounds on which employers can refuse. Where flexible working is refused, the reasons must be demonstrably reasonable and documented. This raises the bar above the current eight statutory grounds for refusal.",
-                    "Zero-hours and minimum-hours workers who work a regular pattern over a reference period will be entitled to a guaranteed-hours contract reflecting that pattern. Employers who rely on zero-hours arrangements for operational flexibility will need to either accept that pattern becoming contractual or restructure rotas to avoid regularity. Both approaches carry cost and administrative implications.",
-                    "Review your workforce composition before implementation. Zero-hours usage is not uniformly problematic — some workers genuinely prefer flexibility — but where it is being used to avoid employment cost and legal risk, that model will need to change.",
-                ],
-            },
-            {
-                "heading": "Workforce planning and cost implications",
-                "paragraphs": [
-                    "The combined effect of these reforms is to increase the average cost and legal risk of employing people, particularly for lower-paid and variable-hours workers. Employers should update their hiring cost models to include a higher provision for probation management, performance process time, and potential settlement costs for early-stage dismissals.",
-                    "Structured onboarding and probation programmes — which are good practice regardless of legislation — become more valuable as legal protection for day-one rights. Employers who already run well-documented probation processes will see less disruption than those who rely on informality.",
-                    "Use the next six months before implementation to complete the gap review: contracts, handbooks, probation policies, manager training, flexible working procedure and zero-hours audit. Set one deployment date for updated documentation so that all managers are working from the same version.",
-                ],
-            },
-            {
-                "heading": "Building a compliant cost model",
-                "paragraphs": [
-                    "Every significant employment law change creates a corresponding administration cost that rarely appears in headcount budgets. Estimate the time cost of better probation management, more flexible working requests, guaranteed-hours reviews and any workforce consultation requirements. That time has a real payroll value.",
-                    "Where the legal risk of day-one dismissal is real (for example, a hire into a business-critical role that does not work out within a few months), model a potential settlement scenario alongside the direct employment cost. Having that number visible in advance makes the decision to hire — or to take legal advice — faster.",
-                    "Track compliance ownership clearly across HR, payroll and line management. When policy changes interact with payroll rules, out-of-date processes create avoidable errors. Assign named owners for each area of the reform and review compliance quarterly for the first year.",
-                ],
-            },
-        ],
-    },
-    "hiring-costs-london": {
-        "title": "Cost of hiring in London (2025/26): employer NI, pension and salary benchmarks",
-        "description": "Employer cost of hiring in London for 2025/26. Typical salary bands, employer NI at 15%, pension and total monthly cost at common London pay levels.",
-        "topic": "London hiring",
-        "sections": [
-            {
-                "heading": "Typical London salary bands and employer NI cost",
-                "paragraphs": [
-                    "London salary levels are significantly higher than the UK average across most sectors. For 2025/26, employer NI is 15% on earnings above the £5,000 secondary threshold. At a £40,000 London salary (common for early-to-mid career roles), employer NI is £5,250 per year (£437.50 per month). At £50,000, NI is £6,750 per year (£562.50 per month). At £60,000, it rises to £8,250 per year (£687.50 per month).",
-                    "Adding minimum employer pension on qualifying earnings increases these figures. At £40,000, pension is approximately £1,013 per year; at £50,000 it is approximately £1,321 per year (capped at the qualifying earnings upper limit of £50,270). Total employer cost above salary at £40,000 is therefore around £6,263 per year, or £522 per month.",
-                    "For London roles offering salary sacrifice pension, the pension cost comes from pre-tax salary, which reduces the employer NI base slightly. At £50,000 with 5% salary sacrifice, the NIable pay falls to £47,500, reducing employer NI to approximately £6,375 per year compared with £6,750 on the full salary.",
-                ],
-            },
-            {
-                "heading": "London vs national hiring cost comparison",
-                "paragraphs": [
-                    "London employers face a dual cost premium: higher gross salaries and proportionally higher employer NI on those salaries. A role that benchmarks at £30,000 in a northern city might benchmark at £40,000 in London — adding £1,500 more in employer NI alone (£4,500 London vs £3,750 on a £30,000 salary).",
-                    "The employment allowance (up to £10,500 per year) can partially offset this for eligible employers with annual NI below that threshold. A small London business with three employees averaging £35,000 in salary generates approximately £13,500 in annual employer NI — still above the allowance ceiling, so the offset is partial.",
-                    "Remote work has changed London hiring dynamics. Many employers now hire at London salary rates for roles that can be performed from anywhere, while others use regional salary banding to pay market rates by location. Either approach has employer NI implications because NI follows the employee's salary, not their location.",
-                ],
-            },
-            {
-                "heading": "Practical London hiring cost checklist",
-                "paragraphs": [
-                    "Before committing to a London hire, model: gross salary, employer NI (15% above £5,000), minimum pension, and your operational overhead assumption. For London, equipment, software licences and any desk or office space allocation should be priced explicitly. A common range for operational overhead is £3,000–£6,000 per employee per year for an office-based role.",
-                    "For London senior roles above £100,000, note that employer NI continues at 15% with no upper cap. A £120,000 salary generates £17,250 in employer NI annually (£1,437.50 per month). Pension for that salary caps at the qualifying earnings upper limit — the employer minimum contribution is approximately £1,321 per year regardless of how far above £50,270 the salary sits.",
-                    "Use the employer cost calculator to model the exact NI and pension for any London salary. Input the salary, set pension rate and overhead assumption, and record both monthly and annual totals as your hiring baseline. This output is the number to use in headcount approval, not gross salary alone.",
-                ],
-            },
-        ],
-    },
-    "hiring-costs-manchester": {
-        "title": "Cost of hiring in Manchester (2025/26): employer NI and total hiring costs",
-        "description": "Employer cost of hiring in Manchester for 2025/26. Common salary ranges, employer NI at 15% and total cost above salary at typical Manchester pay levels.",
-        "topic": "Manchester hiring",
-        "sections": [
-            {
-                "heading": "Manchester salary benchmarks and employer NI",
-                "paragraphs": [
-                    "Manchester is one of the UK's strongest regional hiring markets, with salary levels ranging from £24,000–£30,000 for entry roles to £45,000–£65,000 for senior individual contributors and team leads in tech, finance and professional services. For 2025/26, employer NI is 15% on earnings above the £5,000 secondary threshold.",
-                    "At a £30,000 Manchester salary, employer NI is £3,750 per year (£312.50 per month). At £35,000, NI is £4,500 per year (£375 per month). At £45,000, it is £6,000 per year (£500 per month). Adding minimum employer pension at 3% of qualifying earnings: at £35,000 the pension cost is approximately £863 per year, giving a total above-salary cost of £5,363 per year (£447 per month).",
-                    "Manchester's growing tech sector includes significant demand for roles in the £35,000–£55,000 band. At £50,000, total employer cost above salary is approximately £8,071 per year (NI £6,750 plus pension £1,321), making the total annual cost around £58,071 for that hire.",
-                ],
-            },
-            {
-                "heading": "Manchester cost of hiring versus London",
-                "paragraphs": [
-                    "Manchester salary benchmarks are typically 15–25% below London for comparable roles, though the gap is narrowing in tech and financial services. The employer NI difference compounds this: at £35,000 (a common Manchester mid-career benchmark) versus £45,000 (a more common London equivalent), the annual NI difference is £1,500 per employee.",
-                    "For employers with operations in both cities, this means Manchester-based headcount carries lower NI per employee, even before accounting for lower salary. Employment Allowance — which can offset up to £10,500 of employer NI for eligible businesses — may be fully usable by a Manchester team where it only partially offsets London NI bills.",
-                    "Operational overhead assumptions also differ. Manchester office space and equipment costs are lower than London equivalents, though the gap has narrowed as demand for Manchester office space has grown. Use local market rates for workspace and benchmark salary data for your sector before finalising a hiring cost model.",
-                ],
-            },
-            {
-                "heading": "Using this for Manchester headcount approval",
-                "paragraphs": [
-                    "For a headcount approval presentation, the most useful format is: role title, gross salary, monthly employer NI, monthly pension, monthly overhead, and total monthly cost. This is more useful to finance and founders than annual gross salary because it shows recurring cashflow impact.",
-                    "Use the employer cost calculator to generate the NI and pension components, then add your overhead assumption. Document the pension basis (qualifying earnings minimum, or full salary) and overhead rule (per-employee figure or shared cost allocation). Consistent documentation means re-approvals later in the year use the same framework.",
-                    "For growing Manchester teams, model a hiring plan across the next 12 months with monthly NI running totals. This helps identify whether Employment Allowance will be fully absorbed during the year and shows when NI liability starts compounding materially.",
-                ],
-            },
-        ],
-    },
-    "hiring-costs-birmingham": {
-        "title": "Cost of hiring in Birmingham (2025/26): employer NI and salary benchmarks",
-        "description": "Employer hiring costs in Birmingham for 2025/26. Salary ranges, employer NI at 15%, pension and total cost at common Birmingham pay levels.",
-        "topic": "Birmingham hiring",
-        "sections": [
-            {
-                "heading": "Birmingham salary levels and employer NI",
-                "paragraphs": [
-                    "Birmingham is the UK's second largest city economy with a diverse hiring market spanning financial services, professional services, manufacturing, public sector and a growing tech sector. Salary ranges vary significantly by sector: £22,000–£30,000 for entry roles, £30,000–£50,000 for experienced hires, and £50,000–£75,000 for senior management and technical specialists.",
-                    "At a £30,000 Birmingham salary, employer NI for 2025/26 is £3,750 per year (£312.50 per month). At £35,000, NI is £4,500 per year (£375 per month). At £40,000, NI is £5,250 per year (£437.50 per month). Adding 3% employer pension at £35,000: approximately £863 per year, making total above-salary cost around £5,363 per year (£447 per month).",
-                    "Birmingham HMRC processing and financial services roles, and the growing professional services cluster, often benchmark between £28,000 and £45,000. HS2 and infrastructure projects have created additional demand in engineering and project management at higher salary bands.",
-                ],
-            },
-            {
-                "heading": "Employment Allowance impact for Birmingham employers",
-                "paragraphs": [
-                    "Employment Allowance (up to £10,500 for eligible employers in 2025/26) can be particularly valuable for growing Birmingham businesses. A team of four employees averaging £32,000 in salary generates approximately £16,200 in annual employer NI — allowance offsets the first £10,500, leaving a net NI liability of approximately £5,700 for the year.",
-                    "For Birmingham small and medium employers, the removal of the previous £100,000 NI bill eligibility cap in 2025/26 means more businesses can now claim. Previously, businesses with NI bills above £100,000 were excluded; that restriction has now been lifted. Check eligibility (solo-director companies remain excluded) and claim through your payroll software.",
-                    "For Birmingham employers near the Employment Allowance ceiling, model the full-year position monthly. The allowance offsets cumulative employer NI in-year; once used, standard rates apply from that point forward. This affects cashflow particularly in the second half of the tax year.",
-                ],
-            },
-            {
-                "heading": "Building a Birmingham hiring cost model",
-                "paragraphs": [
-                    "For a repeatable Birmingham hiring cost model, use: gross salary, 15% NI on earnings above £5,000, 3% pension on qualifying earnings, and an overhead assumption specific to your operational setup. Birmingham office and equipment costs are broadly similar to Manchester and lower than London equivalents.",
-                    "For mixed Birmingham headcount (some office-based, some remote), use a consistent overhead assumption or document different rates by work type. Finance teams reviewing headcount approval find inconsistent overhead assumptions confusing and may apply their own, potentially incorrect, figures.",
-                    "Use the employer cost calculator to produce the NI and pension baseline for any Birmingham salary. Combine that with your overhead assumption to create the complete monthly hiring cost number. Review quarterly, particularly around budget reviews or when salary bands are adjusted.",
-                ],
-            },
-        ],
-    },
-    "hiring-costs-edinburgh-scotland": {
-        "title": "Cost of hiring in Scotland (2025/26): employer NI and Scottish payroll considerations",
-        "description": "Employer cost of hiring in Scotland for 2025/26. Employer NI at 15%, Scottish income tax context, pension and total hiring costs at common Scottish salary levels.",
-        "topic": "Scotland hiring",
-        "sections": [
-            {
-                "heading": "Employer NI in Scotland: what is and is not different",
-                "paragraphs": [
-                    "Employer National Insurance is UK-wide. Scottish employers pay the same 15% employer NI on earnings above £5,000 as employers anywhere else in the UK. Scottish income tax (which uses five bands with rates from 19% to 48%) is deducted from employees' wages and does not affect employer NI or pension contributions.",
-                    "At a £35,000 salary in Edinburgh or Glasgow, employer NI is £4,500 per year (£375 per month) — exactly the same as in Manchester or Birmingham at the same salary. Pension cost at 3% minimum is approximately £863 per year. Total employer cost above salary is around £5,363 per year.",
-                    "For employers comparing Scottish and rUK headcount, the employer cost model is identical for the same salary. The difference appears on the employee's payslip — Scottish income tax reduces take-home pay at mid and higher salaries compared with rUK — which can affect recruitment, retention and salary negotiation dynamics.",
-                ],
-            },
-            {
-                "heading": "Scottish salary benchmarks and hiring context",
-                "paragraphs": [
-                    "Edinburgh and Glasgow are the two major Scottish hiring centres. Edinburgh has a strong financial services cluster (Standard Life, Baillie Gifford, fund administration) alongside legal, technology and public sector employers. Glasgow has broader private sector diversity including financial services, retail, logistics and growing tech.",
-                    "Scottish salary benchmarks are generally 5–15% below London for equivalent roles, and broadly comparable with other major UK regional cities. Edinburgh financial services roles and technology roles in both cities have seen upward salary pressure, with some roles now benchmarking close to London levels for specialist skills.",
-                    "Aberdeen salary levels in energy and engineering can vary significantly with commodity cycles. During peak periods, offshore and subsea roles commanded significant premia that are less common now. Model Aberdeen salaries against current market benchmarks rather than historical peaks.",
-                ],
-            },
-            {
-                "heading": "Employee awareness of Scottish income tax in hiring",
-                "paragraphs": [
-                    "Scottish income tax affects take-home pay at mid and higher salary levels. A £45,000 salary produces a slightly lower net monthly take-home under Scottish rules than under rUK — approximately £60–£90 per month less depending on deduction settings. For employers hiring from outside Scotland, this is sometimes a surprise to candidates during offer negotiation.",
-                    "Being transparent about Scottish income tax in offer discussions — and pointing candidates to reliable net pay comparison tools — reduces late-stage negotiation friction. Candidates who understand the tax position early are less likely to request last-minute salary uplifts.",
-                    "For relocating employees, the change in income tax region happens when they become Scottish resident (main home in Scotland). This is handled via payroll and HMRC; employers should notify payroll when a relocation takes effect so the correct tax code is applied.",
-                ],
-            },
-        ],
-    },
-    "hiring-costs-leeds": {
-        "title": "Cost of Hiring in Leeds (2025/26): Employer NI, Pension & Total Salary Cost",
-        "description": "Employer hiring costs in Leeds for 2025/26. Salary benchmarks across NHS, finance and tech, employer NI at 15%, pension and total above-salary cost at common Leeds pay levels.",
-        "topic": "Leeds hiring",
-        "sections": [
-            {
-                "heading": "Leeds salary benchmarks and employer NI",
-                "paragraphs": [
-                    "Leeds is one of the UK's largest regional economies, with major employment clusters in financial services, legal, NHS and public sector, digital technology and professional services. Entry-level roles typically range from £22,000–£28,000; experienced hires from £30,000–£50,000; senior and specialist roles from £50,000–£80,000.",
-                    "At a £30,000 Leeds salary, employer NI for 2025/26 is £3,750 per year (£312.50 per month). At £35,000, NI is £4,500 per year (£375 per month). Adding 3% employer pension at £35,000 adds approximately £863 per year, making total above-salary cost around £5,363 per year (£447 per month).",
-                    "Leeds Teaching Hospitals NHS Trust is one of Europe's largest, alongside West Yorkshire ICB and Leeds City Council — making public sector a significant part of the Leeds hiring market. NHS Agenda for Change pay bands drive many hiring decisions at Bands 2–8.",
-                ],
-            },
-            {
-                "heading": "Employment Allowance for Leeds employers",
-                "paragraphs": [
-                    "Employment Allowance (up to £10,500 for eligible employers in 2025/26) is available to most Leeds SMEs and reduces the employer NI bill directly. A team of four employees averaging £32,000 generates approximately £16,200 in annual employer NI — allowance covers the first £10,500, leaving a net NI liability of £5,700.",
-                    "Single-director limited companies cannot claim Employment Allowance if the director is the only employee paid above the secondary threshold. Confirm eligibility with your payroll provider or accountant before applying.",
-                ],
-            },
-            {
-                "heading": "Total cost of a Leeds hire: worked example",
-                "paragraphs": [
-                    "For a £35,000 salary: employer NI £4,500 + pension £863 + typical overheads (recruitment, equipment, workspace) of £3,000 = total employer cost approximately £43,363 per year. Monthly equivalent: £3,614.",
-                    "Use the calculator to model any Leeds salary with custom pension percentage and overhead assumptions. The cost-of-employing hub shows pre-calculated totals for common salary levels.",
-                ],
-            },
-        ],
-    },
-    "hiring-costs-liverpool": {
-        "title": "Cost of Hiring in Liverpool (2025/26): Employer NI, Pension & Total Salary Cost",
-        "description": "Employer hiring costs in Liverpool for 2025/26. Salary benchmarks, employer NI at 15%, pension and total above-salary cost at common Liverpool pay levels.",
-        "topic": "Liverpool hiring",
-        "sections": [
-            {
-                "heading": "Liverpool salary benchmarks and employer NI",
-                "paragraphs": [
-                    "Liverpool's economy spans logistics and maritime, healthcare, financial services, digital and creative industries, and higher education (University of Liverpool, Liverpool John Moores, Hope). Salaries typically range from £22,000–£28,000 for entry roles to £35,000–£55,000 for experienced professionals.",
-                    "At £30,000, employer NI for 2025/26 is £3,750 per year. At £35,000, NI is £4,500 per year (£375 per month). Adding 3% pension at £35,000 costs approximately £863 per year. Total above-salary cost at £35,000: around £5,363 per year.",
-                    "Liverpool City Region's healthcare and logistics sectors generate consistent PAYE hiring demand. The port and distribution economy sustains significant numbers of roles at £22,000–£30,000, while financial services and professional services anchor mid-market hiring.",
-                ],
-            },
-            {
-                "heading": "Total cost of a Liverpool hire: worked example",
-                "paragraphs": [
-                    "For a £32,000 salary: employer NI £4,050 + pension £776 + overheads £2,500 = total employer cost approximately £39,326 per year. Monthly: £3,277.",
-                    "Model any Liverpool salary in the calculator. Employment Allowance of up to £10,500 can significantly reduce the NI component for eligible employers.",
-                ],
-            },
-        ],
-    },
-    "hiring-costs-bristol": {
-        "title": "Cost of Hiring in Bristol (2025/26): Employer NI, Pension & Total Salary Cost",
-        "description": "Employer hiring costs in Bristol for 2025/26. Salary benchmarks in tech, aerospace and financial services, employer NI at 15%, pension and total cost.",
-        "topic": "Bristol hiring",
-        "sections": [
-            {
-                "heading": "Bristol salary benchmarks and employer NI",
-                "paragraphs": [
-                    "Bristol has one of the UK's strongest regional economies, with high-productivity clusters in aerospace and defence (Airbus, Rolls-Royce), financial services (Lloyds Banking Group), digital technology and creative industries. Salary levels are above most UK regional cities — technology and engineering roles frequently benchmark at £40,000–£70,000.",
-                    "At £40,000, employer NI for 2025/26 is £5,250 per year (£437.50 per month). At £50,000, NI is £6,750 per year (£562.50 per month). Adding 3% pension at £40,000 adds approximately £1,013 per year. Total above-salary cost at £40,000: approximately £6,263 per year (£522 per month).",
-                    "Bristol's tech and aerospace premium means employers often need to budget for above-average salaries. Use the calculator to model accurate employer NI at Bristol's typical pay levels.",
-                ],
-            },
-            {
-                "heading": "Total cost of a Bristol hire: worked example",
-                "paragraphs": [
-                    "For a £45,000 salary in Bristol: employer NI £6,000 + pension £1,150 + overheads £3,000 = total employer cost approximately £55,150 per year. Monthly: £4,596.",
-                    "Bristol's higher-than-average salaries mean employer NI and pension costs are proportionally higher. Model your specific role in the calculator for an accurate breakdown.",
-                ],
-            },
-        ],
-    },
-    "hiring-costs-edinburgh": {
-        "title": "Cost of Hiring in Edinburgh (2025/26): Employer NI, Pension & Total Salary Cost",
-        "description": "Employer hiring costs in Edinburgh for 2025/26. Scottish salary benchmarks, employer NI at 15%, pension and total above-salary cost. Note: employer NI is a UK-wide rate — Scottish income tax does not affect employer payroll costs.",
-        "topic": "Edinburgh hiring",
-        "sections": [
-            {
-                "heading": "Edinburgh salary benchmarks and employer NI",
-                "paragraphs": [
-                    "Edinburgh is Scotland's financial and professional services capital, with strong demand for finance, legal, technology, public sector and tourism roles. Salary levels are broadly comparable with Manchester and Leeds, though financial services and tech roles can benchmark close to London rates. Entry-level roles typically start at £24,000–£28,000; experienced professionals in financial services and law often earn £45,000–£80,000.",
-                    "Employer NI in Edinburgh is the same as anywhere in the UK: 15% on earnings above the £5,000 secondary threshold for 2025/26. At £35,000, employer NI is £4,500 per year (£375 per month). At £45,000, it is £6,000 per year (£500 per month). Adding 3% pension at £45,000 adds £1,163 per year. Total above-salary cost at £45,000: approximately £7,163 per year.",
-                    "Edinburgh's major employers include Standard Life Aberdeen, Baillie Gifford, Lloyds Banking Group (Halifax/Bank of Scotland), NHS Lothian and the Scottish Government. The financial services sector benchmarks strongly against UK peers, and recruitment competition with London firms is a factor for senior hires.",
-                ],
-            },
-            {
-                "heading": "Total cost of an Edinburgh hire: worked example",
-                "paragraphs": [
-                    "For a £40,000 salary in Edinburgh: employer NI £5,250 + pension £1,013 + overheads £3,000 = total employer cost approximately £49,263 per year. Monthly: £4,105. Note that the employee's Scottish income tax is not an employer liability — it is deducted from the employee's pay via PAYE.",
-                    "Employment Allowance of up to £10,500 can offset NI costs for eligible Edinburgh employers. Use the calculator to model your specific salary and headcount.",
-                ],
-            },
-        ],
-    },
-    "hiring-costs-cardiff": {
-        "title": "Cost of Hiring in Cardiff (2025/26): Employer NI, Pension & Total Salary Cost",
-        "description": "Employer hiring costs in Cardiff for 2025/26. Welsh salary benchmarks, employer NI at 15%, pension and total above-salary cost. Wales uses the same employer NI rates as England.",
-        "topic": "Cardiff hiring",
-        "sections": [
-            {
-                "heading": "Cardiff salary benchmarks and employer NI",
-                "paragraphs": [
-                    "Cardiff is the largest city in Wales and its economic centre, with significant public sector employment (Welsh Government, NHS Wales, Cardiff Council), financial services, professional services, media and higher education. Salary levels are broadly in line with other regional UK cities, typically 15–20% below London. Entry-level roles generally start at £22,000–£26,000; senior professional roles in finance, law and tech reach £40,000–£65,000.",
-                    "Employer NI in Cardiff uses the same UK-wide rate: 15% on earnings above the £5,000 secondary threshold for 2025/26. At £30,000, employer NI is £3,750 per year (£312.50 per month). At £40,000, it is £5,250 per year (£437.50 per month). Adding 3% pension at £35,000 adds £863 per year. Total above-salary cost at £35,000: approximately £5,363 per year.",
-                    "Major Cardiff employers include NHS Wales, Welsh Government, Admiral Group, Legal & General, Cardiff University and Cardiff Metropolitan University. The Admiral Group and Legal & General maintain large operations in Cardiff, making financial services and insurance significant sectors for recruitment.",
-                ],
-            },
-            {
-                "heading": "Total cost of a Cardiff hire: worked example",
-                "paragraphs": [
-                    "For a £32,000 salary in Cardiff: employer NI £4,050 + pension £788 + overheads £2,500 = total employer cost approximately £39,338 per year. Monthly: £3,278. Wales uses the same income tax rates as England, so PAYE deductions work identically for Cardiff employees.",
-                    "Employment Allowance of up to £10,500 can reduce NI costs significantly for eligible Cardiff employers. Model your specific salary in the calculator.",
-                ],
-            },
-        ],
-    },
-    "employer-on-costs-explained": {
-        "title": "Employer On-Costs Explained (2025/26): NI, Pension, Holiday & Overheads",
-        "description": "What are employer on-costs? This guide explains all the costs above salary — employer NI at 15%, pension, holiday pay accrual and overheads — with worked examples for 2025/26.",
-        "topic": "Employer on-costs",
-        "sections": [
-            {
-                "heading": "What are employer on-costs?",
-                "paragraphs": [
-                    "Employer on-costs are all the costs that sit above an employee's gross salary — the amounts the employer pays on top of, or in addition to, the salary itself. The main components are employer National Insurance (NI), employer pension contributions, and overhead costs such as office space, equipment and management time.",
-                    "Understanding on-costs is critical for workforce planning, budgeting and evaluating the true return on a hire. A £35,000 salary does not cost £35,000 — it typically costs £38,000–£42,000 depending on pension rate and overhead assumptions.",
-                ],
-            },
-            {
-                "heading": "Employer NI — the largest on-cost for most employers",
-                "paragraphs": [
-                    "From April 2025, employer NI is charged at 15% on all earnings above the secondary threshold of £5,000 per year (£416.67 per month). This is the largest mandatory on-cost for most employers.",
-                    "At a £35,000 salary: employer NI = (35,000 − 5,000) × 15% = £4,500 per year (£375 per month). At £50,000: employer NI = (50,000 − 5,000) × 15% = £6,750 per year (£562.50 per month). These figures represent employer liability only — employee NI is separate and deducted from the employee's pay.",
-                    "Employment Allowance can reduce employer NI by up to £10,500 per year for eligible employers. Eligibility requires that total employer NI liabilities were below £100,000 in the prior tax year and the employer does not employ any single person who is a director of a limited company with no other employees.",
-                ],
-            },
-            {
-                "heading": "Pension contributions and other on-costs",
-                "paragraphs": [
-                    "Auto-enrolment requires employers to contribute a minimum of 3% of qualifying earnings (£6,240–£50,270 for 2025/26). At £35,000, the qualifying earnings band gives £28,760 in pensionable pay, and 3% employer contribution = £862.80 per year (£71.90 per month).",
-                    "Other on-costs vary by employer but typically include: employer liability insurance, recruitment costs (job board fees and agency fees of 10–20% of salary for permanent hires), IT equipment (£500–£2,000 per employee), office space, and management overhead. A common rule of thumb is to add 10–15% of salary as a blended overhead allowance. This gives a total cost-to-company at £35,000 of approximately £38,000–£42,000 per year.",
-                ],
-            },
-        ],
-    },
-    "hiring-costs-newcastle": {
-        "title": "Cost of Hiring in Newcastle (2025/26): Employer NI, Pension & Total Salary Cost",
-        "description": "Employer hiring costs in Newcastle for 2025/26. Salary benchmarks, employer NI at 15%, pension and total above-salary cost at common Newcastle pay levels.",
-        "topic": "Newcastle hiring",
-        "sections": [
-            {
-                "heading": "Newcastle salary benchmarks and employer NI",
-                "paragraphs": [
-                    "Newcastle upon Tyne is the economic centre of the North East, with strong public sector employment (NHS, councils, HMRC), financial services, digital technology and offshore energy. Salary levels are generally 10–20% below London, with entry roles at £22,000–£27,000 and experienced professionals at £28,000–£50,000.",
-                    "At £28,000, employer NI for 2025/26 is £3,450 per year (£287.50 per month). At £35,000, NI is £4,500 per year (£375 per month). Adding 3% pension at £35,000 adds £863 per year. Total above-salary cost at £35,000: around £5,363 per year.",
-                    "Newcastle's public sector is substantial — NHS trusts, Northumberland County Council, Newcastle City Council and HMRC's regional operations are major employers. Agenda for Change banding drives NHS hiring at Bands 2–7 in the region.",
-                ],
-            },
-            {
-                "heading": "Total cost of a Newcastle hire: worked example",
-                "paragraphs": [
-                    "For a £30,000 salary in Newcastle: employer NI £3,750 + pension £713 + overheads £2,500 = total employer cost approximately £36,963 per year. Monthly: £3,080.",
-                    "Employment Allowance of up to £10,500 can reduce the NI component significantly for eligible Newcastle employers. Model your specific salary in the calculator.",
-                ],
-            },
-        ],
-    },
-    "hiring-costs-sheffield": {
-        "title": "Cost of Hiring in Sheffield (2025/26): Employer NI, Pension & Total Salary Cost",
-        "description": "Employer hiring costs in Sheffield for 2025/26. Salary benchmarks in manufacturing, logistics and digital sectors, employer NI at 15%, pension at 3% and total above-salary cost.",
-        "topic": "Hiring",
-        "sections": [
-            {
-                "heading": "Hiring in Sheffield: what it costs employers in 2025/26",
-                "paragraphs": [
-                    "Sheffield's employer cost structure follows UK-wide rules: employer NI at 15% on earnings above £5,000 and a minimum 3% pension contribution on qualifying earnings under auto-enrolment. What varies is the salary range. Sheffield salaries tend to sit below London levels but are broadly comparable with other major northern cities such as Leeds and Manchester.",
-                    "In manufacturing, engineering and logistics — three of Sheffield's strongest employment sectors — typical salaries range from £26,000 for operational and warehouse roles to £55,000 for experienced engineers and supply chain managers. At the upper end of that range, employer NI and pension add approximately £8,250 per year before overheads. At the lower end, the April 2025 NI threshold change has increased cost more proportionally because more of a lower salary now falls into the NIable band.",
-                    "Sheffield's growing digital and creative sector produces a different cost profile. Entry-level digital roles commonly start around £24,000–£28,000. Mid-level developer or UX salaries tend to sit in the £35,000–£45,000 range. At £40,000, the total employer cost before overheads is approximately £45,813 per year — salary, NI and pension combined.",
-                ],
-            },
-            {
-                "heading": "Sheffield salary benchmarks and employer cost worked examples",
-                "paragraphs": [
-                    "At a £25,000 salary — common for entry-level and administrative roles — employer NI is £3,000 per year (15% above £5,000) and minimum pension is approximately £563 per year, giving a total employer cost of approximately £28,563 before overheads. At £30,000, total employer cost is approximately £34,464 — £3,750 NI and £714 pension on top of salary.",
-                    "For a £40,000 role in engineering or digital, employer NI is £5,250 per year and pension is approximately £1,013, giving a baseline cost of approximately £46,263 with a standard £3,000 overhead assumption. For senior or specialist hires at £55,000, employer NI rises to £7,500 per year, pension to £1,322 (capped at £50,270 for qualifying earnings), bringing total cost before overheads to approximately £63,822.",
-                    "These figures use 2025/26 rates. For roles budgeted under 2024/25 NI assumptions, costs will be understated — particularly on salaries below £40,000 where the threshold change from £9,100 to £5,000 creates the largest proportional uplift.",
-                ],
-            },
-            {
-                "heading": "Employment Allowance and Sheffield SME employers",
-                "paragraphs": [
-                    "Sheffield has a high density of SMEs and family businesses, particularly in manufacturing and professional services. For smaller employers, Employment Allowance remains one of the most significant levers available. In 2025/26, eligible employers can offset up to £10,500 of employer NI — up from £5,000 in 2024/25 — which for a small Sheffield business with total NI below that threshold means NI is effectively zero.",
-                    "The previous £100,000 NI cap on eligibility has been removed, meaning more Sheffield employers now qualify. If you are unsure whether you qualify, the standard rule is that limited companies with at least one employee who is not a sole director are usually eligible. Check with HMRC or your accountant before claiming.",
-                    "Use the employer cost calculator to model Sheffield hire costs with and without Employment Allowance applied. For budget presentations and headcount sign-off, presenting both scenarios is common practice.",
-                ],
-            },
-        ],
-    },
-    "hiring-costs-nottingham": {
-        "title": "Cost of Hiring in Nottingham (2025/26): Employer NI, Pension & Total Salary Cost",
-        "description": "Employer hiring costs in Nottingham for 2025/26. Salary benchmarks across retail, healthcare and professional services, employer NI at 15%, pension and total above-salary cost.",
-        "topic": "Hiring",
-        "sections": [
-            {
-                "heading": "Hiring in Nottingham: employer cost overview for 2025/26",
-                "paragraphs": [
-                    "Nottingham's employment mix spans healthcare, retail, financial services and a growing digital sector, with the University of Nottingham and Nottingham Trent University producing a consistent graduate pipeline. Employer costs follow national rules — 15% NI above £5,000, minimum 3% pension — applied to salary levels that sit broadly in line with other East Midlands cities.",
-                    "For office-based and professional service roles, salaries commonly range from £24,000 for graduate and administrative positions to £50,000 for experienced managers and specialists. At £35,000 — a common Nottingham mid-market salary — total employer cost before overheads is approximately £40,363 per year: £35,000 salary plus £4,500 employer NI plus approximately £863 employer pension.",
-                    "Healthcare roles, whether NHS or private, add a further consideration: many NHS contracts have fixed salary scales, so the employer cost variable is primarily NI and pension rather than negotiated salary. At the NHS Band 5 starting point of approximately £28,407, employer NI is approximately £3,511 per year and pension (at minimum 3%) is approximately £667 per year.",
-                ],
-            },
-            {
-                "heading": "Nottingham hiring cost worked examples",
-                "paragraphs": [
-                    "At £25,000 — a common salary for graduate and entry-level roles — total employer cost before overheads is approximately £28,563 (£3,000 NI + £563 pension). At £30,000, total reaches approximately £34,464. At £40,000, the figure is approximately £46,263 with a standard overhead assumption.",
-                    "For retailers and hospitality operators hiring at or near minimum wage, the NI change matters more proportionally than for higher-salary employers. A full-time employee on the 2025/26 minimum wage earns approximately £24,785 per year. Employer NI on that salary is approximately £2,968 per year — up from approximately £2,031 under 2024/25 rules, a rise of £790 per employee per year from NI alone.",
-                    "For financial services and insurance roles — present in Nottingham through several major employers — typical salaries of £40,000–£65,000 produce employer costs of £46,263 to approximately £74,573 before overheads. Employment Allowance can absorb a meaningful portion of NI for smaller Nottingham firms under the threshold.",
-                ],
-            },
-            {
-                "heading": "Planning and budgeting Nottingham hires",
-                "paragraphs": [
-                    "When budgeting Nottingham hires for 2025/26, the most common error is carrying forward 2024/25 NI assumptions. The threshold change from £9,100 to £5,000 hits proportionally harder at lower salary levels, which affects sectors like retail, care and hospitality more than professional services.",
-                    "Use the employer cost calculator to build a consistent per-role cost model before offer stage. For budget presentations, the monthly number tends to resonate more than annual totals — a £34,464/year cost for a £30,000 Nottingham hire is £2,872 per month, which is the figure most finance teams want to see on a headcount request.",
-                    "For Employment Allowance, Nottingham SMEs with total employer NI below £10,500 can use the allowance to eliminate NI entirely. For employers above that level, it reduces the first £10,500 of liability — still significant for teams with three to eight employees in typical Nottingham salary ranges.",
-                ],
-            },
-        ],
-    },
-    "hiring-costs-manchester": {
-        "title": "Cost of Hiring in Manchester (2025/26): Employer NI, Pension & Total Salary Cost",
-        "description": "Employer hiring costs in Manchester for 2025/26. Salary benchmarks across finance, tech, media and professional services, with employer NI at 15%, pension and total above-salary cost.",
-        "topic": "Hiring",
-        "sections": [
-            {
-                "heading": "Hiring in Manchester: what it costs employers in 2025/26",
-                "paragraphs": [
-                    "Manchester is one of the UK's most significant employment markets outside London, with strong sectors in financial services, technology, media (anchored by MediaCityUK), professional services and logistics. Employer costs follow national rules — 15% employer NI on earnings above £5,000, minimum 3% pension — applied to a salary market that sits above average for the North West but below London levels.",
-                    "In financial services, salaries in Manchester typically range from £28,000 for graduate and analyst roles to £65,000 for experienced managers and specialists. At £35,000 — a common mid-market salary across several Manchester sectors — total employer cost is approximately £40,363 per year: £35,000 salary, £4,500 employer NI, £863 minimum pension. Media and tech roles at MediaCityUK and the growing Northern Quarter tech cluster tend to sit in the £30,000–£55,000 range.",
-                    "The April 2025 NI threshold reduction from £9,100 to £5,000 has increased costs particularly for roles below £30,000. For logistics and distribution roles — common in Greater Manchester — earning £24,000–£28,000, per-employee NI has risen by approximately £790–£870 per year versus 2024/25 assumptions. Any headcount plan using pre-April 2025 NI assumptions will understate employer cost.",
-                ],
-            },
-            {
-                "heading": "Manchester salary benchmarks and employer cost worked examples",
-                "paragraphs": [
-                    "At £25,000 — typical for entry-level, graduate and administrative roles — employer NI is £3,000 per year and minimum pension is approximately £563, giving a total employer cost of approximately £28,563 before overheads. At £30,000 (common across sales, marketing coordination and junior finance roles), total cost reaches approximately £34,464 per year.",
-                    "For mid-level professionals in financial services or tech earning £45,000, employer NI is £6,000 per year and pension is approximately £1,163, placing total employer cost at approximately £52,163 before overheads. Senior managers and specialists at £60,000 generate employer NI of £8,250 and pension of £1,322 (qualifying earnings capped at £50,270), giving total employer cost of approximately £69,572.",
-                    "Manchester's media sector, particularly at MediaCityUK, produces a wide salary spread: production assistants may earn £22,000–£26,000, while senior producers and executives can reach £50,000–£70,000. Production companies and broadcasters with high NI bills can benefit significantly from Employment Allowance if eligible.",
-                ],
-            },
-            {
-                "heading": "Employment Allowance and Manchester SME employers",
-                "paragraphs": [
-                    "Manchester has a dense SME ecosystem, particularly in digital, creative and professional services. For eligible employers, Employment Allowance in 2025/26 offsets up to £10,500 of annual employer NI — a material saving for small Manchester businesses. The previous £100,000 NI eligibility cap has been removed, broadening access.",
-                    "For a Manchester tech startup employing five people with an average salary of £38,000, total employer NI is approximately £24,750 per year. Employment Allowance reduces this by £10,500, leaving net NI payable of approximately £14,250 — a saving of approximately £875 per month. This is a significant consideration for scaling teams in Manchester's competitive hiring market.",
-                    "Use the employer cost calculator to model Manchester hire scenarios with and without Employment Allowance. For offer approvals and headcount plans, presenting both net and gross NI scenarios is standard practice and helps finance teams plan cashflow accurately.",
-                ],
-            },
-        ],
-    },
-    "hiring-costs-birmingham": {
-        "title": "Cost of Hiring in Birmingham (2025/26): Employer NI, Pension & Total Salary Cost",
-        "description": "Employer hiring costs in Birmingham for 2025/26. Salary benchmarks across manufacturing, automotive, professional services and public sector, with employer NI, pension and total above-salary cost.",
-        "topic": "Hiring",
-        "sections": [
-            {
-                "heading": "Hiring in Birmingham: what it costs employers in 2025/26",
-                "paragraphs": [
-                    "Birmingham is the UK's second city and a major employment hub for manufacturing, automotive (with Jaguar Land Rover operations in the West Midlands), financial and professional services, retail and public sector employment. Employer costs are governed by the same 2025/26 rules — 15% NI above £5,000, minimum 3% pension — applied to salaries that broadly sit at the Midlands average.",
-                    "For manufacturing and production roles, common in the wider West Midlands area, salaries typically range from £24,000 for operatives to £45,000–£60,000 for engineers and senior technical staff. At £30,000 — a typical mid-range salary for Birmingham's diverse employer base — total employer cost is approximately £34,464 per year. At £40,000, total employer cost before overheads is approximately £46,263.",
-                    "Birmingham's professional services sector has grown significantly, with accountancy, legal and consulting firms expanding their West Midlands presence. Graduate and junior professional roles commonly start at £24,000–£28,000, rising to £40,000–£60,000 at the manager level. The April 2025 NI threshold change adds approximately £790 per employee per year at entry-level salaries compared with 2024/25.",
-                ],
-            },
-            {
-                "heading": "Birmingham salary benchmarks and employer cost worked examples",
-                "paragraphs": [
-                    "At £25,000 — common for administrative, retail and entry-level professional roles across Birmingham — employer NI is £3,000 per year and minimum pension is approximately £563, placing total employer cost before overheads at approximately £28,563. At £28,000, total employer cost reaches approximately £31,863 (NI £3,450 + pension £651).",
-                    "For engineering and technical roles in the automotive and manufacturing supply chain, salaries of £35,000–£50,000 are typical. At £35,000, employer NI is £4,500 and pension is £863, giving total cost of approximately £40,363. At £50,000, NI is £6,750 and pension £1,322, total £58,072 before overheads.",
-                    "Birmingham's public sector employers — including the NHS, local authorities and universities — tend to follow national pay scales, making salary benchmarking more predictable than private sector roles. NHS Band 5 starting salary of approximately £28,407 generates employer NI of approximately £3,511 and pension of approximately £667, placing total employer cost at approximately £32,585 before trust-specific overhead.",
-                ],
-            },
-            {
-                "heading": "Employment Allowance and Birmingham SME employers",
-                "paragraphs": [
-                    "Birmingham has a large SME sector spanning manufacturing, retail, property, and professional services. For eligible employers, Employment Allowance offsets up to £10,500 of annual employer NI in 2025/26 — a substantial relief for small businesses with two to eight employees in typical Birmingham salary ranges.",
-                    "A small Birmingham professional services firm with five staff at an average salary of £32,000 generates approximately £20,250 in employer NI per year. Employment Allowance of £10,500 reduces net NI payable to approximately £9,750 — saving approximately £875 per month. This is particularly meaningful for Birmingham's growing creative, legal and accountancy SME sector.",
-                    "Sole directors of Birmingham-based limited companies without other employees cannot claim Employment Allowance. As soon as a second person is employed through PAYE, eligibility typically opens. Use the employer cost calculator to model Birmingham hire costs with Employment Allowance applied before sign-off.",
-                ],
-            },
-        ],
-    },
-    "hiring-costs-leeds": {
-        "title": "Cost of Hiring in Leeds (2025/26): Employer NI, Pension & Total Salary Cost",
-        "description": "Employer hiring costs in Leeds for 2025/26. Salary benchmarks in financial services, legal, digital and healthcare, with employer NI at 15%, pension and total above-salary cost.",
-        "topic": "Hiring",
-        "sections": [
-            {
-                "heading": "Hiring in Leeds: what it costs employers in 2025/26",
-                "paragraphs": [
-                    "Leeds is one of the UK's strongest financial services centres outside London, with major banks, insurance companies and building societies maintaining large operations in the city. It also has a strong legal sector, growing tech and digital economy, and significant NHS employment. Employer NI (15% above £5,000) and minimum pension (3% on qualifying earnings) apply at the same rates as everywhere in the UK — Leeds-specific factors are salary levels and sector mix.",
-                    "In financial services, Leeds salaries commonly range from £26,000 for graduate analyst roles to £65,000 for experienced managers. Legal professionals range from £28,000 for newly qualified solicitors in Leeds firms to £60,000+ for partners and senior associates. At £40,000 — common across both sectors at the mid level — total employer cost is approximately £46,263 per year before overheads.",
-                    "Leeds' digital and tech sector has grown rapidly around areas like the South Bank regeneration zone. Developer and data science roles typically sit between £35,000 and £70,000. At £55,000, employer NI is £7,500 and pension £1,322 per year, placing total employer cost at approximately £63,822 before any per-employee overhead assumptions.",
-                ],
-            },
-            {
-                "heading": "Leeds salary benchmarks and employer cost worked examples",
-                "paragraphs": [
-                    "At £25,000 — common for graduate, administrative and junior service roles — total Leeds employer cost before overheads is approximately £28,563 (NI £3,000 + pension £563). At £30,000 total employer cost is approximately £34,464. Both figures are based on 2025/26 NI rates; under 2024/25 rates, the same roles would have generated lower NI bills by approximately £790–£870 per employee.",
-                    "NHS roles in Leeds — employing thousands through Leeds Teaching Hospitals Trust and other trusts — follow national pay scales. Band 5 roles starting around £28,407 generate approximately £3,511 employer NI and £667 pension per year, totalling approximately £32,585. Band 6 roles (approximately £35,000–£42,618) generate NI of £4,500–£5,643 per year.",
-                    "For legal firms billing at solicitor and partner level, salaries of £45,000–£80,000 are typical for experienced hires. At £65,000, employer NI is £9,000 per year and pension £1,322, placing total employer cost at approximately £75,322. At £80,000, NI is £11,250 and total employer cost approximately £92,572.",
-                ],
-            },
-            {
-                "heading": "Employment Allowance and Leeds SME employers",
-                "paragraphs": [
-                    "Leeds has a vibrant SME economy — independent law firms, accountancy practices, digital agencies and healthcare providers all benefit from Employment Allowance where eligible. In 2025/26, the allowance offsets up to £10,500 of annual employer NI for qualifying businesses, up from £5,000 in 2024/25.",
-                    "A Leeds digital agency with six employees earning an average of £35,000 generates approximately £27,000 in total employer NI per year (6 × £4,500). Employment Allowance of £10,500 reduces net NI payable to approximately £16,500 — a reduction of nearly 40%. For smaller teams where total NI falls below £10,500, the entire bill can be eliminated.",
-                    "The Employment Allowance increase from £5,000 to £10,500 is especially relevant in Leeds where many firms operate as small professional practices. Previously, companies with two or three employees could only offset part of their NI bill; now, many can offset it entirely. Model this in the employer cost calculator to see the Leeds-specific impact on your headcount budget.",
-                ],
-            },
-        ],
-    },
-    "hiring-costs-bristol": {
-        "title": "Cost of Hiring in Bristol (2025/26): Employer NI, Pension & Total Salary Cost",
-        "description": "Employer hiring costs in Bristol for 2025/26. Salary benchmarks in aerospace, tech, financial services and creative sectors, with employer NI at 15%, pension and total above-salary cost.",
-        "topic": "Hiring",
-        "sections": [
-            {
-                "heading": "Hiring in Bristol: what it costs employers in 2025/26",
-                "paragraphs": [
-                    "Bristol has one of the highest average salaries outside London, driven by a strong aerospace and defence cluster (Airbus, Rolls-Royce, BAE Systems), a growing technology sector, established financial services businesses and a thriving creative economy. Employer NI at 15% and minimum pension at 3% apply nationally, but Bristol's higher average salaries mean per-employee NI costs tend to be above the UK average.",
-                    "Aerospace and engineering roles command a premium. Graduate aerospace engineers typically start at £28,000–£35,000, rising to £50,000–£75,000 for experienced engineers and programme managers. At £50,000, employer NI is £6,750 per year and pension £1,322, giving total employer cost of approximately £58,072 before overheads. At £65,000, total employer cost rises to approximately £75,322.",
-                    "Bristol's tech sector — particularly SaaS, cybersecurity and fintech — produces salaries of £40,000–£80,000 for experienced engineers. The city also has a strong creative economy with agencies, studios and broadcast employers. Entry-level creative roles typically start at £24,000–£28,000, while senior creatives and directors can earn £45,000–£60,000.",
-                ],
-            },
-            {
-                "heading": "Bristol salary benchmarks and employer cost worked examples",
-                "paragraphs": [
-                    "At £28,000 — common for entry-level professional and creative roles in Bristol — employer NI is £3,450 and minimum pension is approximately £651, totalling approximately £32,101 before overheads. At £35,000 (common mid-level across multiple Bristol sectors), total employer cost is approximately £40,363.",
-                    "For aerospace engineers and tech workers at £55,000, employer NI is £7,500 per year and pension £1,322, placing total employer cost at approximately £63,822. Financial services roles at £45,000–£60,000 generate NI of £6,000–£8,250, with pension capped at qualifying earnings of £50,270 (£1,322 minimum pension above that level).",
-                    "Bristol's relatively high salary levels mean the April 2025 NI rate increase (from 13.8% to 15%) has a proportionally larger absolute impact than in lower-wage cities. At £50,000, the rate change alone (ignoring the threshold reduction) adds approximately £603 per employee per year versus 2024/25. Combined with the threshold change from £9,100 to £5,000, the total per-employee increase at £50,000 is approximately £1,106.",
-                ],
-            },
-            {
-                "heading": "Employment Allowance and Bristol SME employers",
-                "paragraphs": [
-                    "Bristol's SME ecosystem is particularly strong in tech, creative and professional services. Employment Allowance in 2025/26 offsets up to £10,500 of annual employer NI for eligible businesses. With Bristol's higher average salaries, the NI bill per employee is often above the national average — making Employment Allowance proportionally more valuable per employee than in lower-wage regions.",
-                    "A Bristol tech startup with four developers earning an average of £50,000 generates approximately £27,000 in annual employer NI (4 × £6,750). Employment Allowance reduces this to approximately £16,500. For the same team in a city with average salaries of £35,000, total NI would be approximately £18,000 — the allowance has a larger absolute impact in Bristol's higher-wage environment.",
-                    "Model Bristol hire costs with and without Employment Allowance using the employer cost calculator. For board presentations and offer approvals, showing the net NI position after allowance is standard practice and gives a more accurate picture of true payroll burden for Bristol employers.",
-                ],
-            },
-        ],
-    },
-    "hiring-costs-edinburgh": {
-        "title": "Cost of Hiring in Edinburgh (2025/26): Employer NI, Pension & Total Salary Cost",
-        "description": "Employer hiring costs in Edinburgh for 2025/26. Salary benchmarks in financial services, public sector, tech and tourism, with employer NI at 15%, pension and total above-salary cost.",
-        "topic": "Hiring",
-        "sections": [
-            {
-                "heading": "Hiring in Edinburgh: what it costs employers in 2025/26",
-                "paragraphs": [
-                    "Edinburgh is Scotland's capital and financial centre, home to major financial institutions including Standard Life Aberdeen, Baillie Gifford, Royal Bank of Scotland and Natwest Group. The public sector is also a major employer through the Scottish Government, NHS Lothian and the University of Edinburgh. Employer NI (15% above £5,000) and pension (3% on qualifying earnings) apply at UK-wide rates — Edinburgh's distinctiveness lies in its salary levels and sector composition.",
-                    "Financial services roles in Edinburgh typically range from £28,000 for graduate analysts to £70,000+ for fund managers and senior investment professionals. At £40,000 — a common mid-market salary in financial services and professional services — total employer cost is approximately £46,263 per year. Edinburgh's tech sector, centred around companies like Skyscanner and FanDuel, produces developer salaries of £35,000–£70,000.",
-                    "Tourism and hospitality is a significant Edinburgh employer, particularly given the city's prominence as a global tourist destination. Hospitality roles at or near NLW (£12.71/hour, approximately £24,785 full-time) generate employer NI of approximately £2,968 per year. The April 2025 NI threshold change is proportionally larger for these roles than for financial services staff, adding approximately £790 per full-time NLW employee versus 2024/25.",
-                ],
-            },
-            {
-                "heading": "Edinburgh salary benchmarks and employer cost worked examples",
-                "paragraphs": [
-                    "At £28,000 — common for graduate, administrative and junior public sector roles — employer NI is £3,450 and pension approximately £651, giving total employer cost of approximately £32,101 before overheads. At £35,000, total employer cost is approximately £40,363. At £45,000 (common for experienced finance and tech professionals), employer NI is £6,000 and pension £1,163, total approximately £52,163.",
-                    "NHS Lothian roles follow national NHS pay bands. Band 5 starting salary of approximately £28,407 generates £3,511 employer NI and £667 pension per year. Band 7 salaries of approximately £46,148 generate NI of approximately £6,172 and pension of £1,177, placing total employer cost at approximately £53,497 before NHS overhead allowances.",
-                    "Edinburgh's financial services sector at the senior level produces salaries that trigger significant employer NI: at £70,000, NI is £9,750 per year and pension £1,322 (qualifying earnings capped). Total employer cost before overheads: approximately £81,072. At £90,000, NI is £12,750 and total employer cost approximately £104,072.",
-                ],
-            },
-            {
-                "heading": "Employment Allowance and Edinburgh SME employers",
-                "paragraphs": [
-                    "Edinburgh has a significant SME sector in legal services, accountancy, creative industries and technology. Employment Allowance in 2025/26 — up to £10,500 off annual employer NI — is available to most Edinburgh businesses with more than one employee. The allowance increase from £5,000 to £10,500 is particularly material for Edinburgh firms where per-employee NI averages are above the national average.",
-                    "A small Edinburgh fintech with five employees at an average salary of £45,000 generates approximately £30,000 in annual employer NI (5 × £6,000). Employment Allowance reduces net NI payable to approximately £19,500. For Edinburgh's growing startup and scaleup community, this represents a significant annual cash saving on payroll.",
-                    "Sole directors of Edinburgh-based limited companies cannot claim Employment Allowance without other employees. Hiring a second person — even part-time — typically unlocks eligibility. Use the employer cost calculator to model Edinburgh hire costs at any salary level, with and without Employment Allowance, to support headcount decisions.",
-                ],
-            },
-        ],
-    },
-    "hiring-costs-glasgow": {
-        "title": "Cost of Hiring in Glasgow (2025/26): Employer NI, Pension & Total Salary Cost",
-        "description": "Employer hiring costs in Glasgow for 2025/26. Salary benchmarks across financial services, healthcare, manufacturing and retail, with employer NI at 15%, pension and total above-salary cost.",
-        "topic": "Hiring",
-        "sections": [
-            {
-                "heading": "Hiring in Glasgow: what it costs employers in 2025/26",
-                "paragraphs": [
-                    "Glasgow is Scotland's largest city and a major employment centre spanning financial services, NHS healthcare, manufacturing, retail and a growing tech sector. Salaries tend to sit broadly in line with other major UK regional cities at the mid-market level, though London premiums do not apply. Employer NI at 15% above the £5,000 secondary threshold and minimum 3% pension apply at UK-wide rates.",
-                    "The NHS is one of Glasgow's largest employers through NHS Greater Glasgow and Clyde, employing tens of thousands of staff across hospitals, community services and administrative roles. NHS Band 5 starting salaries of approximately £28,407 generate employer NI of approximately £3,511 per year and pension of approximately £667, giving total employer cost of approximately £32,585. Financial services roles at the city's major banks and insurers typically range from £28,000 to £60,000.",
-                    "Glasgow's manufacturing sector — including engineering, shipbuilding heritage and newer precision manufacturing — contributes skilled trades roles typically earning £28,000–£45,000. At £35,000, total employer cost is approximately £40,363. Retail and hospitality, large employers given Glasgow's city centre activity, predominantly pay at or near NLW, generating employer NI of approximately £2,968 per full-time NLW employee.",
-                ],
-            },
-            {
-                "heading": "Glasgow salary benchmarks and employer cost worked examples",
-                "paragraphs": [
-                    "At £25,000 — common for retail, hospitality, administrative and entry-level service roles — employer NI is £3,000 and minimum pension is approximately £563, placing total employer cost at approximately £28,563. At £30,000, total reaches approximately £34,464. Both reflect 2025/26 rates; under 2024/25 assumptions, costs would be approximately £790–£870 lower per employee.",
-                    "For Glasgow's professional and financial services sector, salaries of £35,000–£55,000 are typical for experienced staff. At £45,000, employer NI is £6,000 per year and pension £1,163, giving total employer cost of approximately £52,163 before overheads. Senior finance professionals at £60,000 generate NI of £8,250 and total employer cost of approximately £69,572.",
-                    "Glasgow's growing tech cluster, particularly in AI, fintech and software, produces roles at £35,000–£70,000 for experienced engineers. At £55,000, total employer cost is approximately £63,822 before overheads. Graduate tech roles typically start at £26,000–£32,000, generating employer NI of £3,150–£4,050 per year.",
-                ],
-            },
-            {
-                "heading": "Employment Allowance and Glasgow SME employers",
-                "paragraphs": [
-                    "Glasgow has a significant SME base in professional services, retail, hospitality and creative industries. Employment Allowance in 2025/26 offsets up to £10,500 of annual employer NI for eligible Glasgow businesses — a significant uplift from the previous £5,000 cap. The eligibility threshold (total NI under £100,000 in the prior year) means many Glasgow businesses that previously could not claim now can.",
-                    "A Glasgow accountancy practice with six staff at an average salary of £32,000 generates approximately £20,250 in annual employer NI. Employment Allowance of £10,500 reduces net NI payable to approximately £9,750 — a saving of approximately £875 per month. For Glasgow's hospitality businesses with high headcount and lower average salaries, the absolute value of the allowance is also significant.",
-                    "Use the employer cost calculator to model Glasgow hire costs at any salary level. For budget presentations and headcount sign-off, showing the Employment Allowance-adjusted NI figure gives a more accurate picture of what Glasgow employers actually pay through PAYE across the year.",
-                ],
-            },
-        ],
-    },
-    "hiring-costs-cardiff": {
-        "title": "Cost of Hiring in Cardiff (2025/26): Employer NI, Pension & Total Salary Cost",
-        "description": "Employer hiring costs in Cardiff for 2025/26. Salary benchmarks across public sector, media, financial services and retail, with employer NI at 15%, pension and total above-salary cost.",
-        "topic": "Hiring",
-        "sections": [
-            {
-                "heading": "Hiring in Cardiff: what it costs employers in 2025/26",
-                "paragraphs": [
-                    "Cardiff is Wales's capital and dominant employment hub, with the Welsh Government, BBC Wales and a cluster of financial services businesses all headquartered or significantly present in the city. Public sector employment is proportionally larger in Cardiff than in most English cities of comparable size, and salaries tend to sit somewhat below UK national averages across most occupations. Employer NI (15% above £5,000) and pension (3%) apply at the same UK-wide rates.",
-                    "Welsh Government and Cardiff Council roles follow national public sector pay frameworks, with administrative and professional roles typically ranging from £22,000 to £50,000. BBC Wales employs production, technical and administrative staff across salary bands from £24,000 to £60,000 for senior programme-makers and editors. At £30,000 — a typical Cardiff public sector mid-level salary — total employer cost is approximately £34,464 per year.",
-                    "The Cardiff financial services cluster, including operations for major banks and insurance firms, tends to pay slightly below London and Edinburgh levels for comparable roles. Typical salaries range from £24,000 for operations and back-office staff to £55,000+ for experienced analysts and managers. At £35,000, total employer cost before overheads is approximately £40,363.",
-                ],
-            },
-            {
-                "heading": "Cardiff salary benchmarks and employer cost worked examples",
-                "paragraphs": [
-                    "At £24,000 — common across retail, administrative and lower public sector roles — employer NI is £2,850 and pension approximately £531, giving total employer cost of approximately £27,381. At £28,000 (typical for Band D local authority and junior professional roles), total employer cost is approximately £32,101. Both reflect 2025/26 NI at 15% above the £5,000 threshold.",
-                    "Cardiff's median private sector salary is somewhat below the UK average, meaning the April 2025 NI threshold change (from £9,100 to £5,000) has a proportionally larger impact here than in higher-wage cities. The additional NI on salaries of £22,000–£28,000 is approximately £790–£870 per employee versus 2024/25 — a meaningful rise for organisations with high concentrations of lower-paid roles.",
-                    "Financial services and insurance operations staff at £35,000–£45,000 generate employer NI of £4,500–£6,000 per year, with pension of £863–£1,163. At £40,000, total employer cost is approximately £46,263. Senior analysts and managers at £50,000–£55,000 generate total employer costs of £58,072–£63,822 per year before overheads.",
-                ],
-            },
-            {
-                "heading": "Employment Allowance and Cardiff SME employers",
-                "paragraphs": [
-                    "Cardiff's private sector includes growing tech, creative and professional services communities. Employment Allowance of up to £10,500 per year is available to eligible Cardiff employers and can significantly reduce NI liability for small businesses. Many Cardiff creative agencies, tech companies and independent professional practices have total NI bills below £10,500, meaning they can eliminate their NI entirely through the allowance.",
-                    "A Cardiff digital agency with five staff at an average salary of £28,000 generates approximately £17,250 in annual employer NI. Employment Allowance of £10,500 reduces net NI payable to approximately £6,750 — a saving of nearly 61%. For businesses operating in Cardiff's lower-wage environment, the allowance provides proportionally greater relief than in London or Bristol.",
-                    "The Employment Allowance increase from £5,000 to £10,500 in April 2025 is particularly impactful for Cardiff businesses. Previously, only a fraction of NI was offset for many firms; now the entire bill may be eliminated. Use the employer cost calculator to see your Cardiff hire costs with allowance applied before committing to new headcount.",
-                ],
-            },
-        ],
-    },
-    "hiring-costs-liverpool": {
-        "title": "Cost of Hiring in Liverpool (2025/26): Employer NI, Pension & Total Salary Cost",
-        "description": "Employer hiring costs in Liverpool for 2025/26. Salary benchmarks across healthcare, logistics, retail and the creative economy, with employer NI at 15%, pension and total above-salary cost.",
-        "topic": "Hiring",
-        "sections": [
-            {
-                "heading": "Hiring in Liverpool: what it costs employers in 2025/26",
-                "paragraphs": [
-                    "Liverpool is a major UK employment market with key sectors in NHS healthcare (one of the largest employers in the region), retail and hospitality, port and logistics operations, and an established creative economy. Salaries tend to sit in the lower range of major UK cities, with a median broadly comparable with other North West and Midlands cities. Employer NI (15% above £5,000) and pension (3%) apply at UK-wide rates.",
-                    "NHS employment through Liverpool University Hospitals Trust and Mersey Care employs tens of thousands of people across clinical, administrative and support roles. NHS Band 5 starting salary of approximately £28,407 generates employer NI of £3,511 and pension of £667 per year, totalling approximately £32,585 employer cost. Band 3 administrative and support roles at approximately £22,816–£24,336 generate NI of £2,672–£2,900 per year.",
-                    "Liverpool's port and logistics sector — one of the UK's busiest — employs warehouse operatives, port staff and logistics managers across a wide salary range. Operative roles typically earn £24,000–£32,000, generating employer NI of £2,850–£4,050. Management and specialist roles at £35,000–£50,000 generate NI of £4,500–£6,750 per year. The April 2025 NI threshold change adds approximately £790–£870 per lower-paid logistics employee versus 2024/25.",
-                ],
-            },
-            {
-                "heading": "Liverpool salary benchmarks and employer cost worked examples",
-                "paragraphs": [
-                    "At £24,000 — common for retail, hospitality, administrative and NHS Band 3 roles — employer NI is £2,850 and pension approximately £531, giving total employer cost of approximately £27,381 before overheads. At £28,000, total employer cost is approximately £32,101. These figures reflect 2025/26 rates; the April 2025 threshold change increases costs by approximately £790 per year for NLW full-time employees versus 2024/25.",
-                    "Creative and digital sector roles in Liverpool — supported by organisations like Liverpool Film Office and the growing tech community — typically range from £24,000 for entry-level roles to £45,000–£55,000 for experienced professionals and managers. At £35,000, total employer cost is approximately £40,363. Liverpool's creative sector has relatively high concentrations of freelance and contract workers; converting these to PAYE employment adds NI and pension at the relevant rate.",
-                    "Liverpool's retail and hospitality sector employs large numbers of staff at or near NLW. A full-time NLW employee (£24,785/year) generates employer NI of approximately £2,968 and pension of approximately £556, giving total employer cost of approximately £28,309 per year. For retailers and venues employing ten or more staff at NLW, Employment Allowance can eliminate the entire employer NI bill if total NI is below £10,500.",
-                ],
-            },
-            {
-                "heading": "Employment Allowance and Liverpool SME employers",
-                "paragraphs": [
-                    "Liverpool has a substantial SME sector in hospitality, retail, creative industries and professional services. Employment Allowance in 2025/26 — up to £10,500 off annual employer NI — is especially valuable for Liverpool's lower-average-salary businesses, where the allowance can eliminate NI entirely for teams of four to six employees. The previous eligibility cap of £100,000 annual NI has been removed, widening access.",
-                    "A Liverpool hospitality business with eight staff earning an average of £24,000 generates approximately £22,800 in annual employer NI. Employment Allowance of £10,500 reduces net NI payable to approximately £12,300 — a saving of nearly 46%. For smaller venues or retailers with five or fewer NLW staff, the total NI bill may fall below £10,500, allowing full elimination through the allowance.",
-                    "Use the employer cost calculator to model Liverpool hire costs at any salary level with Employment Allowance applied. For headcount sign-off and cashflow planning, presenting the net NI position after allowance is more useful than the gross NI figure, particularly for Liverpool businesses where allowance covers a large proportion of the annual NI liability.",
-                ],
-            },
-        ],
-    },
-    "first-employee-cost": {
-        "title": "Cost of Hiring Your First Employee in the UK (2025/26)",
-        "description": "What does it actually cost to hire your first employee in the UK? This guide covers employer NI at 15%, pension auto-enrolment, Employment Allowance and total true cost for 2025/26.",
-        "topic": "Hiring",
-        "sections": [
-            {
-                "heading": "What does hiring your first employee actually cost?",
-                "paragraphs": [
-                    "Many first-time employers focus on the salary figure and miss the mandatory add-ons. In 2025/26, every UK employer must pay employer National Insurance on top of gross salary — 15% on earnings above £5,000 — and once your employee is eligible, you must also make auto-enrolment pension contributions of at least 3% of their qualifying earnings. These two items alone typically add 14–17% on top of the headline salary.",
-                    "At a £28,000 starting salary, the true employer cost before overheads is approximately £32,153 per year: £28,000 salary, £3,450 employer NI and £653 employer pension. If you are hiring at £35,000, the total reaches approximately £40,363 before any equipment, software or workspace costs. Use the employer cost calculator to model your specific salary.",
-                    "Beyond the statutory costs, factor in one-off hiring costs that do not appear in the recurring model: job board fees (typically £100–£600 per post), any recruitment agency fees (often 10–20% of first-year salary for specialist roles), and the time cost of onboarding. The statutory costs on this page are the recurring floor — the true cost of hiring your first employee is higher when setup costs are included.",
-                ],
-            },
-            {
-                "heading": "Employment Allowance — your key relief as a first employer",
-                "paragraphs": [
-                    "Good news for first-time employers: most new businesses can claim Employment Allowance in 2025/26, which reduces your employer NI bill by up to £10,500. If your first employee is on a salary below approximately £75,000, the allowance will cover your entire employer NI liability for the year.",
-                    "The main exception is sole-director companies with no other employees. If you are the only director and have no other employees, you cannot claim. Once you hire your first employee (who is not a fellow director), the allowance becomes available. Check HMRC's guidance or confirm with your accountant before the first payroll run.",
-                    "To claim Employment Allowance, select 'Yes' in the Employment Allowance field within your payroll software at the start of the tax year. Most UK payroll software — Xero, QuickBooks, Sage, FreeAgent — handles this automatically once you indicate eligibility. The allowance is applied against your employer NI liability each pay period until used.",
-                ],
-            },
-            {
-                "heading": "Auto-enrolment: your pension duties from day one",
-                "paragraphs": [
-                    "If your first employee is aged 22 or over and earns more than £10,000 per year, you must automatically enrol them into a workplace pension within six weeks of their start date. You must make a minimum employer contribution of 3% on qualifying earnings between £6,240 and £50,270. There is no opt-out for the employer — only the employee can choose to opt out.",
-                    "For a £30,000 salary, qualifying earnings are £30,000 minus £6,240 = £23,760. Your minimum employer pension contribution is 3% of £23,760 = £712.80 per year, or approximately £59 per month. This is paid into the employee's pension pot in addition to their employee contribution (minimum 5% of qualifying earnings under auto-enrolment rules).",
-                    "Most payroll software handles auto-enrolment automatically once you set it up, but you need to register with a pension provider first. NEST (the National Employment Savings Trust) is a government-backed option available to all UK employers. You can use any authorised pension provider. Set this up before your first payroll run rather than scrambling to catch up.",
-                ],
-            },
-            {
-                "heading": "True first-employee cost by salary: worked examples",
-                "paragraphs": [
-                    "At a £25,000 salary with Employment Allowance: employer NI is £3,000 but fully offset by allowance, so net NI = £0. Pension = £563. True recurring cost = £25,563 per year. This is the best-case scenario for a first employer who qualifies for the allowance.",
-                    "At a £30,000 salary with Employment Allowance: NI of £3,750 fully offset. Pension = £714. Recurring cost = £30,714. Without Employment Allowance, the figure rises to £34,464. The difference — £3,750 — is the value of claiming the allowance at this salary.",
-                    "At a £45,000 salary, the employer NI is £6,000 per year. Employment Allowance offsets £6,000 fully. Pension on qualifying earnings: (£45,000 − £6,240) × 3% = £1,162.80 per year. Recurring cost with allowance: £46,163. Without allowance: £52,163. Beyond £75,000 salary, NI will exceed the £10,500 allowance and a residual NI liability applies. Use the calculator to model the exact figure.",
-                ],
-            },
-        ],
-    },
-    "part-time-employee-cost": {
-        "title": "Cost of Employing Part-Time Staff UK (2025/26) — Employer NI, Pension & On-Costs",
-        "description": "How much does a part-time employee cost a UK employer? Employer NI at 15%, pension at 3%, Employment Allowance and true cost at common part-time salary levels for 2025/26.",
-        "topic": "Hiring",
-        "sections": [
-            {
-                "heading": "How part-time employee costs work",
-                "paragraphs": [
-                    "Part-time employees are subject to the same employer National Insurance and pension rules as full-time staff. The secondary threshold for employer NI is £5,000 per year — not pro-rated for part-time hours. That means a part-time employee earning £15,000 per year still attracts employer NI at 15% on earnings above £5,000, giving £1,500 per year in NI.",
-                    "Pension auto-enrolment applies if the employee earns more than £10,000 per year in a single job and is aged between 22 and State Pension Age. If they earn between £6,240 and £10,000, they have the right to opt in but do not have to be automatically enrolled. Below £6,240, no pension duty applies. For a part-time worker on £12,000 per year, qualifying earnings are £12,000 − £6,240 = £5,760, and minimum employer pension is 3% of £5,760 = £172.80 per year.",
-                    "This means part-time hires can have a higher percentage-above-salary cost than full-time hires, because the fixed NI threshold is not reduced. A full-time £50,000 salary costs about 16% above salary in NI and pension. A part-time £15,000 salary costs about 12% above salary in NI and pension — but a part-time £20,000 salary costs about 14% above, and that percentage rises toward the full-time equivalent as salary increases.",
-                ],
-            },
-            {
-                "heading": "Part-time employer cost: worked examples for 2025/26",
-                "paragraphs": [
-                    "At a £12,000 part-time salary: employer NI is £1,050 per year (15% of £7,000), pension is £172.80 per year. Total employer cost = £13,222.80 per year or approximately £1,101 per month.",
-                    "At a £16,000 part-time salary: employer NI is £1,650 per year, pension is £291.60 per year. Total cost = £17,941.60 per year. At £20,000: NI = £2,250, pension = £411.60. Total = £22,661.60. At £25,000: NI = £3,000, pension = £563. Total = £28,563.",
-                    "Employment Allowance applies to part-time employees in the same way as full-time. If you are an eligible employer with employer NI below £10,500 per year across all your employees, the allowance fully offsets the liability. For small businesses with a few part-time workers, this is particularly valuable.",
-                ],
-            },
-            {
-                "heading": "Auto-enrolment for part-time workers: what changes",
-                "paragraphs": [
-                    "The most important distinction for part-time workers and auto-enrolment is the £10,000 earnings threshold. Workers earning below £10,000 per year from you are not automatically enrolled — but they have the right to opt in. If they opt in, you must make the minimum employer contribution.",
-                    "The qualifying earnings band (£6,240–£50,270) is also fixed — not pro-rated. So for a worker earning £8,000 per year, qualifying earnings are £8,000 − £6,240 = £1,760, and minimum employer pension is just 3% of £1,760 = £52.80 per year. Low-earning part-time workers carry a very low pension cost.",
-                    "If a worker has more than one part-time job, each employer assesses auto-enrolment duties separately based on their own salary payment only — not the employee's total earnings from all jobs. Make sure you assess eligibility accurately at the start of employment and re-assess at the annual re-enrolment date.",
-                ],
-            },
-        ],
-    },
-}
-
-# Load daily SEO content additions (updated by automation — never edit manually)
-_SEO_PATH = os.path.join(os.path.dirname(__file__), "data", "seo_extras.json")
-if os.path.exists(_SEO_PATH):
-    with open(_SEO_PATH) as _f:
-        _seo_extras = json.load(_f)
-    GUIDES.update(_seo_extras.get("guides", {}))
-
-STATIC_PAGES = {
-    "methodology": {
-        "title": "Methodology — How Employer Cost Calculations Work",
-        "description": "How EmployerCalculator.co.uk calculates employer NI, pension contributions and total hiring costs. Assumptions, formulae and update schedule for 2025/26.",
-        "content": [
-            "EmployerCalculator uses deterministic formulae for 2025/26 employer NI, pension minimums and total employer cost modelling. Each result is rendered server-side and included directly in HTML for SEO.",
-            "Employer NI assumptions: 15% rate above £5,000 secondary threshold, with support for Employment Allowance up to £10,500 and relief handling for under-21 and apprentice under-25 scenarios up to the upper secondary threshold.",
-            "Pension assumptions: employer minimum 3% and total minimum 8% on qualifying earnings band £6,240 to £50,270. Programmatic pages default to minimum employer contribution unless stated.",
-            "Update schedule: rates and thresholds are reviewed each tax-year cycle and whenever HMRC issues in-year updates. Pages display tax year explicitly.",
-            "Disclaimer: estimates only and not financial or legal advice.",
-        ],
-    },
-    "editorial-standards": {
-        "title": "Editorial Standards",
-        "description": "Accuracy, review and correction standards for EmployerCalculator.co.uk content.",
-        "content": [
-            "We publish practical, decision-focused content for UK employers using official sources where available. Content is reviewed against HMRC and GOV.UK guidance before publication.",
-            "Every guide includes a byline and source review statement. Calculator assumptions are documented on methodology and source pages.",
-            "If we identify an accuracy issue, we correct promptly and update the relevant page copy. We favour clear assumptions and plain English over marketing language.",
-        ],
-    },
-    "sources": {
-        "title": "Sources — HMRC & GOV.UK References",
-        "description": "Official HMRC and GOV.UK sources used for employer NI rates, pension thresholds, Employment Allowance and statutory pay figures on EmployerCalculator.co.uk.",
-        "content": [
-            "HMRC Rates and thresholds for employers 2025 to 2026",
-            "National Insurance rates and letters",
-            "Employment Allowance guidance",
-            "Automatic enrolment guidance from The Pensions Regulator",
-            "GOV.UK redundancy, notice and statutory payment guidance",
-        ],
-        "links": [
-            ("HMRC rates and thresholds 2025/26", "https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2025-to-2026"),
-            ("National Insurance rates and letters", "https://www.gov.uk/national-insurance-rates-letters"),
-            ("Employment Allowance", "https://www.gov.uk/employment-allowance"),
-            ("Workplace pension contributions", "https://www.thepensionsregulator.gov.uk/en/employers/managing-a-scheme/contributions-and-funding"),
-            ("Statutory redundancy pay", "https://www.gov.uk/redundancy-your-rights"),
-        ],
-    },
-    "about": {
-        "title": "About",
-        "description": "About EmployerCalculator.co.uk.",
-        "content": [
-            "EmployerCalculator.co.uk is a UK employer-cost calculator hub focused on payroll and HR decision support for the 2025/26 tax year.",
-            "It is the employer-side sister site to AfterTaxSalary.co.uk, which focuses on employee take-home pay.",
-            "Our goal is simple: help employers understand monthly and annual cost before they hire, budget, or restructure.",
-        ],
-    },
-    "privacy": {
-        "title": "Privacy Policy",
-        "description": "Privacy policy for EmployerCalculator.co.uk.",
-        "content": [
-            "We minimise personal data collection. Standard web server logs may include IP address, browser and request metadata for security and operations.",
-            "Calculator inputs are processed to produce estimates and are not sold. Contact form submissions are used only to respond to enquiries.",
-            "You can contact us for privacy requests using the contact page.",
-        ],
-    },
-    "terms": {
-        "title": "Terms of Use",
-        "description": "Terms of use for EmployerCalculator.co.uk.",
-        "content": [
-            "Calculator outputs are estimates based on stated assumptions and are provided for informational purposes only.",
-            "The site does not provide legal, tax or financial advice. You remain responsible for payroll compliance and professional advice where required.",
-            "By using the site, you accept these terms and agree not to rely solely on estimates for legal or contractual decisions.",
-        ],
-    },
-}
-
-GSC_INTENT_PAGES: Dict[str, Dict] = {
-    "/employer-total-cost-calculator": {
-        "title": "Total Employer Cost Calculator UK (2025/26) — Salary, NI, Pension & Overheads",
-        "description": "Calculate total employer cost in the UK for 2025/26. Salary + employer NI (15% above £5k) + pension (3%) + optional overheads. £35k = £40,363/yr · £50k = £58,063/yr. Free calculator.",
-        "h1": "Total employer cost calculator UK (2025/26)",
-        "badge": "Calculator intent",
-        "intro": "Use the total employer cost calculator to convert a headline salary into the true UK employer budget number for 2025/26. It combines gross salary, employer NI at 15% on earnings above £5,000, employer pension at 3% of qualifying earnings, and optional per-head overhead assumptions. Use the result for offer approvals, headcount plans and finance sign-off.",
-        "bullets": [
-            "Model the true cost above headline salary for UK hiring decisions.",
-            "Switch between minimum pension assumptions and your internal overhead baseline.",
-            "Compare 2025/26 versus 2024/25 NI to quantify the April 2025 rate change impact.",
-        ],
-        "primary_cta": {"label": "Open full employer total cost calculator", "url": "/calculator"},
-        "faq_items": [
-            {"q": "What does total employer cost include?", "a": "Total employer cost includes gross salary, employer NI, employer pension, and any per-employee overhead assumptions such as equipment or software."},
-            {"q": "Is this UK-specific?", "a": "Yes. This page and calculator use UK 2025/26 assumptions, including employer NI at 15% above the £5,000 secondary threshold and auto-enrolment pension minimums."},
-            {"q": "What is the total employer cost for a £35,000 salary?", "a": "For a £35,000 salary in 2025/26, total employer cost is approximately £39,500 per year — £35,000 salary plus £4,500 employer NI (15% above £5,000) plus £863 employer pension (3% of qualifying earnings). With a £3,000 overhead assumption, total rises to approximately £42,500."},
-            {"q": "How do I calculate total employer cost?", "a": "Formula: total employer cost = gross salary + (gross salary − £5,000) × 15% + (min(salary, £50,270) − £6,240) × 3% + overheads. For a £35,000 salary: £35,000 + £4,500 NI + £863 pension = £40,363 before overheads."},
-        ],
-    },
-    "/employer-cost-calculator-uk": {
-        "title": "Employer Cost Calculator UK (2025/26) | EmployerCalculator.co.uk",
-        "description": "Employer cost calculator UK page for 2025/26. Check monthly and annual employer spend including NI, pension and optional overheads.",
-        "h1": "Employer cost calculator UK",
-        "badge": "Calculator intent",
-        "intro": "This employer cost calculator UK page is designed for salary budgeting, offer approvals and headcount planning. It focuses on practical employer-side payroll cost rather than employee take-home pay.",
-        "bullets": [
-            "Get a monthly and annual view of employer payroll cost in one place.",
-            "Include Employment Allowance where eligible to model net NI due.",
-            "Compare salary-only decisions against true recurring employer spend.",
-        ],
-        "primary_cta": {"label": "Run employer cost calculation", "url": "/calculator"},
-        "faq_items": [
-            {"q": "How is employer NI handled in this calculator?", "a": "Employer NI is calculated at 15% on earnings above £5,000 for 2025/26, with optional Employment Allowance offset where selected."},
-            {"q": "Does this include pension cost?", "a": "Yes. Minimum employer pension is modelled at 3% of qualifying earnings (£6,240 to £50,270), with adjustable contribution rate input."},
-        ],
-    },
-    "/total-cost-to-employer-calculator-uk": {
-        "title": "Total Cost to Employer Calculator UK (2025/26) | EmployerCalculator.co.uk",
-        "description": "Total cost to employer calculator UK page. Estimate full annual and monthly employer cost with NI, pension and overhead assumptions.",
-        "h1": "Total cost to employer calculator UK",
-        "badge": "Calculator intent",
-        "intro": "Use this total cost to employer calculator UK page to convert headline salary into a true employer budget number for 2025/26 planning and approval workflows.",
-        "bullets": [
-            "Translate salary into total employer cost with transparent assumptions.",
-            "View NI and pension components separately for better reporting.",
-            "Keep output consistent across finance, HR and hiring managers.",
-        ],
-        "primary_cta": {"label": "Calculate total cost to employer", "url": "/calculator"},
-        "faq_items": [
-            {"q": "Why is total cost above salary?", "a": "Because UK employers also pay employer NI and pension contributions on top of gross salary, and many businesses carry additional per-employee overhead costs."},
-            {"q": "Can I use this for budget sign-off?", "a": "Yes, as a baseline estimator. Use the same assumptions line (tax year, NI rate/threshold, pension basis, overhead rule) across stakeholders."},
-        ],
-    },
-    "/auto-enrolment-payroll-costs": {
-        "title": "Auto Enrolment Payroll Costs 2025/26: What Employers Actually Pay | EmployerCalculator.co.uk",
-        "description": "Auto enrolment payroll costs explained for UK employers. Minimum 3% employer pension on qualifying earnings £6,240–£50,270. See per-employee cost by salary for 2025/26.",
-        "h1": "Auto enrolment payroll costs for UK employers (2025/26)",
-        "badge": "Pension costs",
-        "intro": "Auto enrolment adds a mandatory pension contribution on top of every eligible employee's salary. For 2025/26, the minimum employer contribution is 3% of qualifying earnings — the slice of salary between £6,240 and £50,270. That means for a £30,000 salary the auto enrolment cost to the employer is approximately £714 per year (3% of £30,000 minus £6,240). For a £50,000 salary it is approximately £1,309 per year. Use the pension cost calculator to model any salary, or the full employer calculator to combine pension with employer NI and overhead costs.",
-        "bullets": [
-            "Minimum employer contribution: 3% of qualifying earnings.",
-            "2025/26 qualifying earnings band: £6,240 to £50,270.",
-            "A £30,000 salary adds approximately £714/year in auto enrolment pension cost.",
-            "A £50,000 salary adds approximately £1,309/year (capped at upper qualifying earnings limit).",
-            "Eligible workers aged 22–State Pension Age earning above £10,000 must be enrolled automatically.",
-        ],
-        "primary_cta": {"label": "Open auto-enrolment pension cost calculator", "url": "/pension-cost"},
-        "faq_items": [
-            {"q": "What are qualifying earnings for auto-enrolment in 2025/26?", "a": "For 2025/26, qualifying earnings run from £6,240 to £50,270. The employer's minimum 3% contribution is calculated on the portion of salary that falls within that band, not on the full gross salary."},
-            {"q": "How much does auto enrolment cost the employer per month?", "a": "For a £30,000 salary, auto enrolment pension costs the employer around £59 per month (3% of £23,760 qualifying earnings, divided by 12). For a £40,000 salary it is around £84 per month. Use the pension cost calculator for any specific salary."},
-            {"q": "Which employees must be auto-enrolled?", "a": "Workers aged between 22 and State Pension Age who earn more than £10,000 per year in a single job must be automatically enrolled. Workers aged 16–21 or over State Pension Age, or those earning below £10,000, have the right to opt in but are not automatically enrolled."},
-            {"q": "Can employees opt out of auto-enrolment?", "a": "Yes. Employees can opt out within one month of being enrolled, and if they do the employer stops contributions and refunds theirs. Employers must re-enrol eligible employees every three years even if they previously opted out."},
-            {"q": "Does auto enrolment cost change if we offer more than 3%?", "a": "Yes. If you offer a higher employer contribution — common at 5% or 10% — model it using the full employer calculator. The statutory minimum is 3% of qualifying earnings, but many employers pay more to attract and retain staff."},
-            {"q": "Where do I calculate full employer cost including NI and pension?", "a": "Use the full employer calculator to combine salary, employer NI (15% above £5,000 for 2025/26) and pension contributions in one result. You can also add per-employee overhead costs."},
-        ],
-    },
-    "/ni-change-calculator": {
-        "title": "National Insurance Rise Calculator UK 2025/26 | Before & After April 2025 by Salary",
-        "description": "NI change calculator: see exact 2024/25 vs 2025/26 employer NI for any salary. £30k: rose from £2,884 to £3,750 (+£866). £50k: rose from £5,640 to £6,750 (+£1,110). Rate 13.8%→15%, threshold £9,100→£5,000.",
-        "h1": "NI rise calculator for UK employers (2025/26)",
-        "badge": "NI rise / NI change",
-        "intro": "From 6 April 2025, employer National Insurance rose from 13.8% to 15% and the secondary threshold fell from £9,100 to £5,000 per year. Both changes hit at once, which means lower-paid employees now attract employer NI on a much larger portion of their salary. At £30,000, the annual NI bill rose from approximately £2,884 to £3,750 — an increase of £866 per employee. At £35,000, the rise is around £915. Use the full employer cost calculator below to run your specific salary and see the exact 2025/26 versus 2024/25 comparison.",
-        "bullets": [
-            "NI rate change: 13.8% → 15% (from 6 April 2025).",
-            "Threshold change: £9,100 → £5,000 secondary threshold.",
-            "At £35,000 salary: NI rises from ~£3,585 to ~£4,500 (+£915/year).",
-            "At £50,000 salary: NI rises from ~£5,640 to ~£6,750 (+£1,110/year).",
-            "Employment Allowance increased from £5,000 to £10,500 for eligible smaller employers.",
-        ],
-        "primary_cta": {"label": "Run NI change comparison in calculator", "url": "/calculator"},
-        "faq_items": [
-            {"q": "What changed in April 2025 for employer NI?", "a": "Employer NI rose from 13.8% to 15%, and the secondary threshold fell from £9,100 to £5,000, both effective from 6 April 2025. Both changes apply at once, so lower-paid roles now face NI on a much larger earnings band at a higher rate."},
-            {"q": "How much has employer NI increased per employee?", "a": "At £30,000, annual employer NI rose by approximately £866. At £35,000 it rose by around £915. At £50,000 the increase is approximately £1,110. Use the full employer cost calculator to see the exact change for your specific salary."},
-            {"q": "Does Employment Allowance offset the NI increase?", "a": "It can offset part or all of employer NI for eligible smaller employers, but it does not change the underlying NI rate or threshold. Employment Allowance itself increased to £10,500 for 2025/26, which partially offsets the impact for eligible employers."},
-            {"q": "Is this the same as a payroll NI change calculator?", "a": "Yes, this page explains the April 2025 NI change and links to a full calculator where you can enter salary, pension and overheads to see both 2025/26 and 2024/25 NI outcomes side by side."},
-        ],
-    },
-    "/employer-costs-uk": {
-        "title": "Employer Costs UK 2025/26 — What Employers Pay On Top of Salary",
-        "description": "Full breakdown of UK employer costs for 2025/26: employer NI at 15% above £5,000, pension at 3% minimum, Employment Allowance up to £10,500. See exactly what you pay per employee.",
-        "h1": "Employer costs UK (2025/26) — what you pay on top of salary",
-        "badge": "Employer costs UK",
-        "intro": "In the UK, an employer's cost is always higher than the stated salary. For 2025/26, you must add employer NI at 15% on earnings above £5,000, a minimum 3% pension contribution under auto-enrolment, and any per-employee overhead costs. For a £35,000 salary, the statutory employer costs (NI + pension) add £5,363 per year — taking total employer spend to at least £40,363 before overheads. Use the full employer cost calculator to model your specific payroll.",
-        "bullets": [
-            "Employer NI: 15% on all earnings above the £5,000 secondary threshold.",
-            "Pension: minimum 3% on qualifying earnings between £6,240 and £50,270.",
-            "Employment Allowance: up to £10,500/year off the NI bill for eligible employers.",
-            "£30,000 salary → approx £34,464 total employer cost (NI + pension, no overheads).",
-            "£50,000 salary → approx £58,063 total employer cost (NI + pension, no overheads).",
-        ],
-        "primary_cta": {"label": "Calculate your employer costs", "url": "/calculator"},
-        "faq_items": [
-            {"q": "What are the statutory employer costs in the UK for 2025/26?", "a": "The two statutory employer costs are: employer NI (15% on earnings above £5,000) and employer pension (minimum 3% of qualifying earnings between £6,240 and £50,270 under auto-enrolment). Both are mandatory on top of gross salary for most employees."},
-            {"q": "How much do employer costs add on top of salary?", "a": "Typically 12–18% above gross salary for standard salaries. At £35,000: employer NI £4,500 + pension £863 = £5,363 extra (15.3% above salary). At £50,000: employer NI £6,750 + pension £1,313 = £8,063 extra (16.1% above salary)."},
-            {"q": "What is Employment Allowance and how does it reduce employer costs?", "a": "Employment Allowance lets eligible employers offset up to £10,500 of their annual employer NI bill. For a small business with total employer NI below £10,500, this can eliminate the entire NI liability. Single-director companies with no other employees cannot claim."},
-        ],
-    },
-    "/how-much-do-i-cost-my-employer": {
-        "title": "How Much Do I Cost My Employer UK? 2025/26 | EmployerCalculator.co.uk",
-        "description": "Find out what you cost your employer in 2025/26. Your employer pays NI at 15% and pension on top of your salary. Earn £35,000? You cost your employer approximately £40,363/year.",
-        "h1": "How much do I cost my employer? (UK, 2025/26)",
-        "badge": "Employee perspective",
-        "intro": "Your gross salary is not what your employer pays for you. On top of your salary, your employer pays employer NI — 15% on earnings above £5,000 in 2025/26 — and a minimum 3% pension contribution. If you earn £35,000, your employer's total cost is approximately £40,363 per year. If you earn £50,000, it is approximately £58,063. Use the calculator below to see the exact figure for any salary.",
-        "bullets": [
-            "£25,000 salary → you cost your employer approx £29,214/year.",
-            "£35,000 salary → you cost your employer approx £40,363/year.",
-            "£50,000 salary → you cost your employer approx £58,063/year.",
-            "£75,000 salary → you cost your employer approx £87,063/year.",
-            "None of this is deducted from your pay — it is an additional cost on top.",
-        ],
-        "primary_cta": {"label": "See your true cost to your employer", "url": "/calculator"},
-        "faq_items": [
-            {"q": "How much more do I cost my employer than my salary?", "a": "Typically 13–18% above your gross salary. At £35,000: your employer pays ~£4,500 in NI and ~£863 in minimum pension on top of your salary — so you cost them roughly £40,363/year before any overheads or benefits."},
-            {"q": "Does my employer pay NI on my full salary?", "a": "No — only on earnings above the £5,000 secondary threshold. At £35,000, NI is charged on £30,000 × 15% = £4,500. The first £5,000 of your salary is exempt from employer NI."},
-            {"q": "Is employer NI taken from my pay?", "a": "No. Employer NI is paid by your employer on top of your gross salary. It is entirely separate from your own employee NI, which is deducted from your take-home pay at 8% between £12,570 and £50,270."},
-        ],
-    },
-    "/paye-cost-to-employer-calculator": {
-        "title": "PAYE Cost to Employer Calculator UK 2025/26 | EmployerCalculator.co.uk",
-        "description": "Calculate the PAYE cost to employer for any UK salary. 2025/26: employer NI at 15% above £5,000 plus 3% minimum pension. Monthly and annual totals with 2024/25 comparison.",
-        "h1": "PAYE cost to employer calculator (UK, 2025/26)",
-        "badge": "PAYE employer cost",
-        "intro": "The PAYE employer cost includes employer NI — charged at 15% on earnings above £5,000 for 2025/26 — plus the employer's minimum auto-enrolment pension contribution of 3% on qualifying earnings. The calculator below gives monthly and annual totals, Employment Allowance modelling, and a comparison against 2024/25 figures for any UK salary.",
-        "bullets": [
-            "Employer NI for 2025/26: 15% on earnings above the £5,000 secondary threshold.",
-            "Minimum employer pension: 3% on qualifying earnings (£6,240–£50,270 band).",
-            "Employment Allowance reduces employer NI bill by up to £10,500 for eligible employers.",
-            "PAYE employer cost for £35,000 salary: approx £5,363/year above salary (NI + pension).",
-        ],
-        "primary_cta": {"label": "Open PAYE employer cost calculator", "url": "/calculator"},
-        "faq_items": [
-            {"q": "What is included in PAYE employer costs?", "a": "PAYE employer costs are employer NI (Class 1, secondary contributions) and employer pension under auto-enrolment. In 2025/26, employer NI is 15% above the £5,000 secondary threshold. Employer pension minimum is 3% of qualifying earnings between £6,240 and £50,270. Both are paid by the employer on top of gross salary."},
-            {"q": "Is this a PAYE calculator for employers?", "a": "Yes. This page provides the employer-side PAYE cost model: employer NI and pension obligations. For employee take-home pay after income tax and employee NI, use AfterTaxSalary.co.uk."},
-        ],
-    },
-    "/employer-national-insurance-calculator": {
-        "title": "Employer National Insurance Calculator UK 2025/26 | EmployerCalculator.co.uk",
-        "description": "Employer National Insurance calculator for UK employers. 2025/26: 15% on earnings above £5,000. See NI due by salary — annual and monthly — with 2024/25 comparison and Employment Allowance modelling.",
-        "h1": "Employer National Insurance calculator (UK, 2025/26)",
-        "badge": "Employer NI",
-        "intro": "This employer National Insurance calculator uses 2025/26 rules: 15% on employee earnings above the £5,000 secondary threshold. Enter any salary to see annual and monthly employer NI, the 2024/25 comparison, and the impact of Employment Allowance. Commonly used when budgeting a new hire, checking a payroll assumption, or quantifying the April 2025 NI rise.",
-        "bullets": [
-            "2025/26 employer NI rate: 15% above the £5,000 secondary threshold.",
-            "Employment Allowance up to £10,500 available for eligible employers.",
-            "Compare 2024/25 (13.8% above £9,100) with 2025/26 rates.",
-            "No upper earnings cap — employer NI continues at 15% on all earnings above threshold.",
-        ],
-        "primary_cta": {"label": "Open employer NI calculator", "url": "/employer-ni"},
-        "faq_items": [
-            {"q": "How do I calculate employer National Insurance?", "a": "Multiply (gross salary minus £5,000) by 15%. For example: £35,000 minus £5,000 = £30,000 × 15% = £4,500 employer NI per year (2025/26). Use the employer NI table to look up any standard salary."},
-            {"q": "What is the employer NI rate in 2025/26?", "a": "The employer NI rate for 2025/26 is 15% on earnings above the £5,000 secondary threshold (down from £9,100 in 2024/25). The rate itself increased from 13.8% to 15% from 6 April 2025."},
-            {"q": "What is Employment Allowance and who can claim it?", "a": "Employment Allowance lets eligible employers reduce their employer NI bill by up to £10,500 per year in 2025/26. Most limited companies with at least one employee who is not a sole director qualify. Single-director companies with no other employees cannot claim."},
-        ],
-    },
-    "/salary-calculator-for-employers": {
-        "title": "Salary Calculator for Employers UK 2025/26 — True Cost to Employer | EmployerCalculator.co.uk",
-        "description": "Free salary calculator for UK employers. See the true employer cost of any salary — NI at 15%, pension at 3%, and overhead assumptions — with annual and monthly totals for 2025/26.",
-        "h1": "Salary calculator for employers (UK, 2025/26)",
-        "badge": "Salary cost",
-        "intro": "When an employer sees a salary figure, the actual cost is higher — employer NI at 15% above £5,000, pension at 3% of qualifying earnings, and any workspace or equipment overheads on top. This salary calculator for employers converts a gross salary into a full annual and monthly employer cost for 2025/26, so offer approvals, headcount budgets and cost-per-hire estimates use a consistent number.",
-        "bullets": [
-            "A £30,000 salary costs approximately £34,464/year total — 15% above headline.",
-            "A £40,000 salary costs approximately £45,813/year (with £3,000 overheads).",
-            "A £60,000 salary costs approximately £68,563/year total.",
-            "Adjust pension rate and overhead assumptions for your specific payroll policy.",
-        ],
-        "primary_cta": {"label": "Open salary calculator for employers", "url": "/calculator"},
-        "faq_items": [
-            {"q": "Why does a salary cost more than the stated figure?", "a": "UK employers pay employer NI on top of gross salary — 15% of earnings above £5,000 in 2025/26 — plus a minimum 3% employer pension contribution. A £35,000 salary typically costs around £40,363/year total before additional overheads."},
-            {"q": "What is included in a full employer salary cost?", "a": "Gross salary, employer NI (15% above £5,000), employer pension (3% minimum on qualifying earnings), and any overhead costs such as equipment, software or workspace. Use the full employer cost calculator to model all four components."},
-            {"q": "How do I use this as a pay calculator for employers?", "a": "Enter gross salary, choose your pension rate and overhead assumptions, and apply Employment Allowance if eligible. The calculator shows annual and monthly totals, a cost breakdown chart, and comparison against 2024/25 NI assumptions."},
-        ],
-    },
-    "/employee-cost-calculator-uk": {
-        "title": "Employee Cost Calculator UK 2025/26 — True Cost per Employee | EmployerCalculator.co.uk",
-        "description": "Employee cost calculator for UK employers. The true cost per employee includes salary, employer NI at 15% above £5,000, and pension at 3% minimum. See annual and monthly totals for 2025/26.",
-        "h1": "Employee cost calculator UK (2025/26)",
-        "badge": "Employee cost",
-        "intro": "The true cost of an employee is not just their salary. UK employers must also pay employer NI — 15% on earnings above the £5,000 secondary threshold from April 2025 — plus a minimum 3% pension contribution under auto-enrolment. This employee cost calculator models those three components for any salary and shows monthly and annual totals. For total workforce cost planning, include per-employee overhead assumptions.",
-        "bullets": [
-            "Salary + employer NI + pension = baseline employee cost floor.",
-            "Add overheads (equipment, software, workspace) for realistic total per-employee spend.",
-            "Compare 2024/25 and 2025/26 NI assumptions to understand cost drift.",
-            "Employment Allowance can offset NI for eligible smaller employers.",
-        ],
-        "primary_cta": {"label": "Calculate true cost per employee", "url": "/calculator"},
-        "faq_items": [
-            {"q": "What is the true cost of an employee UK?", "a": "The statutory minimum cost of an employee in the UK is salary plus employer NI (15% above £5,000 for 2025/26) plus minimum employer pension (3% of qualifying earnings). A £35,000 employee costs approximately £40,363/year before overheads."},
-            {"q": "How much does an employee cost on top of their salary in the UK?", "a": "Typically 15–20% above gross salary. At £30,000: roughly £4,464 extra in NI and pension. At £50,000: roughly £8,063 extra. Overheads (equipment, software, workspace) add a further £2,000–£5,000 for most roles."},
-            {"q": "Does this include employer pension costs?", "a": "Yes. The calculator includes minimum employer pension at 3% of qualifying earnings (£6,240 to £50,270 band). You can adjust the pension rate to match your actual employer contribution policy."},
-        ],
-    },
-    "/employer-ni-calculator-2025-26": {
-        "title": "Employer NI Calculator 2025/26 | 15% Rate, £5,000 Threshold — EmployerCalculator.co.uk",
-        "description": "Employer NI calculator for 2025/26: 15% on earnings above the £5,000 secondary threshold. See NI due by salary, monthly and annual. Employment Allowance up to £10,500 included. Compare 2024/25 vs 2025/26.",
-        "h1": "Employer NI calculator 2025/26 (UK)",
-        "badge": "2025/26 employer NI",
-        "intro": "This employer NI calculator covers the 2025/26 rules: 15% on employee earnings above the £5,000 secondary threshold. Enter any salary and see annual and monthly NI, with Employment Allowance modelling and a side-by-side 2024/25 comparison. For a full cost view including pension and overheads, use the total employer cost calculator.",
-        "bullets": [
-            "2025/26 employer NI rate: 15% above the £5,000 secondary threshold.",
-            "Example: £40,000 salary → £5,250 employer NI/year (£437.50/month).",
-            "Employment Allowance up to £10,500 can offset eligible employers' NI bill.",
-            "No upper earnings cap on employer NI (unlike employee NI which drops to 2% above £50,270).",
-            "Use the full calculator for pension, overhead and total employer cost modelling.",
-        ],
-        "primary_cta": {"label": "Open employer NI calculator 2025/26", "url": "/calculator"},
-        "faq_items": [
-            {"q": "What is the employer NI rate for 2025/26?", "a": "The employer NI rate for 2025/26 is 15% on employee earnings above the secondary threshold of £5,000 per year (£96.15/week). This applies to standard Class 1 contributions. Reduced rates of 0% apply for employees under 21 and apprentices under 25."},
-            {"q": "Is there an upper cap on employer NI?", "a": "No. Employer NI is charged at 15% above the £5,000 threshold with no upper earnings cap. Unlike employee NI which drops to 2% above £50,270, employer NI continues at 15% on all earnings above threshold."},
-            {"q": "How do I calculate employers NI on a salary?", "a": "Multiply (gross salary minus £5,000) by 15%. For example: £35,000 salary — £5,000 = £30,000 × 15% = £4,500 employer NI per year."},
-        ],
-    },
-    "/uk-average-salary": {
-        "title": "UK Average Salary 2025/26 — What It Costs Employers | EmployerCalculator.co.uk",
-        "description": "The UK average salary is approximately £37,430/year (ONS 2024). For employers, that means ~£42,544 total annual cost including employer NI at 15% and 3% pension. See the full breakdown.",
-        "h1": "UK average salary — and what it costs employers (2025/26)",
-        "badge": "Average salary",
-        "intro": "The UK median full-time salary is approximately £37,430 per year according to the ONS Annual Survey of Hours and Earnings (2024). For employers, the total cost is higher — employer NI at 15% above the £5,000 secondary threshold adds approximately £4,864, and minimum auto-enrolment pension at 3% of qualifying earnings adds £942. Total employer cost for the average UK salary: approximately £43,236 per year, or £3,603 per month. Use the calculator to model any salary.",
-        "bullets": [
-            "UK median full-time salary (ONS 2024): ~£37,430/year (£3,119/month gross).",
-            "Employer NI on average salary: ~£4,864/year at 15% above £5,000.",
-            "Employer pension on average salary: ~£942/year at 3% of qualifying earnings.",
-            "Total cost to employer for average UK salary: approximately £43,236/year.",
-            "Average monthly salary UK (gross): ~£3,119. Take-home varies by tax code — see AfterTaxSalary.co.uk.",
-        ],
-        "primary_cta": {"label": "Calculate cost for any salary", "url": "/calculator"},
-        "secondary_cta": {"label": "See take-home pay on AfterTaxSalary.co.uk", "url": "https://aftertaxsalary.co.uk"},
-        "faq_items": [
-            {"q": "What is the average monthly salary in the UK?", "a": "Based on ONS ASHE 2024 data, the UK median full-time gross salary is approximately £37,430/year — that is roughly £3,119 per month before tax and deductions. Average salary varies significantly by sector, region and role."},
-            {"q": "What does the UK average salary cost an employer per month?", "a": "At a £37,430 salary, an employer pays approximately £3,603/month total — the gross salary (£3,119) plus employer NI (~£405/month) plus minimum pension (~£79/month). Overhead costs are additional."},
-            {"q": "What is the average take-home pay in the UK?", "a": "Take-home pay on a £37,430 salary is approximately £28,500–£29,500 per year for a standard taxpayer in England — around £2,375–£2,460 per month after income tax and employee NI. The exact figure depends on your tax code and student loan status. Use AfterTaxSalary.co.uk for a precise figure."},
-            {"q": "What is the UK average salary in 2025?", "a": "The most recent ONS data (ASHE 2024, published October 2024) puts median full-time UK earnings at £37,430/year. The mean (average) full-time salary is higher at approximately £44,000 due to high earners skewing the average."},
-            {"q": "Is the UK average salary before or after tax?", "a": "All salary figures quoted by ONS are gross (before tax). Employers pay this gross amount plus employer NI and pension on top. Employees receive net pay after income tax, employee NI and any student loan deductions."},
-        ],
-    },
-    "/employer-ni-historical-rates": {
-        "title": "Employer NI Historical Rates — 2020/21, 2022/23, 2023/24, 2024/25, 2025/26 | EmployerCalculator.co.uk",
-        "description": "Employer NI rates and thresholds by tax year: 2020/21 to 2025/26. Rate rose from 13.8% to 15% in April 2025. Secondary threshold dropped from £9,100 to £5,000. Use for prior-year cost comparisons.",
-        "h1": "Employer National Insurance — historical rates by tax year",
-        "badge": "Historical rates",
-        "intro": "Employer National Insurance rates and secondary thresholds have changed significantly in recent years. The most significant change was from April 2025 (2025/26): the rate increased from 13.8% to 15% and the secondary threshold dropped from £9,100 to £5,000, sharply increasing the cost of lower-paid roles. Use this page to look up the correct rate for a prior tax year, or use the calculator for 2025/26 modelling.",
-        "bullets": [
-            "2025/26: 15% above £5,000 secondary threshold (from April 2025).",
-            "2024/25: 13.8% above £9,100 secondary threshold.",
-            "2023/24: 13.8% above £9,100 secondary threshold.",
-            "2022/23: 13.8% above £9,100 (July 2022 onwards; 15.05% Apr–Jul 2022 with health & social care levy).",
-            "2021/22: 13.8% above £8,840 secondary threshold.",
-            "2020/21: 13.8% above £8,788 secondary threshold.",
-        ],
-        "primary_cta": {"label": "Calculate 2025/26 employer NI now", "url": "/employer-ni"},
-        "faq_items": [
-            {"q": "What was the employer NI rate in 2022/23?", "a": "In 2022/23, employer NI was 13.8% above the £9,100 secondary threshold. From April to July 2022 a temporary 1.25% Health and Social Care Levy uplift applied, making the effective rate 15.05% for that period. It reverted to 13.8% from November 2022."},
-            {"q": "What was the employer NI rate in 2023/24?", "a": "In 2023/24, employer NI was 13.8% above the £9,100 secondary threshold. The rate and threshold were unchanged from 2022/23 (post-levy reversal)."},
-            {"q": "What was the employer NI rate in 2024/25?", "a": "In 2024/25, employer NI remained at 13.8% above the £9,100 secondary threshold. This changed significantly from April 2025 when the rate rose to 15% and the threshold dropped to £5,000."},
-            {"q": "When did employer NI change to 15%?", "a": "Employer NI increased from 13.8% to 15% from 6 April 2025 (the start of the 2025/26 tax year), as announced in the October 2024 Budget. At the same time, the secondary threshold dropped from £9,100 to £5,000."},
-            {"q": "How do I calculate employer NI for a previous tax year?", "a": "Multiply (gross salary minus the threshold for that year) by the rate for that year. For 2024/25: (salary − £9,100) × 13.8%. For 2025/26: (salary − £5,000) × 15%. The full-year cost for 2025/26 is substantially higher for most salaries due to both rate and threshold changes."},
-        ],
-    },
-    "/true-cost-of-employee-calculator-uk": {
-        "title": "True Cost of an Employee Calculator UK 2025/26 | EmployerCalculator.co.uk",
-        "description": "Calculate the true cost of an employee UK. A £35k employee costs £40,363/year — salary plus employer NI at 15% plus 3% pension. Free 2025/26 calculator with overheads and Employment Allowance.",
-        "h1": "True cost of an employee calculator (UK, 2025/26)",
-        "badge": "True cost",
-        "intro": "The true cost of an employee is always higher than the salary on the offer letter. For 2025/26 UK employers must pay employer NI at 15% on earnings above £5,000, a minimum 3% pension under auto-enrolment, and carry any per-employee overhead costs on top. The calculator below gives the true total for any salary — annual and monthly — with Employment Allowance modelling for eligible employers.",
-        "bullets": [
-            "£25,000 salary → ~£28,563/year true cost (employer NI + pension).",
-            "£35,000 salary → ~£40,363/year true cost (with £3,000 overhead assumption).",
-            "£50,000 salary → ~£58,063/year true cost (with £3,000 overhead assumption).",
-            "£75,000 salary → ~£86,813/year true cost (with £3,000 overhead assumption).",
-            "Employment Allowance (up to £10,500) reduces NI for eligible employers.",
-        ],
-        "primary_cta": {"label": "Calculate true cost of your employee", "url": "/calculator"},
-        "faq_items": [
-            {"q": "What is the true cost of an employee in the UK?", "a": "In 2025/26, the true minimum cost is gross salary plus employer NI (15% above £5,000) plus employer pension (3% of qualifying earnings). A £35,000 salary costs approximately £40,363/year before additional overheads."},
-            {"q": "How much does a £30,000 employee really cost?", "a": "A £30,000 salary costs approximately £34,464/year including employer NI of ~£3,750 and pension of ~£714. With typical overhead assumptions (equipment, software, workspace) the figure rises to approximately £37,464."},
-            {"q": "What overheads should I include in employee cost?", "a": "Common overhead inclusions: desk/workspace cost (£1,500–£3,000/year), IT equipment and software licences (£500–£1,500/year), recruitment amortisation, and training budget. The calculator allows a custom overhead figure."},
-            {"q": "How does Employment Allowance affect the true cost?", "a": "Eligible employers can offset up to £10,500 of employer NI per year with Employment Allowance. For a small team this can significantly reduce per-employee cost — especially for lower salary ranges where NI is a larger proportion of total cost."},
-        ],
-    },
-    "/employer-salary-cost-calculator-uk": {
-        "title": "Employer Salary Cost Calculator UK (2025/26) — True Cost Above Salary | EmployerCalculator.co.uk",
-        "description": "UK employer salary cost calculator for 2025/26. See the true cost of any salary — employer NI at 15% above £5,000, pension at 3% minimum. £35k salary = £40,363/yr. Monthly and annual totals.",
-        "h1": "Employer salary cost calculator UK (2025/26)",
-        "badge": "Salary cost",
-        "intro": "An employer's salary cost is always higher than the stated gross salary. For 2025/26, you must add employer NI at 15% on earnings above £5,000 and a minimum 3% employer pension contribution under auto-enrolment. This employer salary cost calculator UK page shows the true annual and monthly cost for any salary, with a side-by-side 2024/25 comparison and optional Employment Allowance and overhead modelling. Use the calculator below for any specific figure.",
-        "bullets": [
-            "Employer NI is 15% on earnings above £5,000 — no upper earnings cap.",
-            "Employer pension minimum is 3% of qualifying earnings between £6,240 and £50,270.",
-            "A £35,000 salary costs approximately £39,500/year — £40,363 with £3k overheads.",
-            "A £50,000 salary costs approximately £58,063/year including NI, pension and £3k overheads.",
-            "Employment Allowance (up to £10,500) can reduce net NI for eligible employers.",
-        ],
-        "primary_cta": {"label": "Open employer salary cost calculator", "url": "/calculator"},
-        "faq_items": [
-            {"q": "What does employer salary cost include?", "a": "Employer salary cost includes gross salary, employer NI (15% on earnings above £5,000 for 2025/26), and minimum employer pension (3% of qualifying earnings under auto-enrolment). It does not automatically include recruitment fees, training or equipment — add an overhead figure in the full calculator for a total picture."},
-            {"q": "How do I calculate employer salary cost UK?", "a": "Formula: gross salary + (salary − £5,000) × 15% + (min(salary, £50,270) − £6,240) × 3%. For £35,000: £35,000 + £4,500 NI + £863 pension = £40,363. Use the calculator above for any salary."},
-            {"q": "What is the employer salary cost for £30,000?", "a": "For a £30,000 salary in 2025/26, the employer cost before overheads is approximately £34,464: £30,000 salary + £3,750 employer NI + £714 pension. With a standard overhead assumption of £3,000, total rises to approximately £37,464."},
-            {"q": "Does Employment Allowance reduce employer salary cost?", "a": "Yes. Eligible employers can claim up to £10,500 of Employment Allowance per year, reducing their employer NI bill. This can materially lower the net employer salary cost for smaller businesses. Single-director companies with no other employees cannot claim."},
-        ],
-    },
-    "/first-employee-cost-uk": {
-        "title": "Cost of Hiring Your First Employee UK (2025/26) | EmployerCalculator.co.uk",
-        "description": "What does it cost to hire your first employee in the UK? Employer NI at 15%, pension at 3%, Employment Allowance for eligible new employers. Free 2025/26 calculator and guide.",
-        "h1": "Cost of hiring your first employee in the UK (2025/26)",
-        "badge": "First employee",
-        "intro": "Hiring your first employee costs more than the salary figure on the offer letter. In 2025/26, UK employers pay employer NI at 15% on earnings above £5,000, and must make minimum 3% pension contributions once the employee is auto-enrolled. Most first-time employers also qualify for Employment Allowance, which can offset up to £10,500 of employer NI. This page gives the true cost model with worked examples and the allowance calculation included.",
-        "bullets": [
-            "Employer NI for 2025/26: 15% on earnings above £5,000 secondary threshold.",
-            "Auto-enrolment pension: 3% minimum on qualifying earnings £6,240–£50,270.",
-            "Employment Allowance: up to £10,500 off your NI bill — available to most first employers.",
-            "At £28,000 salary with allowance, recurring cost ≈ £28,653/yr.",
-            "Without allowance, a £28,000 salary costs approximately £32,153/yr.",
-        ],
-        "primary_cta": {"label": "Calculate first employee cost", "url": "/calculator"},
-        "secondary_cta": {"label": "Read the full guide", "url": "/guides/first-employee-cost"},
-        "faq_items": [
-            {"q": "Can I claim Employment Allowance for my first employee?", "a": "Most first-time employers who are not sole-director companies can claim Employment Allowance. Once you hire at least one employee who is not a fellow director, you are usually eligible. The allowance offsets up to £10,500 of employer NI per year in 2025/26."},
-            {"q": "When do I need to auto-enrol my first employee?", "a": "You must auto-enrol within six weeks of the employee's start date if they are aged 22 to State Pension Age and earn more than £10,000 per year. Set up a pension provider (NEST is a free government-backed option) before their first payroll run."},
-            {"q": "What is the true total cost of hiring someone at £30,000?", "a": "At £30,000 salary, employer NI is £3,750 per year (15% above £5,000) and pension is £714 per year (3% of qualifying earnings). Total employer cost before overheads: approximately £34,464 per year. With Employment Allowance, the NI is offset — bringing the figure to approximately £30,714."},
-        ],
-    },
-    "/part-time-employee-cost": {
-        "title": "Part-Time Employee Cost UK (2025/26) — Employer NI, Pension & True Cost | EmployerCalculator.co.uk",
-        "description": "How much does a part-time employee cost a UK employer? Employer NI at 15% applies on earnings above £5,000, pension applies above £10,000 earnings. Free 2025/26 calculator.",
-        "h1": "Part-time employee cost UK (2025/26)",
-        "badge": "Part-time cost",
-        "intro": "Part-time employees carry most of the same employer cost obligations as full-time staff. Employer NI at 15% applies on earnings above £5,000 regardless of hours — the threshold is not pro-rated. Auto-enrolment pension applies if the part-time employee earns more than £10,000 per year with you and is the right age. This page sets out the true recurring cost of part-time employees at common salary levels for 2025/26.",
-        "bullets": [
-            "Employer NI threshold of £5,000 is fixed — not reduced for part-time hours.",
-            "Auto-enrolment applies above £10,000 earnings in a single job.",
-            "At £15,000 part-time salary: NI = £1,500/yr, pension = £262/yr. Total ≈ £16,762/yr.",
-            "At £20,000 part-time salary: NI = £2,250/yr, pension = £411/yr. Total ≈ £22,661/yr.",
-            "Employment Allowance applies to part-time employees the same as full-time.",
-        ],
-        "primary_cta": {"label": "Calculate part-time employee cost", "url": "/calculator"},
-        "secondary_cta": {"label": "Read the full guide", "url": "/guides/part-time-employee-cost"},
-        "faq_items": [
-            {"q": "Do I pay employer NI on part-time employees?", "a": "Yes. The £5,000 secondary threshold is not pro-rated for part-time hours. Employer NI at 15% applies to all earnings above £5,000 regardless of how many hours the employee works. A part-time worker earning £15,000 per year generates £1,500 in employer NI."},
-            {"q": "Do I need to auto-enrol a part-time worker?", "a": "You must auto-enrol if the worker earns more than £10,000 per year from you, is aged 22 to State Pension Age, and works in the UK. If they earn between £6,240 and £10,000, they can opt in but you do not have to enrol them automatically. Below £6,240, no pension obligation applies."},
-            {"q": "How much does a part-time employee on £16,000 cost?", "a": "At £16,000 salary in 2025/26: employer NI is £1,650 per year (15% of £11,000). Pension qualifying earnings are £16,000 − £6,240 = £9,760; minimum employer contribution is £292.80 per year. Total employer cost before overheads: approximately £17,943 per year."},
-        ],
-    },
-    "/minimum-wage-employer-cost": {
-        "title": "Minimum Wage Employer Cost UK 2025/26 — NI, Pension & True Total | EmployerCalculator.co.uk",
-        "description": "What does a minimum wage employee cost a UK employer in 2025/26? Employer NI at 15%, pension at 3%, and true recurring cost at the 2025/26 National Minimum Wage and National Living Wage rates.",
-        "h1": "Minimum wage employer cost UK (2025/26)",
-        "badge": "Minimum wage",
-        "intro": "The National Living Wage (NLW) for workers aged 21 and over is £12.71 per hour from April 2026, giving an annual salary of approximately £24,785 for a standard 37.5-hour week. For employers, the true cost of a minimum wage employee in 2026/27 is higher — employer NI at 15% on earnings above £5,000 adds approximately £2,968 per year, and minimum auto-enrolment pension adds approximately £556 per year. Total employer cost for a full-time NLW employee: approximately £28,309 per year before overheads. Use the calculator below for any specific salary or hours.",
-        "bullets": [
-            "National Living Wage (21+): £12.71/hr from April 2026. Full-time ≈ £24,785/yr.",
-            "National Minimum Wage (18–20): £10.00/hr. Under-18: £7.55/hr.",
-            "Employer NI on £24,785: approximately £2,968/year (15% above £5,000).",
-            "Employer pension on £24,785: approximately £556/year (3% of qualifying earnings).",
-            "Total employer cost for full-time NLW employee: approximately £28,309/year before overheads.",
-        ],
-        "primary_cta": {"label": "Calculate minimum wage employer cost", "url": "/calculator"},
-        "faq_items": [
-            {"q": "What is the National Living Wage from April 2026?", "a": "The National Living Wage (NLW) for workers aged 21 and over is £12.71 per hour from April 2026. For a 37.5-hour week, this gives an annual salary of approximately £24,785. The rate increased from £12.21 per hour in 2025/26."},
-            {"q": "How much does a minimum wage employee cost an employer?", "a": "A full-time employee on the 2025/26 National Living Wage (£24,785/year) costs an employer approximately £28,309 per year: £24,785 salary + £2,968 employer NI (15% above £5,000) + £556 employer pension (3% of qualifying earnings). With typical overheads of £2,000–£3,000, total rises to approximately £29,000–£30,000."},
-            {"q": "Do employers pay NI on minimum wage workers?", "a": "Yes. Employer NI at 15% applies on all earnings above £5,000 per year, regardless of wage rate. A minimum wage employee earning £24,785 per year generates £2,968 in employer NI. The April 2025 threshold change from £9,100 to £5,000 specifically increased costs for lower-paid workers, including those on minimum wage."},
-            {"q": "Has Employment Allowance changed what minimum wage workers cost?", "a": "Employment Allowance can eliminate the employer NI bill for eligible small employers — up to £10,500 per year. For businesses with small teams all earning near minimum wage, this can reduce the per-employee NI cost to zero. Single-director companies without other staff cannot claim."},
-        ],
-    },
-    "/employer-cost-per-employee": {
-        "title": "Employer Cost Per Employee UK 2025/26 — NI, Pension & Average Total | EmployerCalculator.co.uk",
-        "description": "What is the average employer cost per employee in the UK? At the median salary of £37,430, employer NI and pension add approximately £5,806/year. Full 2025/26 breakdown by salary level.",
-        "h1": "Employer cost per employee UK (2025/26)",
-        "badge": "Cost per employee",
-        "intro": "The employer cost per employee in the UK is always higher than the headline salary. At the UK median full-time salary of approximately £37,430 (ONS ASHE 2024), an employer pays around £4,864 in employer NI (15% above the £5,000 secondary threshold) and £942 in minimum pension (3% on qualifying earnings), bringing the statutory cost per employee to approximately £43,236 per year. This page shows cost per employee at common UK salary levels so you can benchmark and plan headcount budgets for 2025/26.",
-        "bullets": [
-            "UK median full-time salary 2024/25: approximately £37,430 (ONS ASHE 2024).",
-            "Employer NI on £37,430: approximately £4,864/year at 15% above £5,000.",
-            "Employer pension on £37,430: approximately £942/year at 3% of qualifying earnings.",
-            "Total statutory employer cost at median salary: approximately £43,236/year.",
-            "Employment Allowance can offset up to £10,500 NI for eligible smaller employers.",
-        ],
-        "primary_cta": {"label": "Calculate employer cost per employee", "url": "/calculator"},
-        "faq_items": [
-            {"q": "What is the average employer cost per employee in the UK?", "a": "At the UK median full-time salary of approximately £37,430 (ONS ASHE 2024), the total employer cost per employee is approximately £43,236 per year — £37,430 salary plus £4,864 employer NI and £942 employer pension. Adding typical workplace overheads of £3,000 per employee brings the figure to approximately £46,236."},
-            {"q": "How much does employer NI cost per employee in 2025/26?", "a": "Employer NI per employee depends on salary. At £25,000 it is £3,000/year. At £35,000 it is £4,500/year. At £50,000 it is £6,750/year. The rate is 15% on all earnings above the £5,000 secondary threshold, with no upper cap."},
-            {"q": "What overhead costs should I add to per-employee budget?", "a": "Beyond NI and pension, common per-employee overheads include desk space or remote work allowance (£1,000–£3,000/year), IT equipment and software licences (£500–£1,500/year), training budget, and any benefits such as health insurance or enhanced pension. For planning purposes, £2,000–£5,000 per head is a common overhead assumption for UK office-based roles."},
-        ],
-    },
-}
-
-
-INDUSTRY_PAGES: Dict[str, Dict] = {
-    "cost-of-employing-hospitality-staff": {
-        "title": "Cost of Employing Hospitality Staff UK 2025/26 — Employer NI, Pension & Total",
-        "description": "True employer cost of hospitality staff in 2025/26. Employer NI at 15%, pension at 3%, total cost for chefs, front-of-house and managers at UK hospitality salary levels.",
-        "h1": "Cost of employing hospitality staff UK (2025/26)",
-        "badge": "Hospitality sector",
-        "example_salary": 24000,
-        "salary_range": "£23,809 (NLW) – £45,000",
-        "intro": "Hospitality is one of the UK's most labour-intensive sectors and one of the hardest hit by the April 2025 employer NI changes. With a large proportion of staff earning at or near the National Living Wage (£12.71/hour), the threshold cut from £9,100 to £5,000 has increased per-employee NI costs proportionally more than in higher-salary industries. At a typical front-of-house salary of £24,000, employer NI is approximately £2,850 per year — up from approximately £2,060 under 2024/25 rules. A kitchen porter or bar worker on NLW full-time (£24,785) generates employer NI of approximately £2,968 per year, pension of approximately £556, giving a total employer cost of approximately £28,309 before overheads.",
-        "bullets": [
-            "Typical front-of-house salary: £23,809–£27,000 (NLW to senior waiting staff).",
-            "Chef de partie / junior chef: £26,000–£35,000. Head chef: £35,000–£55,000.",
-            "Employer NI on £24,000 salary: approximately £2,850/year (15% above £5,000).",
-            "Minimum employer pension on £24,000: approximately £531/year (3% of qualifying earnings).",
-            "Hospitality managers: £28,000–£45,000 salary range, employer NI £3,450–£6,000/year.",
-            "April 2025 NI threshold change particularly impacted lower-wage hospitality employers.",
-        ],
-        "primary_cta": {"label": "Calculate hospitality staff employer cost", "url": "/calculator?salary=24000"},
-        "secondary_cta": {"label": "Cost by salary level", "url": "/cost-of-employing"},
-        "faq_items": [
-            {"q": "How has the employer NI change affected hospitality businesses?", "a": "The April 2025 changes raised employer NI from 13.8% to 15% and cut the secondary threshold from £9,100 to £5,000. For hospitality staff on NLW (£24,785/year), this added approximately £790 per employee per year in NI costs. For a venue employing 10 staff at NLW, that represents around £7,900 per year in additional employer NI."},
-            {"q": "Do hospitality employers have to auto-enrol staff?", "a": "Yes, if workers are aged 22–66 and earn more than £10,000 per year. For full-time hospitality staff on NLW earning £24,785, auto-enrolment is mandatory and the minimum employer contribution is 3% of qualifying earnings — approximately £556/year. Workers below £10,000 can opt in, but the employer contribution obligation also applies."},
-            {"q": "Can hospitality businesses claim Employment Allowance?", "a": "Yes, if eligible. Most hospitality businesses with more than one employee qualify for Employment Allowance, which offsets up to £10,500 of annual employer NI. For a small restaurant or pub with six to eight staff earning near NLW, this can eliminate the entire annual NI bill — leaving only pension contributions and salary as the above-salary costs."},
-        ],
-    },
-    "cost-of-employing-care-workers": {
-        "title": "Cost of Employing Care Workers UK 2025/26 — Employer NI, Pension & Total",
-        "description": "Employer cost for care workers in 2025/26. Salary benchmarks, employer NI at 15%, pension at 3%, total cost for domiciliary and residential care staff.",
-        "h1": "Cost of employing care workers UK (2025/26)",
-        "badge": "Care sector",
-        "example_salary": 25000,
-        "salary_range": "£23,809 (NLW) – £32,000",
-        "intro": "Care workers in England, Scotland, Wales and Northern Ireland are predominantly paid between the National Living Wage and approximately £14–£15 per hour. In 2025/26, employer NI applies at 15% on all earnings above £5,000 — and with care roles typically earning £22,000–£28,000 per year, a larger share of salary falls in the NIable band than before the April 2025 threshold change. At £25,000 salary, employer NI is £3,000 per year and minimum pension is approximately £563, giving a total employer cost of approximately £28,563 before any overheads. For domiciliary care providers with large numbers of part-time workers, NI applies on each employee individually — hours are not pooled.",
-        "bullets": [
-            "Care assistant / support worker: typically £23,809–£26,000 (NLW to experienced level).",
-            "Senior care worker / team leader: £26,000–£32,000.",
-            "Care coordinator / registered manager: £28,000–£45,000.",
-            "Employer NI on £25,000: approximately £3,000/year (15% above £5,000).",
-            "Minimum pension on £25,000: approximately £563/year (3% of qualifying earnings).",
-            "NI threshold is NOT pro-rated for part-time hours — applies in full per employee.",
-        ],
-        "primary_cta": {"label": "Calculate care worker employer cost", "url": "/calculator?salary=25000"},
-        "secondary_cta": {"label": "Part-time employee cost", "url": "/part-time-employee-cost"},
-        "faq_items": [
-            {"q": "Does the employer NI threshold apply per employee or per organisation?", "a": "The £5,000 secondary threshold applies per employee, individually. A domiciliary care provider with 20 part-time workers cannot pool their hours or earnings to benefit from a single threshold — each worker's NI is calculated individually. This means even low-hour part-time care workers generate employer NI once their annual pay exceeds £5,000."},
-            {"q": "How much does a care worker cost an employer per year?", "a": "A care assistant earning £25,000 costs an employer approximately £28,563 per year before overheads — £25,000 salary, approximately £3,000 employer NI and approximately £563 minimum pension. With mileage, training and coordination costs typical in domiciliary care, total per-employee cost is often £30,000–£32,000 per year."},
-            {"q": "Is Employment Allowance available to care providers?", "a": "Most care employers with more than one employee qualify for Employment Allowance, which offsets up to £10,500 of annual employer NI in 2025/26. For smaller domiciliary care businesses with three to five employees, this can significantly reduce net NI payable. Single-director companies with no other employees cannot claim."},
-        ],
-    },
-    "cost-of-employing-retail-staff": {
-        "title": "Cost of Employing Retail Staff UK 2025/26 — Employer NI, Pension & Total",
-        "description": "What does it cost to employ retail staff in the UK in 2025/26? Employer NI at 15%, pension contributions and total per-employee cost at typical retail wage levels.",
-        "h1": "Cost of employing retail staff UK (2025/26)",
-        "badge": "Retail sector",
-        "example_salary": 24785,
-        "salary_range": "£23,809 (NLW) – £40,000",
-        "intro": "Retail is the UK's largest private-sector employer, and the majority of retail staff are paid at or close to the National Living Wage. In 2026/27, a full-time retail assistant on NLW (£12.71/hour) earns approximately £24,785 per year. The employer's total cost — salary, employer NI (15% above £5,000) and minimum pension — is approximately £28,309 per year. For retailers employing large numbers of part-time workers, each individual employee has their own NI threshold assessment. The April 2025 threshold change (from £9,100 to £5,000) has added approximately £790 per full-time NLW employee per year in additional employer NI.",
-        "bullets": [
-            "Retail sales assistant (NLW full-time): ~£24,785/year salary, ~£28,309 total cost.",
-            "Supervisor / team leader: £26,000–£32,000, total cost £30,300–£37,600.",
-            "Store manager (small format): £28,000–£40,000, total cost £32,800–£46,300.",
-            "Employer NI on NLW salary (£24,785): approximately £2,968/year.",
-            "Minimum pension on NLW salary: approximately £556/year.",
-            "April 2025 NI change adds ~£790/year per NLW full-time retail worker.",
-        ],
-        "primary_cta": {"label": "Calculate retail staff employer cost", "url": "/calculator?salary=24785"},
-        "secondary_cta": {"label": "Minimum wage employer cost", "url": "/minimum-wage-employer-cost"},
-        "faq_items": [
-            {"q": "How much does a part-time retail worker cost an employer?", "a": "A part-time retail worker on 20 hours per week at NLW (£12.71/hr) earns approximately £12,699/year. Employer NI on that salary is approximately £1,155 (15% of £7,699 above the £5,000 threshold) and minimum pension is approximately £195. Total employer cost before overheads: approximately £14,049/year. The NI threshold (£5,000) applies in full, not pro-rated for part-time hours."},
-            {"q": "Do retailers have to pay pension on minimum wage staff?", "a": "Yes, if the employee is aged 22–66 and earns more than £10,000/year. For full-time NLW staff earning £24,785, auto-enrolment is mandatory. For part-time staff earning under £10,000, they can opt in but are not automatically enrolled — however if they opt in, the employer must still contribute at minimum 3% of qualifying earnings."},
-            {"q": "How does Employment Allowance help retail employers?", "a": "For small retailers with total employer NI below £10,500/year, Employment Allowance can eliminate the entire NI bill. A small shop with five full-time NLW staff generates approximately £14,105 in total employer NI per year, so Employment Allowance (£10,500) would reduce net NI payable to approximately £3,605 per year. Larger retail chains above the eligibility criteria cannot claim."},
-        ],
-    },
-    "cost-of-employing-construction-workers": {
-        "title": "Cost of Employing Construction Workers UK 2025/26 — Employer NI, Pension & Total",
-        "description": "Employer cost for construction workers in the UK in 2025/26. Salary benchmarks for labourers, tradespeople and site managers, with employer NI and pension calculations.",
-        "h1": "Cost of employing construction workers UK (2025/26)",
-        "badge": "Construction sector",
-        "example_salary": 35000,
-        "salary_range": "£24,000–£65,000",
-        "intro": "Construction employment spans a wide salary range — from general labourers earning close to the National Living Wage to experienced site managers and senior engineers commanding £55,000–£70,000 or more. At a mid-market salary of £35,000 (common for an experienced tradesperson such as a joiner, electrician or plumber), total employer cost in 2025/26 is approximately £40,363 before overheads — £35,000 salary plus £4,500 employer NI and £863 minimum pension. For site managers at £50,000, total employer cost before overheads is approximately £58,072 per year. Many construction businesses also use CIS subcontractor arrangements for self-employed workers, which have a different cost and NI structure.",
-        "bullets": [
-            "General labourer: ~£24,000–£28,000. Employer NI: £2,850–£3,450.",
-            "Experienced tradesperson (electrician, plumber, joiner): £32,000–£45,000.",
-            "CSCS-qualified specialist: £35,000–£55,000.",
-            "Site manager / project manager: £45,000–£70,000.",
-            "Employer NI on £35,000: approximately £4,500/year (15% above £5,000).",
-            "CIS subcontractors (self-employed): no employer NI or pension obligation.",
-        ],
-        "primary_cta": {"label": "Calculate construction worker employer cost", "url": "/calculator?salary=35000"},
-        "secondary_cta": {"label": "Contractor vs employee cost", "url": "/contractor-vs-employee-cost"},
-        "faq_items": [
-            {"q": "What is the difference in cost between employing PAYE and CIS subcontractors in construction?", "a": "A PAYE employee at £35,000 costs an employer approximately £40,363/year in salary, NI and pension. A CIS self-employed subcontractor does not generate employer NI or pension costs — you simply pay the agreed rate. However, CIS workers must be genuinely self-employed (HMRC applies specific tests). Falsely categorising employees as self-employed carries significant penalties including back-payment of NI and interest."},
-            {"q": "How much employer NI is due on a construction site manager salary?", "a": "A site manager earning £50,000 per year generates £6,750 in employer NI (15% of £45,000 above the £5,000 threshold) plus approximately £1,322 minimum pension on qualifying earnings. Total employer cost before overheads: approximately £58,072 per year. At £60,000 salary, total employer cost rises to approximately £70,072."},
-            {"q": "Does the Construction Industry Scheme affect employer NI?", "a": "CIS affects income tax deductions from payments to subcontractors, not employer NI. CIS only applies to payments for construction work to self-employed workers or subcontractors operating through their own limited companies. Directly employed PAYE construction workers pay standard income tax and NI through payroll — CIS does not apply to them."},
-        ],
-    },
-    "cost-of-employing-it-staff": {
-        "title": "Cost of Employing IT Staff UK 2025/26 — Employer NI, Pension & True Total Cost",
-        "description": "Employer cost for IT and tech staff in the UK in 2025/26. Developer, data engineer, QA and IT manager salary benchmarks with NI, pension and total employer cost calculations.",
-        "h1": "Cost of employing IT staff UK (2025/26)",
-        "badge": "Tech & IT sector",
-        "example_salary": 55000,
-        "salary_range": "£30,000–£100,000+",
-        "intro": "IT and technology staff are among the highest-compensated employees in the UK labour market, with demand consistently outpacing supply in software development, data engineering, and cybersecurity roles. At a mid-market developer salary of £55,000, the total employer cost in 2025/26 is approximately £63,822 per year — employer NI of £7,500 (15% above £5,000) plus minimum pension of £1,322 on qualifying earnings. For senior engineers and architects at £75,000–£90,000, employer NI rises to £10,500–£12,750 per year. Many IT employers also compete on benefits, adding further to total employment cost above the statutory floor.",
-        "bullets": [
-            "Junior developer / IT analyst: £30,000–£40,000. Employer NI: £3,750–£5,250.",
-            "Mid-level developer / engineer: £45,000–£65,000. Employer NI: £6,000–£9,000.",
-            "Senior developer / tech lead: £65,000–£90,000. Employer NI: £9,000–£12,750.",
-            "Data engineer / DevOps: £50,000–£80,000.",
-            "IT manager / head of engineering: £70,000–£110,000.",
-            "Employer pension capped at qualifying earnings of £50,270 — minimum cost £1,322/year above that.",
-        ],
-        "primary_cta": {"label": "Calculate IT staff employer cost", "url": "/calculator?salary=55000"},
-        "secondary_cta": {"label": "Contractor vs employee comparison", "url": "/contractor-vs-employee-cost"},
-        "faq_items": [
-            {"q": "Is it cheaper to hire an IT contractor than a permanent developer?", "a": "On day-rate cost, a contractor often appears more expensive than the salary equivalent — but the employer avoids NI (15%), pension, holiday pay (28 days), sick pay and other employment obligations. At £55,000 PAYE salary, total employer cost is approximately £63,822/year (£277/day at 230 days). A contractor at £350/day would cost approximately £80,500/year — but with no ongoing employment commitments. For sustained full-time work, PAYE is typically more cost-effective."},
-            {"q": "How much does IT employer NI cost at £70,000 salary?", "a": "Employer NI on £70,000 salary in 2025/26 is £9,750 per year (15% of £65,000 above the £5,000 threshold). Minimum pension on qualifying earnings (£50,270 cap) is £1,322/year. Total employer cost before overheads: approximately £81,072 per year. At £80,000 salary, total employer cost reaches approximately £92,072."},
-            {"q": "Does IR35 affect IT employer costs?", "a": "Yes. If a developer working through a limited company is deemed inside IR35, the engaging organisation becomes responsible for operating PAYE and paying employer NI at 15% on the deemed employment income. For medium and large businesses, this assessment responsibility has rested with the engaging company since April 2021. A contractor earning £350/day inside IR35 for 230 days creates approximately £10,100 in employer NI — comparable to a £70,000+ permanent employee."},
-        ],
-    },
-    "cost-of-employing-education-staff": {
-        "title": "Cost of Employing Education Staff UK 2025/26 — NI, Pension & Total",
-        "description": "Employer costs for education sector staff in the UK — teachers, TAs, support staff. 2025/26 NI, pension scheme contributions and total payroll cost.",
-        "h1": "Cost of employing education staff UK (2025/26)",
-        "badge": "Education sector",
-        "example_salary": 35000,
-        "salary_range": "£20,000–£65,000",
-        "intro": "Education sector employers face higher-than-average pension costs because most staff in state schools belong to the Teachers' Pension Scheme (employer contribution ~28.6%) or the Local Government Pension Scheme (employer contribution typically 18–23%), not the auto-enrolment 3% minimum. A teacher on £40,000 generates an employer pension contribution of approximately £11,440 per year under TPS — compared with £1,013 under auto-enrolment. For support staff and TAs on LGPS, the pension cost is also significantly above the statutory minimum.",
-        "bullets": [
-            "Teachers (MPS): £31,650–£43,607. TPS employer pension ~28.6% adds £9,050–£12,472/yr.",
-            "Teaching assistants (LGPS): £19,000–£28,000. LGPS employer contribution adds ~20% above salary.",
-            "School business managers: £28,000–£45,000. LGPS or auto-enrolment depending on contract.",
-            "Independent school staff may use auto-enrolment — lower pension cost but market salaries often higher.",
-            "Employer NI on all roles: 15% above £5,000 threshold.",
-        ],
-        "primary_cta": {"label": "Calculate teacher employer cost", "url": "/calculator?salary=40000"},
-        "secondary_cta": {"label": "Cost of hiring a teaching assistant", "url": "/cost-of-hiring-a-teaching-assistant"},
-        "faq_items": [
-            {"q": "How much does it cost to employ a teacher including pension?", "a": "A teacher on the Main Pay Scale midpoint of £40,000 costs approximately £51,440–£53,000 per year as an employer — salary plus employer NI of £5,250 plus TPS pension contribution of approximately £11,440 (28.6%). This is substantially higher than the auto-enrolment minimum of £1,013. Independent schools using auto-enrolment have lower pension costs but typically pay market salaries above the national pay scales."},
-            {"q": "Do teaching assistants belong to a pension scheme?", "a": "Most teaching assistants employed by state schools or local authorities are eligible for the Local Government Pension Scheme (LGPS). Employer contribution rates are set locally but typically range from 18% to 23% of salary. For a TA on £22,000, this adds approximately £3,960–£5,060 per year in pension costs above the standard auto-enrolment minimum of approximately £478."},
-        ],
-    },
-    "cost-of-employing-healthcare-workers": {
-        "title": "Cost of Employing Healthcare Workers UK 2025/26 — NI, Pension & Total",
-        "description": "Employer cost for healthcare and NHS workers in the UK. Band 2–8 salary benchmarks, employer NI, NHS Pension Scheme and total payroll cost for 2025/26.",
-        "h1": "Cost of employing healthcare workers UK (2025/26)",
-        "badge": "Healthcare sector",
-        "example_salary": 38000,
-        "salary_range": "£23,000–£65,000",
-        "intro": "Healthcare employers face above-average pension costs through the NHS Pension Scheme, where employer contributions are approximately 23.7% of pensionable pay. For a Band 5 nurse at £35,000, employer pension adds approximately £8,295 per year — compared with £873 under auto-enrolment. Private healthcare employers using auto-enrolment have lower statutory pension costs but typically pay above NHS rates to compete for staff. At £38,000, the total NHS employer cost including NI (£4,950) and NHS pension (£9,006) is approximately £51,956 per year.",
-        "bullets": [
-            "Band 2 (HCA, porter): £23,615–£25,674. NHS pension adds ~£5,597–£6,085/yr.",
-            "Band 3 (senior HCA, admin): £24,071–£25,674.",
-            "Band 5 (RN, ODP, radiographer): £29,970–£36,483. NHS pension adds ~£7,103–£8,646.",
-            "Band 6 (specialist): £37,338–£44,962. NHS pension adds ~£8,849–£10,656.",
-            "Private sector: typically auto-enrolment (3%) with market premium on salary.",
-        ],
-        "primary_cta": {"label": "Calculate healthcare employer cost", "url": "/calculator?salary=35000"},
-        "secondary_cta": {"label": "Cost of hiring a nurse", "url": "/cost-of-hiring-a-nurse"},
-        "faq_items": [
-            {"q": "What is the NHS Pension Scheme employer contribution rate?", "a": "From 2023/24, the NHS Pension Scheme employer contribution rate is 23.7% of pensionable pay. This compares to the auto-enrolment minimum of 3% on qualifying earnings. For a Band 5 nurse at £33,000, the employer NHS pension cost is approximately £7,821 per year — roughly 9× the auto-enrolment minimum. This is the single biggest above-salary cost for NHS employers and must be included in any accurate headcount budget."},
-            {"q": "Do private healthcare employers pay NHS pension rates?", "a": "Only NHS employers and bodies with NHS contracts participate in the NHS Pension Scheme. Private healthcare employers use auto-enrolment at a minimum employer contribution of 3% on qualifying earnings (£6,240–£50,270). This reduces statutory pension cost significantly but private sector employers usually pay market salaries above NHS pay scales to attract clinical staff."},
-        ],
-    },
-    "cost-of-employing-logistics-staff": {
-        "title": "Cost of Employing Logistics Staff UK 2025/26 — NI, Pension & Total",
-        "description": "Employer cost for logistics, warehouse and transport staff in the UK. Salary benchmarks, employer NI and total payroll cost for 2025/26.",
-        "h1": "Cost of employing logistics staff UK (2025/26)",
-        "badge": "Logistics & transport",
-        "example_salary": 30000,
-        "salary_range": "£22,000–£45,000",
-        "intro": "The UK logistics sector employs over 2.5 million people, ranging from warehouse operatives on National Living Wage to HGV Class 1 drivers commanding premium rates following post-Brexit driver shortages. At a warehouse operative salary of £25,000, employer NI adds £3,000 and minimum pension adds £563, bringing total annual employer cost to approximately £28,563. Agency workers add further cost — agency margins of 15–30% are common. Shift premiums and weekend working allowances add 10–25% to base salary cost in 24/7 operations.",
-        "bullets": [
-            "Warehouse operative (NLW): ~£25,350/yr. Employer NI: ~£3,053. Total: ~£29,017.",
-            "Forklift operator / FLT driver: £26,000–£32,000.",
-            "HGV Class 2 driver: £28,000–£35,000. Employer NI: £3,450–£4,500.",
-            "HGV Class 1 (artic): £32,000–£45,000. Shortage role — wage growth continues.",
-            "Logistics manager / transport planner: £35,000–£55,000.",
-            "Night shift / weekend premiums typically add 15–25% to base salary cost.",
-        ],
-        "primary_cta": {"label": "Calculate logistics employer cost", "url": "/calculator?salary=28000"},
-        "secondary_cta": {"label": "Cost of hiring a delivery driver", "url": "/cost-of-hiring-a-delivery-driver"},
-        "faq_items": [
-            {"q": "How much does it cost to hire an HGV driver in the UK?", "a": "A Class 1 HGV driver earning £38,000 costs approximately £43,800 per year as an employer — salary plus employer NI of £4,950 plus minimum pension of £963. Night driving allowances, tachograph compliance time, and agency margin (if used) can push total effective cost significantly higher. The driver shortage has kept rates elevated: many experienced Class 1 drivers now command £40,000–£45,000+ in competitive markets."},
-            {"q": "Is using an agency worker cheaper than a direct hire for logistics roles?", "a": "Agency workers avoid employer NI and pension obligations on the payroll, but agency margins of 15–30% typically make them more expensive per hour than equivalent PAYE employees. For short-term or seasonal cover, agencies offer flexibility worth the premium. For consistent full-time roles, direct PAYE employment is usually more cost-effective once the recruitment cost is amortised over 12+ months."},
-        ],
-    },
-}
-
-
-# NLW 2025/26
-_NLW = 12.71
-_HOURS_PER_YEAR = lambda h: round(h * 52)
-
-HOURS_SCENARIO_PAGES: Dict[str, Dict] = {
-    "cost-of-employing-someone-16-hours-a-week": {
-        "hours": 16,
-        "annual_salary_nlw": round(_NLW * _HOURS_PER_YEAR(16)),
-        "title": "Cost of Employing Someone 16 Hours a Week UK (2025/26)",
-        "description": "What does it cost to employ someone 16 hours a week in the UK? Employer NI, pension and total cost at common part-time wages. 2025/26 rates.",
-        "h1": "Cost of employing someone 16 hours a week (2025/26)",
-        "badge": "Part-time · 16 hrs/wk",
-        "intro": "Employing someone for 16 hours a week in the UK generates employer NI, pension obligations and total payroll costs that are not simply half the full-time figure. The employer NI secondary threshold (£5,000/year) is not pro-rated for part-time workers — it applies in full regardless of hours. At 16 hours per week on the 2025/26 National Living Wage (£12.71/hour), annual salary is approximately £10,158, and employer NI applies on £5,158 of earnings above the threshold at 15% — adding approximately £774 per year. Use the calculator below to model any salary or hourly rate.",
-        "key_rate": "£12.71/hr",
-    },
-    "cost-of-employing-someone-20-hours-a-week": {
-        "hours": 20,
-        "annual_salary_nlw": round(_NLW * _HOURS_PER_YEAR(20)),
-        "title": "Cost of Employing Someone 20 Hours a Week (2025/26)",
-        "description": "Employing someone 20 hrs/week at National Living Wage costs ~£14,047/yr total: £12,698 salary + £1,155 employer NI + £194 pension. See full on-costs breakdown for any hourly rate.",
-        "h1": "Cost of employing someone 20 hours a week (2025/26)",
-        "badge": "Part-time · 20 hrs/wk",
-        "intro": "A 20-hour-per-week employee working at the National Living Wage (£12.71/hour) earns approximately £12,698 per year. The employer NI secondary threshold of £5,000 is not reduced for part-time hours, so employer NI applies on £7,698 at 15% — adding approximately £1,155 per year. Minimum pension adds a further £194 on qualifying earnings above £6,240. Total statutory employer cost above salary: approximately £1,349 per year. Use the calculator for any salary.",
-        "key_rate": "£12.71/hr",
-    },
-    "cost-of-employing-someone-24-hours-a-week": {
-        "hours": 24,
-        "annual_salary_nlw": round(_NLW * _HOURS_PER_YEAR(24)),
-        "title": "Cost of Employing Someone 24 Hours a Week UK (2025/26)",
-        "description": "True employer cost for a 24-hour part-time worker in the UK — NI, pension and on-costs for 2025/26.",
-        "h1": "Cost of employing someone 24 hours a week (2025/26)",
-        "badge": "Part-time · 24 hrs/wk",
-        "intro": "At 24 hours per week on the National Living Wage (£12.71/hour), annual salary is approximately £15,237. Employer NI on earnings above the £5,000 secondary threshold is approximately £1,536 per year. Minimum auto-enrolment pension on qualifying earnings (above £6,240) adds approximately £269 per year. Total statutory employer cost above salary: approximately £1,805 per year before overheads.",
-        "key_rate": "£12.71/hr",
-    },
-    "cost-of-employing-someone-25-hours-a-week": {
-        "hours": 25,
-        "annual_salary_nlw": round(_NLW * _HOURS_PER_YEAR(25)),
-        "title": "Cost of Employing Someone 25 Hours a Week UK (2025/26)",
-        "description": "Employer cost for a 25-hour part-time worker — NI, pension, total cost. UK 2025/26.",
-        "h1": "Cost of employing someone 25 hours a week (2025/26)",
-        "badge": "Part-time · 25 hrs/wk",
-        "intro": "At 25 hours per week on the National Living Wage, annual salary is approximately £15,873. Employer NI applies on £10,873 above the £5,000 secondary threshold at 15%, adding approximately £1,631 per year. The NI threshold is annual and applies in full regardless of contracted hours. Minimum pension adds approximately £288 per year on qualifying earnings.",
-        "key_rate": "£12.71/hr",
-    },
-    "cost-of-employing-someone-30-hours-a-week": {
-        "hours": 30,
-        "annual_salary_nlw": round(_NLW * _HOURS_PER_YEAR(30)),
-        "title": "Cost of Employing Someone 30 Hours a Week UK (2025/26)",
-        "description": "Employer cost for someone working 30 hours a week — NI, pension and total. UK 2025/26.",
-        "h1": "Cost of employing someone 30 hours a week (2025/26)",
-        "badge": "Part-time · 30 hrs/wk",
-        "intro": "At 30 hours per week on the National Living Wage (£12.71/hour), annual salary is approximately £19,046. Employer NI on £14,046 above the secondary threshold amounts to approximately £2,107 per year. Minimum pension on qualifying earnings adds approximately £382 per year. Total statutory employer cost: approximately £21,535 per year at NLW — roughly 13% above the headline salary.",
-        "key_rate": "£12.71/hr",
-    },
-    "cost-of-employing-someone-37-5-hours-a-week": {
-        "hours": 37.5,
-        "annual_salary_nlw": round(_NLW * round(37.5 * 52)),
-        "title": "Cost of Employing Someone 37.5 Hours a Week (2025/26)",
-        "description": "Employing someone 37.5 hrs/week at National Living Wage (£12.71/hr) costs ~£28,309/yr total: £24,785 salary + £2,968 employer NI + £556 pension. See full breakdown for any salary.",
-        "h1": "Cost of employing someone 37.5 hours a week (2025/26)",
-        "badge": "Full-time · 37.5 hrs/wk",
-        "intro": "A standard full-time employee working 37.5 hours per week earns approximately £24,785 per year at the National Living Wage. Employer NI on £18,810 above the £5,000 secondary threshold adds approximately £2,968 per year. Auto-enrolment pension at the 3% minimum adds approximately £556 per year on qualifying earnings. Total statutory employer cost: approximately £28,309 per year at NLW — around 14% above gross salary.",
-        "key_rate": "£12.71/hr",
-    },
-    "cost-of-employing-someone-40-hours-a-week": {
-        "hours": 40,
-        "annual_salary_nlw": round(_NLW * _HOURS_PER_YEAR(40)),
-        "title": "Cost of Employing Someone 40 Hours a Week UK (2025/26)",
-        "description": "Employer cost for a 40-hour full-time worker in the UK — NI, pension and total on-costs. 2025/26.",
-        "h1": "Cost of employing someone 40 hours a week (2025/26)",
-        "badge": "Full-time · 40 hrs/wk",
-        "intro": "At 40 hours per week on the National Living Wage (£12.71/hour), annual salary is approximately £25,397. Employer NI on £20,397 above the secondary threshold adds approximately £3,060 per year. Minimum pension on qualifying earnings adds approximately £576 per year. Total statutory employer cost: approximately £29,033 per year — around 14.3% above the headline wage.",
-        "key_rate": "£12.71/hr",
-    },
-}
-
-HOURLY_RATE_PAGES: Dict[str, Dict] = {
-    "employer-cost-at-10-pounds-per-hour": {
-        "hourly_rate": 10.00,
-        "annual_salary_ft": 19500,  # 10 × 37.5 × 52
-        "title": "Employer Cost at £10 Per Hour UK (2025/26) — NI, Pension & Total",
-        "description": "True employer cost for a £10/hour employee in the UK. Annual salary, employer NI, pension and total payroll cost. 2025/26 rates.",
-        "h1": "Employer cost at £10 per hour (2025/26)",
-        "badge": "£10/hr",
-    },
-    "employer-cost-at-11-pounds-per-hour": {
-        "hourly_rate": 11.00,
-        "annual_salary_ft": 21450,  # 11 × 37.5 × 52
-        "title": "Employer Cost at £11 Per Hour UK (2025/26) — NI, Pension & Total",
-        "description": "Employer cost for a £11/hour worker — NI, pension, total payroll cost. UK 2025/26.",
-        "h1": "Employer cost at £11 per hour (2025/26)",
-        "badge": "£11/hr",
-    },
-    "employer-cost-at-minimum-wage-per-hour": {
-        "hourly_rate": 12.71,
-        "annual_salary_ft": 24785,  # NLW × 37.5 × 52
-        "title": "Employer Cost at National Living Wage Per Hour (£12.71) UK 2026/27",
-        "description": "What does it cost to employ someone at the National Living Wage? £12.71/hr = £24,785/yr + employer NI + pension. Full 2026/27 breakdown.",
-        "h1": "Employer cost at National Living Wage — £12.71/hour (2025/26)",
-        "badge": "NLW · £12.71/hr",
-    },
-    "employer-cost-at-13-pounds-per-hour": {
-        "hourly_rate": 13.00,
-        "annual_salary_ft": 25350,  # 13 × 37.5 × 52
-        "title": "Employer Cost at £13 Per Hour UK (2025/26) — NI, Pension & Total",
-        "description": "Employer cost for a £13/hour employee in the UK. Annual cost, NI, pension, total payroll burden. 2025/26 figures.",
-        "h1": "Employer cost at £13 per hour (2025/26)",
-        "badge": "£13/hr",
-    },
-    "employer-cost-at-14-pounds-per-hour": {
-        "hourly_rate": 14.00,
-        "annual_salary_ft": 27300,  # 14 × 37.5 × 52
-        "title": "Employer Cost at £14 Per Hour UK (2025/26) — NI, Pension & Total",
-        "description": "True employer cost for a £14/hour worker in the UK — NI, pension and total on-costs. 2025/26.",
-        "h1": "Employer cost at £14 per hour (2025/26)",
-        "badge": "£14/hr",
-    },
-    "employer-cost-at-15-pounds-per-hour": {
-        "hourly_rate": 15.00,
-        "annual_salary_ft": 29250,  # 15 × 37.5 × 52
-        "title": "Employer Cost at £15 Per Hour UK (2025/26) — NI, Pension & Total",
-        "description": "What does a £15/hour employee cost an employer in the UK? Salary, NI, pension and total annual cost for 2025/26.",
-        "h1": "Employer cost at £15 per hour (2025/26)",
-        "badge": "£15/hr",
-    },
-    "employer-cost-at-20-pounds-per-hour": {
-        "hourly_rate": 20.00,
-        "annual_salary_ft": 39000,  # 20 × 37.5 × 52
-        "title": "Employer Cost at £20 Per Hour UK (2025/26) — NI, Pension & Total",
-        "description": "Employer cost for a £20/hour employee — full-time salary, NI, pension and total payroll cost. UK 2025/26.",
-        "h1": "Employer cost at £20 per hour (2025/26)",
-        "badge": "£20/hr",
-    },
-    "employer-cost-at-25-pounds-per-hour": {
-        "hourly_rate": 25.00,
-        "annual_salary_ft": 48750,  # 25 × 37.5 × 52
-        "title": "Employer Cost at £25 Per Hour UK (2025/26) — NI, Pension & Total",
-        "description": "True employer cost for a £25/hour employee — annual salary, NI, pension and total cost. 2025/26 UK.",
-        "h1": "Employer cost at £25 per hour (2025/26)",
-        "badge": "£25/hr",
-    },
-    "employer-cost-at-30-pounds-per-hour": {
-        "hourly_rate": 30.00,
-        "annual_salary_ft": 58500,  # 30 × 37.5 × 52
-        "title": "Employer Cost at £30 Per Hour UK (2025/26) — NI, Pension & Total",
-        "description": "Employer cost at £30 per hour — salary, NI, pension and total annual payroll cost for UK employers. 2025/26.",
-        "h1": "Employer cost at £30 per hour (2025/26)",
-        "badge": "£30/hr",
-    },
-}
-
-ROLE_PAGES: Dict[str, Dict] = {
-    "cost-of-hiring-a-software-developer": {
-        "title": "Cost of Hiring a Software Developer UK (2025/26) — Salary, NI & Total",
-        "description": "What does it cost to hire a software developer in the UK? Salary benchmarks, employer NI and total payroll cost for junior, mid and senior developers. 2025/26.",
-        "h1": "Cost of hiring a software developer UK (2025/26)",
-        "badge": "Software developer",
-        "salary_range": "£35,000–£90,000",
-        "example_salary": 55000,
-        "intro": "Hiring a software developer in the UK is one of the most significant payroll commitments a business can make. Salaries range from around £35,000 for junior roles in most UK cities to £80,000–£90,000+ for senior engineers in London or specialist areas. At a mid-level salary of £55,000, the total employer cost before overheads is approximately £64,638 per year — salary plus £7,500 employer NI plus £1,313 pension on qualifying earnings.",
-        "role_levels": [
-            {"level": "Junior developer", "salary_range": "£30,000–£42,000", "example": 36000},
-            {"level": "Mid-level developer", "salary_range": "£42,000–£65,000", "example": 55000},
-            {"level": "Senior developer", "salary_range": "£65,000–£90,000", "example": 75000},
-        ],
-    },
-    "cost-of-hiring-an-admin-assistant": {
-        "title": "Cost of Hiring an Admin Assistant UK (2025/26) — Salary, NI & Total",
-        "description": "Employer cost for hiring an admin assistant in the UK. Salary benchmarks, NI, pension and total annual payroll cost. 2025/26.",
-        "h1": "Cost of hiring an admin assistant UK (2025/26)",
-        "badge": "Admin assistant",
-        "salary_range": "£21,000–£32,000",
-        "example_salary": 26000,
-        "intro": "Admin assistants typically earn between £21,000 and £32,000 per year in the UK, depending on experience, location and sector. At a salary of £26,000, the total employer cost including employer NI (£3,150) and minimum pension (£588) is approximately £29,738 per year before overheads. London salaries sit towards the upper end of this range; regional UK salaries are typically £21,000–£26,000.",
-        "role_levels": [
-            {"level": "Entry-level admin", "salary_range": "£21,000–£24,000", "example": 22000},
-            {"level": "Experienced admin assistant", "salary_range": "£24,000–£30,000", "example": 26000},
-            {"level": "Senior admin / PA", "salary_range": "£28,000–£38,000", "example": 32000},
-        ],
-    },
-    "cost-of-hiring-a-care-worker": {
-        "title": "Cost of Hiring a Care Worker UK (2025/26) — Salary, NI & Total",
-        "description": "True employer cost for a care worker in the UK — salary from NLW upwards, NI and pension included. 2025/26.",
-        "h1": "Cost of hiring a care worker UK (2025/26)",
-        "badge": "Care worker",
-        "salary_range": "£22,000–£28,000",
-        "example_salary": 24000,
-        "intro": "Care workers in the UK are typically paid between the National Living Wage (£12.71/hour) and around £14–£15 per hour depending on the employer and role. At a salary of £24,000, employer NI adds approximately £2,850 per year and minimum pension adds approximately £531. Total employer cost: approximately £27,381 per year before overheads. For domiciliary care, many workers are part-time, further complicating the cost picture.",
-        "role_levels": [
-            {"level": "Care assistant (NLW)", "salary_range": "£22,000–£24,000", "example": 24785},
-            {"level": "Senior care worker", "salary_range": "£24,000–£28,000", "example": 26000},
-            {"level": "Care coordinator", "salary_range": "£26,000–£32,000", "example": 28000},
-        ],
-    },
-    "cost-of-hiring-a-warehouse-operative": {
-        "title": "Cost of Hiring a Warehouse Operative UK (2025/26) — Salary, NI & Total",
-        "description": "Employer cost for a warehouse operative in the UK — NLW salary, employer NI, pension and total. 2025/26.",
-        "h1": "Cost of hiring a warehouse operative UK (2025/26)",
-        "badge": "Warehouse operative",
-        "salary_range": "£22,000–£32,000",
-        "example_salary": 26000,
-        "intro": "Warehouse operatives in the UK typically earn between the National Living Wage (approximately £24,785/year full-time) and £14–£15/hour for roles requiring forklift licences or specialist skills. At £26,000 annual salary, the total employer cost including NI (£3,150) and pension (£588) is approximately £29,738 per year. Shift premiums and overtime can add significantly to payroll costs.",
-        "role_levels": [
-            {"level": "General warehouse operative", "salary_range": "£22,000–£26,000", "example": 24000},
-            {"level": "Forklift / specialist operative", "salary_range": "£26,000–£32,000", "example": 28000},
-            {"level": "Team leader / supervisor", "salary_range": "£28,000–£36,000", "example": 32000},
-        ],
-    },
-    "cost-of-hiring-a-receptionist": {
-        "title": "Cost of Hiring a Receptionist UK (2025/26) — Salary, NI & Total",
-        "description": "Employer cost for a receptionist in the UK — salary benchmarks, NI, pension and total. 2025/26.",
-        "h1": "Cost of hiring a receptionist UK (2025/26)",
-        "badge": "Receptionist",
-        "salary_range": "£21,000–£30,000",
-        "example_salary": 24000,
-        "intro": "Receptionists and front-of-house staff in the UK typically earn between £21,000 and £27,000, with London roles at the higher end. At a salary of £24,000, total employer cost including NI (£2,850) and pension (£531) is approximately £27,381 per year. Many receptionist roles are part-time, which changes the NI calculation — the £5,000 threshold applies in full regardless of hours worked.",
-        "role_levels": [
-            {"level": "Junior receptionist", "salary_range": "£21,000–£24,000", "example": 22000},
-            {"level": "Experienced receptionist", "salary_range": "£24,000–£28,000", "example": 25000},
-            {"level": "Medical / legal receptionist", "salary_range": "£25,000–£32,000", "example": 27000},
-        ],
-    },
-    "cost-of-hiring-a-sales-executive": {
-        "title": "Cost of Hiring a Sales Executive UK (2025/26) — Salary, NI & Total",
-        "description": "Employer cost for a UK sales executive — base salary, commission, employer NI and total payroll cost. 2025/26.",
-        "h1": "Cost of hiring a sales executive UK (2025/26)",
-        "badge": "Sales executive",
-        "salary_range": "£25,000–£45,000 base",
-        "example_salary": 32000,
-        "intro": "Sales executives in the UK typically have a base salary of £25,000–£35,000 plus commission. Employer payroll costs are calculated on the base salary plus any commission payments — employer NI and pension apply to the full taxable pay. At a £32,000 base salary, employer NI adds approximately £4,050 and minimum pension adds approximately £775. If the employee earns £10,000 in commission, the additional NI cost to the employer is £1,500.",
-        "role_levels": [
-            {"level": "Junior / telesales", "salary_range": "£22,000–£28,000 base", "example": 25000},
-            {"level": "Sales executive (B2B)", "salary_range": "£28,000–£38,000 base", "example": 32000},
-            {"level": "Senior sales / account manager", "salary_range": "£35,000–£50,000 base", "example": 42000},
-        ],
-    },
-    "cost-of-hiring-a-marketing-executive": {
-        "title": "Cost of Hiring a Marketing Executive UK (2025/26) — Salary, NI & Total",
-        "description": "Employer cost for a UK marketing executive — salary benchmarks, NI, pension and total on-costs. 2025/26.",
-        "h1": "Cost of hiring a marketing executive UK (2025/26)",
-        "badge": "Marketing executive",
-        "salary_range": "£25,000–£45,000",
-        "example_salary": 32000,
-        "intro": "Marketing executives in the UK typically earn between £25,000 and £38,000, rising to £40,000–£50,000 for digital specialists or those in larger businesses. At a salary of £32,000, the total employer cost including NI (£4,050) and pension (£775) is approximately £36,825 per year before overheads. Marketing roles in London or for fast-growing tech businesses frequently sit at the higher end.",
-        "role_levels": [
-            {"level": "Marketing assistant", "salary_range": "£23,000–£28,000", "example": 25000},
-            {"level": "Marketing executive", "salary_range": "£28,000–£38,000", "example": 32000},
-            {"level": "Senior / digital marketing", "salary_range": "£35,000–£50,000", "example": 42000},
-        ],
-    },
-    "cost-of-hiring-a-cleaner": {
-        "title": "Cost of Hiring a Cleaner UK (2025/26) — Employer NI, Pension & Total",
-        "description": "Employer cost for a UK cleaner — NLW or above, NI, pension and total on-costs for full-time and part-time. 2025/26.",
-        "h1": "Cost of hiring a cleaner UK (2025/26)",
-        "badge": "Cleaner",
-        "salary_range": "NLW–£14/hr",
-        "example_salary": 24785,
-        "intro": "Cleaners in the UK are typically paid at or slightly above the National Living Wage (£12.71/hour from April 2025). Many cleaning roles are part-time. A full-time cleaner on NLW earns approximately £24,785 per year. Employer NI adds approximately £2,968 per year and minimum pension adds approximately £524. Many employers hire cleaners for fewer than 16 hours per week, in which case earnings may fall below the auto-enrolment threshold.",
-        "role_levels": [
-            {"level": "Part-time cleaner (16 hrs/wk)", "salary_range": "NLW · approx £10,158/yr", "example": 10158},
-            {"level": "Part-time cleaner (20 hrs/wk)", "salary_range": "NLW · approx £12,698/yr", "example": 12698},
-            {"level": "Full-time cleaner (37.5 hrs/wk)", "salary_range": "NLW · approx £24,785/yr", "example": 24785},
-        ],
-    },
-    "cost-of-hiring-hospitality-staff": {
-        "title": "Cost of Hiring Hospitality Staff UK (2025/26) — NI, Pension & Total",
-        "description": "Employer cost for UK hospitality staff — kitchen, front of house and bar staff. NLW upwards, NI, pension and total. 2025/26.",
-        "h1": "Cost of hiring hospitality staff UK (2025/26)",
-        "badge": "Hospitality",
-        "salary_range": "NLW–£13/hr",
-        "example_salary": 24785,
-        "intro": "Hospitality employers in the UK — restaurants, bars, hotels and catering businesses — predominantly employ staff at or near the National Living Wage. Many roles are part-time or casual. A full-time front-of-house worker on NLW earns approximately £24,785 per year. For kitchens, junior chefs typically start between £24,000 and £28,000. Employer NI on a £26,000 salary adds approximately £3,150 per year — a significant overhead for hospitality margins.",
-        "role_levels": [
-            {"level": "Front of house / bar staff", "salary_range": "NLW · £23,000–£25,000", "example": 24000},
-            {"level": "Kitchen porter / prep cook", "salary_range": "NLW–£13/hr · £22,000–£25,000", "example": 24785},
-            {"level": "Sous chef / senior chef", "salary_range": "£28,000–£38,000", "example": 32000},
-        ],
-    },
-    "cost-of-hiring-a-teaching-assistant": {
-        "title": "Cost of Hiring a Teaching Assistant UK (2025/26) — Salary, NI & Total",
-        "description": "Employer cost for a teaching assistant in the UK — term-time salary, NI, pension and true total cost. 2025/26.",
-        "h1": "Cost of hiring a teaching assistant UK (2025/26)",
-        "badge": "Teaching assistant",
-        "salary_range": "£19,000–£26,000",
-        "example_salary": 22000,
-        "intro": "Teaching assistants in UK state schools are often employed on term-time-only contracts at spinal column points in the range of approximately £19,000–£26,000 pro rata (full-time equivalent). The actual cost depends on whether the role is full-time, term-time only, or part-time. For a full-year equivalent salary of £22,000, employer NI adds approximately £2,550 per year. State school employees typically contribute to the Local Government Pension Scheme — employer contribution rates are set at around 20–23%, not the auto-enrolment minimum.",
-        "role_levels": [
-            {"level": "Level 1 TA", "salary_range": "£19,000–£22,000 FTE", "example": 20000},
-            {"level": "Level 2/3 TA", "salary_range": "£22,000–£26,000 FTE", "example": 23000},
-            {"level": "HLTA / senior TA", "salary_range": "£25,000–£30,000 FTE", "example": 26000},
-        ],
-    },
-    "cost-of-hiring-a-nurse": {
-        "title": "Cost of Hiring a Nurse UK (2025/26) — NHS & Private Salary, NI & Total",
-        "description": "What does it cost to hire a nurse in the UK? NHS Band 5–7 salary benchmarks, employer NI at 15%, pension and total employer cost for 2025/26.",
-        "h1": "Cost of hiring a nurse UK (2025/26)",
-        "badge": "Nurse",
-        "salary_range": "£28,000–£52,000",
-        "example_salary": 37000,
-        "intro": "Nursing salaries in the UK are structured by NHS Agenda for Change pay bands. Band 5 (newly qualified RN) starts at approximately £29,970, rising to around £36,483 with experience. Band 6 (specialist/team leader) ranges from £37,338 to £44,962. Private sector nursing salaries often sit 5–15% above NHS rates. At a Band 5 mid-point of £37,000, total employer cost including 15% NI (£4,800) and 3% minimum pension (£923) is approximately £42,723 per year — though NHS employers pay substantially higher pension contributions under the NHS Pension Scheme.",
-        "role_levels": [
-            {"level": "Band 5 (newly qualified RN)", "salary_range": "£29,970–£36,483", "example": 33000},
-            {"level": "Band 6 (specialist nurse)", "salary_range": "£37,338–£44,962", "example": 41000},
-            {"level": "Band 7 (advanced/ward manager)", "salary_range": "£46,148–£52,809", "example": 49000},
-        ],
-    },
-    "cost-of-hiring-a-teacher": {
-        "title": "Cost of Hiring a Teacher UK (2025/26) — Salary, NI, Pension & Total",
-        "description": "Employer cost of hiring a teacher in England and Wales. MPS/UPS salary scales, employer NI at 15%, Teachers' Pension Scheme contributions and total school payroll cost. 2025/26.",
-        "h1": "Cost of hiring a teacher UK (2025/26)",
-        "badge": "Teacher",
-        "salary_range": "£31,000–£65,000",
-        "example_salary": 42000,
-        "intro": "Teacher salaries in England are set by the School Teachers' Pay and Conditions Document. The Main Pay Scale (MPS) runs from £31,650 to £43,607 outside London. The Upper Pay Scale (UPS) adds a further tier up to £49,084. Leadership pay extends significantly higher. Critically for budget planning: state school teachers belong to the Teachers' Pension Scheme, where employer contributions are approximately 28.6% of salary — far above the auto-enrolment 3% minimum. At a £42,000 MPS salary, the pension contribution alone adds approximately £12,012 per year to the employer cost.",
-        "role_levels": [
-            {"level": "MPS 1–3 (NQT/early career)", "salary_range": "£31,650–£38,000", "example": 34000},
-            {"level": "MPS 4–6 (experienced)", "salary_range": "£38,000–£43,607", "example": 42000},
-            {"level": "UPS (upper pay scale)", "salary_range": "£45,000–£49,084", "example": 47000},
-        ],
-    },
-    "cost-of-hiring-a-project-manager": {
-        "title": "Cost of Hiring a Project Manager UK (2025/26) — Salary, NI & Total",
-        "description": "Employer cost of hiring a project manager in the UK. Salary benchmarks by sector and seniority, employer NI, pension and total annual payroll cost. 2025/26.",
-        "h1": "Cost of hiring a project manager UK (2025/26)",
-        "badge": "Project manager",
-        "salary_range": "£35,000–£75,000",
-        "example_salary": 52000,
-        "intro": "Project manager salaries in the UK vary significantly by sector, seniority and location. Junior PMs in non-technical roles typically earn £35,000–£42,000. Mid-level PMs with 3–7 years' experience earn £42,000–£60,000. Senior or programme managers in IT, construction or financial services can reach £65,000–£85,000+. At a mid-level salary of £52,000, total employer cost including NI (£7,050) and pension (£1,313) is approximately £60,363 per year before overheads.",
-        "role_levels": [
-            {"level": "Junior PM / coordinator", "salary_range": "£32,000–£42,000", "example": 38000},
-            {"level": "Project manager", "salary_range": "£42,000–£60,000", "example": 52000},
-            {"level": "Senior PM / programme manager", "salary_range": "£60,000–£80,000", "example": 70000},
-        ],
-    },
-    "cost-of-hiring-a-delivery-driver": {
-        "title": "Cost of Hiring a Delivery Driver UK (2025/26) — Salary, NI & Total",
-        "description": "Employer cost of hiring a delivery or HGV driver in the UK. Hourly rates, salary equivalents, employer NI and total payroll cost for 2025/26.",
-        "h1": "Cost of hiring a delivery driver UK (2025/26)",
-        "badge": "Delivery driver",
-        "salary_range": "£22,000–£40,000",
-        "example_salary": 30000,
-        "intro": "Delivery driver salaries depend on vehicle type, shift pattern, and operator. Van drivers typically earn £22,000–£28,000 per year or £11–£14/hr. HGV Class 2 drivers earn approximately £28,000–£35,000. Class 1 (articulated) HGV drivers have seen strong wage growth and now command £32,000–£45,000 with experienced drivers earning more. At £30,000, employer NI adds £3,750 and minimum pension adds £713, bringing total annual employer cost to approximately £34,463.",
-        "role_levels": [
-            {"level": "Van / courier driver", "salary_range": "£22,000–£28,000", "example": 25000},
-            {"level": "HGV Class 2 driver", "salary_range": "£27,000–£35,000", "example": 31000},
-            {"level": "HGV Class 1 / artic driver", "salary_range": "£32,000–£45,000", "example": 38000},
-        ],
-    },
-    "cost-of-hiring-a-chef": {
-        "title": "Cost of Hiring a Chef UK (2025/26) — Salary, NI & Total Employer Cost",
-        "description": "Employer cost of hiring a chef in the UK. Commis to head chef salary benchmarks, employer NI, pension and total payroll cost for 2025/26.",
-        "h1": "Cost of hiring a chef UK (2025/26)",
-        "badge": "Chef",
-        "salary_range": "£22,000–£50,000",
-        "example_salary": 32000,
-        "intro": "Chef salaries vary widely by level, cuisine type and establishment. Commis chefs typically start at £22,000–£26,000. Chef de partie roles earn £26,000–£32,000. Sous chefs range from £30,000–£40,000. Head chefs at independent restaurants typically earn £35,000–£50,000, with executive chefs at larger groups earning significantly more. At a sous chef salary of £32,000, employer NI adds £4,050 and minimum pension adds £773, bringing total employer cost to approximately £36,823 per year.",
-        "role_levels": [
-            {"level": "Commis / chef de partie", "salary_range": "£22,000–£30,000", "example": 26000},
-            {"level": "Sous chef", "salary_range": "£28,000–£40,000", "example": 34000},
-            {"level": "Head chef / executive chef", "salary_range": "£38,000–£55,000", "example": 45000},
-        ],
-    },
-    "cost-of-hiring-an-accountant": {
-        "title": "Cost of Hiring an Accountant UK (2025/26) — Salary, NI & Total",
-        "description": "Employer cost of hiring an accountant in the UK. Salary benchmarks by qualification and seniority, employer NI, pension and total cost. 2025/26.",
-        "h1": "Cost of hiring an accountant UK (2025/26)",
-        "badge": "Accountant",
-        "salary_range": "£28,000–£70,000",
-        "example_salary": 45000,
-        "intro": "Accountant salaries in the UK depend heavily on qualification (AAT, ACCA, CIMA, ACA) and whether the role is in industry or practice. Newly qualified ACCA/CIMA accountants typically earn £35,000–£45,000. Part-qualified roles in industry: £28,000–£38,000. Finance managers with post-qualification experience: £45,000–£65,000. At £45,000, employer NI adds £6,000 and pension adds £1,163, bringing total employer cost to approximately £52,163 per year before overheads.",
-        "role_levels": [
-            {"level": "Part-qualified / accounts assistant", "salary_range": "£24,000–£35,000", "example": 30000},
-            {"level": "Newly qualified (ACCA/CIMA/ACA)", "salary_range": "£35,000–£48,000", "example": 42000},
-            {"level": "Finance manager / senior accountant", "salary_range": "£48,000–£70,000", "example": 58000},
-        ],
-    },
-    "cost-of-hiring-an-hr-manager": {
-        "title": "Cost of Hiring an HR Manager UK (2025/26) — Salary, NI & Total",
-        "description": "Employer cost of hiring an HR manager or HR Business Partner in the UK. Salary benchmarks, employer NI, pension and total cost for 2025/26.",
-        "h1": "Cost of hiring an HR manager UK (2025/26)",
-        "badge": "HR manager",
-        "salary_range": "£32,000–£65,000",
-        "example_salary": 45000,
-        "intro": "HR manager salaries vary by company size, sector and whether the role is generalist or specialist. HR advisors and junior managers typically earn £32,000–£42,000. HR managers at small-to-mid businesses earn £42,000–£55,000. HR Business Partners or heads of people at growing companies: £55,000–£75,000. At £45,000, total employer cost including NI (£6,000) and pension (£1,163) is approximately £52,163 per year. HR roles in London sit 15–25% above these figures.",
-        "role_levels": [
-            {"level": "HR advisor / junior HR manager", "salary_range": "£30,000–£42,000", "example": 36000},
-            {"level": "HR manager", "salary_range": "£40,000–£55,000", "example": 47000},
-            {"level": "HR Business Partner / Head of People", "salary_range": "£52,000–£75,000", "example": 62000},
-        ],
-    },
-    "cost-of-hiring-a-customer-service-advisor": {
-        "title": "Cost of Hiring a Customer Service Advisor UK (2025/26) — Salary, NI & Total",
-        "description": "Employer cost of hiring a customer service advisor or agent in the UK. Salary benchmarks, employer NI, pension and total annual cost for 2025/26.",
-        "h1": "Cost of hiring a customer service advisor UK (2025/26)",
-        "badge": "Customer service advisor",
-        "salary_range": "£21,000–£32,000",
-        "example_salary": 26000,
-        "intro": "Customer service advisor salaries typically range from £21,000 to £30,000 depending on sector, shift requirements and whether the role involves technical or specialist support. Contact centre roles often sit at £22,000–£26,000. Specialist support or team leader positions reach £26,000–£35,000. At £26,000, employer NI adds £3,150 and minimum pension adds £588, giving a total employer cost of approximately £29,738 per year. Shift allowances and weekend premiums can add 5–15% to the base cost.",
-        "role_levels": [
-            {"level": "Customer service agent / advisor", "salary_range": "£21,000–£26,000", "example": 24000},
-            {"level": "Senior advisor / specialist support", "salary_range": "£26,000–£32,000", "example": 29000},
-            {"level": "Team leader / CS manager", "salary_range": "£30,000–£42,000", "example": 35000},
-        ],
-    },
-}
-
-
-def gbp(value: float) -> str:
-    return f"£{value:,.0f}"
-
-
-def pct(value: float) -> str:
-    return f"{value:.1f}%"
+def now_utc() -> datetime:
+    return datetime.utcnow()
 
 
 def request_path() -> str:
-    return request.path if request.path.startswith("/") else "/"
+    return request.path if request.path != "" else "/"
 
 
-def _apply_year(text: str) -> str:
-    """Replace any hardcoded tax-year label in a string with the active year."""
-    yr = active_tax_year()
-    return text.replace("2025/26", yr).replace("2026/27", yr)
+def currency(amount: float) -> str:
+    sign = "-" if amount < 0 else ""
+    return f"{sign}£{abs(amount):,.2f}"
 
 
-def _apply_year_deep(value):
-    """Recursively replace current-year labels in nested page content."""
-    if isinstance(value, str):
-        return _apply_year(value)
-    if isinstance(value, list):
-        return [_apply_year_deep(item) for item in value]
-    if isinstance(value, dict):
-        return {key: _apply_year_deep(item) for key, item in value.items()}
-    return value
+def annual_to_monthly(amount: float) -> float:
+    return amount / 12
 
 
-def with_meta(context: Dict, title: str, description: str, breadcrumbs: List[Dict]) -> Dict:
-    canonical = f"{SITE_URL}{request_path()}"
-    context = _apply_year_deep(context)
-    breadcrumbs = _apply_year_deep(breadcrumbs)
-    context.update(
-        {
-            "title": _apply_year(title),
-            "meta_description": _apply_year(description),
-            "canonical_url": canonical,
-            "site_url": SITE_URL,
-            "canonical_host": CANONICAL_HOST,
-            "ga_measurement_id": GA_MEASUREMENT_ID,
-            "adsense_client": ADSENSE_CLIENT,
-            "breadcrumbs": breadcrumbs,
-            "tax_year": active_tax_year(),
-            "now": datetime.utcnow(),
-            "salary_amounts": SALARY_AMOUNTS,
-            "guides": GUIDES,
-            "tool_cards": TOOL_CARDS,
-            "min_employer_pension": MIN_EMPLOYER_PENSION_RATE,
-            "min_total_pension": MIN_TOTAL_PENSION_RATE,
+def weekly_to_monthly(amount: float) -> float:
+    return amount * 52 / 12
+
+
+def round_money(amount: float) -> float:
+    return round(amount + 1e-9, 2)
+
+
+def get_number_arg(name: str, default: float) -> float:
+    raw = (request.args.get(name, "") or "").replace(",", "").replace("£", "").strip()
+    if not raw:
+        return default
+    try:
+        return float(raw)
+    except ValueError:
+        return default
+
+
+def get_text_arg(name: str, default: str) -> str:
+    raw = (request.args.get(name, "") or "").strip()
+    return raw if raw else default
+
+
+def get_bool_arg(name: str, default: bool = False) -> bool:
+    raw = (request.args.get(name, "") or "").strip().lower()
+    if not raw:
+        return default
+    return raw in {"1", "true", "yes", "on"}
+
+
+def parse_inputs(page: Dict[str, Any]) -> Dict[str, Any]:
+    parsed: Dict[str, Any] = {}
+    for field in page["fields"]:
+        if field["type"] == "number":
+            parsed[field["name"]] = get_number_arg(field["name"], field.get("default", 0))
+        elif field["type"] == "select":
+            value = get_text_arg(field["name"], field.get("default", ""))
+            valid = {option["value"] for option in field["options"]}
+            parsed[field["name"]] = value if value in valid else field.get("default", "")
+        elif field["type"] == "boolean":
+            parsed[field["name"]] = get_bool_arg(field["name"], field.get("default", False))
+    return parsed
+
+
+def uc_standard_allowance(age_band: str, household: str) -> float:
+    if household == "couple":
+        return 666.97 if age_band == "25_plus" else 528.34
+    return 424.90 if age_band == "25_plus" else 338.58
+
+
+def uc_health_element(health: str) -> float:
+    if health == "severe":
+        return 429.80
+    if health == "standard":
+        return 217.26
+    return 0.0
+
+
+def child_benefit_weekly(children: float) -> float:
+    children = max(0, int(children))
+    if children <= 0:
+        return 0.0
+    return 27.05 + max(0, children - 1) * 17.90
+
+
+def universal_credit_estimate(inputs: Dict[str, Any]) -> Dict[str, Any]:
+    savings = inputs["savings"]
+    if savings >= 16000:
+        return {
+            "primary_amount": 0.0,
+            "secondary_amount": 0.0,
+            "primary_label": "Estimated monthly Universal Credit",
+            "secondary_label": "Estimated annual Universal Credit",
+            "summary": "Savings of £16,000 or more usually stop a standard Universal Credit award.",
+            "breakdown": [
+                ("Standard allowance", 0.0),
+                ("Children", 0.0),
+                ("Housing support", 0.0),
+                ("Childcare support", 0.0),
+                ("Health element", 0.0),
+                ("Earnings deduction", 0.0),
+                ("Savings deduction", 0.0),
+            ],
+            "notes": [
+                "This estimator uses current monthly standard allowances and simplified housing assumptions.",
+                "Some households can still receive transitional protection or specialist elements not modelled here.",
+            ],
         }
+
+    base = uc_standard_allowance(inputs["age_band"], inputs["household"])
+    children = int(inputs["children"])
+    child_element = children * 303.94
+    if children > 0 and inputs["first_child_pre_2017"]:
+        child_element += 47.94
+    housing_support = min(inputs["housing_cost"], 1200.0)
+    childcare_cap = 1836.16 if children >= 2 else 1071.09
+    childcare_support = min(inputs["childcare_cost"] * 0.85, childcare_cap)
+    health = uc_health_element(inputs["health"])
+    work_allowance = 404.0 if housing_support > 0 else 673.0
+    earnings_deduction = max(0.0, inputs["earnings"] - work_allowance) * 0.55
+    savings_deduction = 0.0
+    if savings > 6000:
+        savings_deduction = math.ceil((savings - 6000) / 250.0) * 4.35
+    monthly_total = max(0.0, base + child_element + housing_support + childcare_support + health - earnings_deduction - savings_deduction)
+    return {
+        "primary_amount": round_money(monthly_total),
+        "secondary_amount": round_money(monthly_total * 12),
+        "primary_label": "Estimated monthly Universal Credit",
+        "secondary_label": "Estimated annual Universal Credit",
+        "summary": "A simplified award estimate using the 55% earnings taper, a work allowance where children or a health condition apply, savings deductions over £6,000, and capped childcare support.",
+        "breakdown": [
+            ("Standard allowance", base),
+            ("Child element", child_element),
+            ("Housing support used", housing_support),
+            ("Childcare support used", childcare_support),
+            ("Health element", health),
+            ("Earnings deduction", -earnings_deduction),
+            ("Savings deduction", -savings_deduction),
+        ],
+        "notes": [
+            "Universal Credit now pays the child element for every eligible child after the 6 April 2026 rule change.",
+            "Housing support is simplified here. Actual help depends on your rent type, service charges and local housing allowance rules.",
+        ],
+    }
+
+
+def child_benefit_estimate(inputs: Dict[str, Any]) -> Dict[str, Any]:
+    weekly_total = child_benefit_weekly(inputs["children"])
+    monthly_total = weekly_to_monthly(weekly_total)
+    annual_total = weekly_total * 52
+    return {
+        "primary_amount": round_money(weekly_total),
+        "secondary_amount": round_money(annual_total),
+        "primary_label": "Estimated weekly Child Benefit",
+        "secondary_label": "Estimated annual Child Benefit",
+        "summary": "This uses the published 2026 to 2027 Child Benefit rates for the eldest child and any additional children.",
+        "breakdown": [
+            ("Eldest or only child", 27.05 if inputs["children"] >= 1 else 0.0),
+            ("Additional children", max(0, int(inputs["children"]) - 1) * 17.90),
+            ("Monthly equivalent", monthly_total),
+        ],
+        "notes": [
+            "If anyone in the household has adjusted net income over £60,000, check the HICBC page next.",
+            "You can claim Child Benefit and opt out of payments if you want National Insurance credits without the cash payment.",
+        ],
+    }
+
+
+def hicbc_estimate(inputs: Dict[str, Any]) -> Dict[str, Any]:
+    annual_benefit = child_benefit_weekly(inputs["children"]) * 52
+    income = inputs["adjusted_net_income"]
+    if income <= 60000:
+        charge = 0.0
+    elif income >= 80000:
+        charge = annual_benefit
+    else:
+        percentage = min(1.0, (income - 60000) / 20000)
+        charge = annual_benefit * percentage
+    keep = max(0.0, annual_benefit - charge)
+    return {
+        "primary_amount": round_money(charge),
+        "secondary_amount": round_money(keep),
+        "primary_label": "Estimated annual HICBC charge",
+        "secondary_label": "Estimated Child Benefit kept",
+        "summary": "The charge starts above £60,000 adjusted net income and reaches 100% when income is £80,000 or more.",
+        "breakdown": [
+            ("Annual Child Benefit used", annual_benefit),
+            ("Adjusted net income", income),
+            ("Estimated charge", -charge),
+            ("Net amount retained", keep),
+        ],
+        "notes": [
+            "This uses the post-April 2024 HICBC taper of 1% for each £200 over £60,000.",
+            "Adjusted net income can be reduced by certain pension contributions and Gift Aid, so the real charge can differ.",
+        ],
+    }
+
+
+def pension_credit_estimate(inputs: Dict[str, Any]) -> Dict[str, Any]:
+    base = 363.25 if inputs["household"] == "couple" else 238.0
+    severe = 86.05 if inputs["severe_disability"] else 0.0
+    carer = 48.15 if inputs["carer"] else 0.0
+    savings_income = 0.0
+    if inputs["savings"] > 10000:
+        savings_income = math.floor((inputs["savings"] - 10000) / 500.0) + (1 if (inputs["savings"] - 10000) % 500 else 0)
+    weekly_award = max(0.0, base + severe + carer - inputs["weekly_income"] - savings_income)
+    return {
+        "primary_amount": round_money(weekly_award),
+        "secondary_amount": round_money(weekly_award * 52),
+        "primary_label": "Estimated weekly Pension Credit",
+        "secondary_label": "Estimated annual Pension Credit",
+        "summary": "This focuses on Guarantee Credit and uses the standard weekly minimum income levels plus optional severe disability and carer additions.",
+        "breakdown": [
+            ("Guarantee Credit minimum", base),
+            ("Severe disability addition", severe),
+            ("Carer addition", carer),
+            ("Income counted", -inputs["weekly_income"]),
+            ("Savings treated as income", -savings_income),
+        ],
+        "notes": [
+            "Savings under £10,000 are ignored. Above that, every £500 generally counts as £1 a week of income.",
+            "Housing costs, Savings Credit and mixed-age couple rules are not fully modelled here.",
+        ],
+    }
+
+
+def pip_estimate(inputs: Dict[str, Any]) -> Dict[str, Any]:
+    daily_points = inputs["daily_living_points"]
+    mobility_points = inputs["mobility_points"]
+    daily_rate = 0.0
+    mobility_rate = 0.0
+    daily_band = "No daily living award indicated"
+    mobility_band = "No mobility award indicated"
+    if daily_points >= 12:
+        daily_rate = 114.60
+        daily_band = "Enhanced daily living indicated"
+    elif daily_points >= 8:
+        daily_rate = 76.70
+        daily_band = "Standard daily living indicated"
+    if mobility_points >= 12:
+        mobility_rate = 80.00
+        mobility_band = "Enhanced mobility indicated"
+    elif mobility_points >= 8:
+        mobility_rate = 30.30
+        mobility_band = "Standard mobility indicated"
+    total = daily_rate + mobility_rate
+    return {
+        "primary_amount": round_money(total),
+        "secondary_amount": round_money(total * 52),
+        "primary_label": "Indicative weekly PIP amount",
+        "secondary_label": "Indicative annual PIP amount",
+        "summary": f"{daily_band}. {mobility_band}. PIP is based on descriptors and evidence, not income.",
+        "breakdown": [
+            ("Daily living component", daily_rate),
+            ("Mobility component", mobility_rate),
+            ("Combined weekly amount", total),
+        ],
+        "notes": [
+            "This is a points-based checker, not an official DWP decision tool.",
+            "Real awards depend on the evidence you provide, how long your condition affects you and a formal assessment process.",
+        ],
+    }
+
+
+def council_tax_reduction_estimate(inputs: Dict[str, Any]) -> Dict[str, Any]:
+    council_tax = inputs["monthly_council_tax"]
+    income = inputs["monthly_income"]
+    reduction = 0.0
+    if inputs["on_means_tested_benefit"]:
+        reduction = 1.0
+    elif income <= 1100:
+        reduction = 0.85
+    elif income <= 1600:
+        reduction = 0.6
+    elif income <= 2200:
+        reduction = 0.35
+    if inputs["single_adult"]:
+        reduction = max(reduction, 0.25)
+    if inputs["savings"] > 16000 and not inputs["on_guarantee_pension_credit"]:
+        reduction = 0.0
+    monthly_help = council_tax * min(reduction, 1.0)
+    return {
+        "primary_amount": round_money(monthly_help),
+        "secondary_amount": round_money(monthly_help * 12),
+        "primary_label": "Estimated monthly council tax help",
+        "secondary_label": "Estimated annual council tax help",
+        "summary": "Council Tax Reduction is set locally, so this page uses broad low-income bands and flags where means-tested benefits or a single-person discount usually strengthen entitlement.",
+        "breakdown": [
+            ("Current monthly council tax", council_tax),
+            ("Reduction percentage used", round_money(min(reduction, 1.0) * 100)),
+            ("Estimated monthly help", monthly_help),
+        ],
+        "notes": [
+            "Each council runs its own scheme. Treat this as a directional estimate only.",
+            "If you already qualify for the 25% single person discount, your remaining bill may still be reduced further by CTR depending on the local rules.",
+        ],
+    }
+
+
+def housing_benefit_estimate(inputs: Dict[str, Any]) -> Dict[str, Any]:
+    eligible_rent = inputs["weekly_rent"]
+    income = inputs["weekly_income"]
+    reduction = 0.0
+    if inputs["legacy_claimant"]:
+        if income <= 120:
+            reduction = 1.0
+        elif income <= 200:
+            reduction = 0.75
+        elif income <= 300:
+            reduction = 0.45
+        else:
+            reduction = 0.2
+        if inputs["spare_room"]:
+            reduction -= 0.14
+    if inputs["savings"] >= 16000 and not inputs["pension_age"]:
+        reduction = 0.0
+    weekly_help = max(0.0, eligible_rent * max(0.0, reduction))
+    return {
+        "primary_amount": round_money(weekly_help),
+        "secondary_amount": round_money(weekly_help * 52),
+        "primary_label": "Estimated weekly Housing Benefit",
+        "secondary_label": "Estimated annual Housing Benefit",
+        "summary": "Housing Benefit is now mainly for pension-age households and some supported or temporary housing cases, so this estimator is designed as a legacy checker rather than a new-claim tool.",
+        "breakdown": [
+            ("Weekly eligible rent used", eligible_rent),
+            ("Income band applied", income),
+            ("Estimated weekly support", weekly_help),
+        ],
+        "notes": [
+            "Most new working-age claims now go through Universal Credit housing costs instead of Housing Benefit.",
+            "Bedroom tax, local housing allowance, non-dependant deductions and service charge rules are simplified here.",
+        ],
+    }
+
+
+def benefit_cap_estimate(inputs: Dict[str, Any]) -> Dict[str, Any]:
+    if inputs["inside_london"]:
+        cap = 2110.25 if inputs["household"] in {"couple", "single_parent"} else 1413.92
+    else:
+        cap = 1835.0 if inputs["household"] in {"couple", "single_parent"} else 1229.42
+    monthly_benefits = inputs["monthly_benefits"]
+    excess = max(0.0, monthly_benefits - cap)
+    return {
+        "primary_amount": round_money(excess),
+        "secondary_amount": round_money(max(0.0, monthly_benefits - excess)),
+        "primary_label": "Estimated monthly amount over the cap",
+        "secondary_label": "Estimated capped benefit total",
+        "summary": "The benefit cap depends mainly on whether you live inside Greater London and whether you are a couple, single parent or single adult.",
+        "breakdown": [
+            ("Monthly benefit total entered", monthly_benefits),
+            ("Monthly cap used", cap),
+            ("Amount over cap", -excess),
+        ],
+        "notes": [
+            "Some households are exempt from the cap, including many people receiving disability-related benefits.",
+            "If you are on Universal Credit, earnings can also stop the cap applying in some cases.",
+        ],
+    }
+
+
+def ssp_estimate(inputs: Dict[str, Any]) -> Dict[str, Any]:
+    weekly_rate = min(123.25, inputs["average_weekly_earnings"] * 0.8)
+    weeks = min(28.0, inputs["weeks_off"])
+    total = weekly_rate * weeks
+    return {
+        "primary_amount": round_money(weekly_rate),
+        "secondary_amount": round_money(total),
+        "primary_label": "Estimated weekly SSP",
+        "secondary_label": "Estimated total SSP for absence",
+        "summary": "This follows the April 2026 SSP structure: the lower of £123.25 a week or 80% of average weekly earnings, for up to 28 weeks.",
+        "breakdown": [
+            ("Average weekly earnings", inputs["average_weekly_earnings"]),
+            ("Weekly SSP used", weekly_rate),
+            ("Weeks used", weeks),
+        ],
+        "notes": [
+            "From 6 April 2026, SSP is generally payable from the first full day of sickness absence for eligible employees.",
+            "Your employer may pay more under a contractual sick pay scheme.",
+        ],
+    }
+
+
+def maternity_comparison_estimate(inputs: Dict[str, Any]) -> Dict[str, Any]:
+    awe = inputs["average_weekly_earnings"]
+    smp_total = 0.0
+    ma_total = 0.0
+    if inputs["employed_long_enough"]:
+        smp_total = min(awe * 0.9, awe) * 6 + min(187.18, awe * 0.9) * 33
+    if inputs["employed_or_self_employed_long_enough"]:
+        ma_total = min(194.32, awe * 0.9) * 39
+    better = "Statutory Maternity Pay" if smp_total >= ma_total else "Maternity Allowance"
+    return {
+        "primary_amount": round_money(smp_total),
+        "secondary_amount": round_money(ma_total),
+        "primary_label": "Estimated total Statutory Maternity Pay",
+        "secondary_label": "Estimated total Maternity Allowance",
+        "summary": f"Based on the eligibility boxes you selected, {better} looks stronger on headline amount.",
+        "breakdown": [
+            ("SMP total", smp_total),
+            ("Maternity Allowance total", ma_total),
+        ],
+        "notes": [
+            "SMP usually requires 26 weeks with the same employer into the qualifying week. Maternity Allowance can help where SMP is not available.",
+            "Both estimates assume the full 39 weeks of payable maternity support.",
+        ],
+    }
+
+
+def esa_estimate(inputs: Dict[str, Any]) -> Dict[str, Any]:
+    if not inputs["has_recent_ni_record"]:
+        weekly_amount = 0.0
+    else:
+        weekly_amount = 145.90 if inputs["group"] == "support" else 95.55
+        if inputs["private_pension_weekly"] > 85:
+            weekly_amount -= (inputs["private_pension_weekly"] - 85) / 2
+    weekly_amount = max(0.0, weekly_amount)
+    return {
+        "primary_amount": round_money(weekly_amount),
+        "secondary_amount": round_money(weekly_amount * 52),
+        "primary_label": "Indicative weekly New Style ESA",
+        "secondary_label": "Indicative annual New Style ESA",
+        "summary": "This page estimates New Style ESA using the work-related activity and support group weekly rates, then adjusts for private pension income above £85 a week.",
+        "breakdown": [
+            ("Base weekly ESA used", 145.90 if inputs["group"] == "support" else 95.55),
+            ("Private pension entered", inputs["private_pension_weekly"]),
+            ("Indicative ESA after pension adjustment", weekly_amount),
+        ],
+        "notes": [
+            "You cannot usually get New Style ESA at the same time as Statutory Sick Pay.",
+            "Many households can claim Universal Credit alongside or instead of ESA, but UC may then be reduced by the ESA amount.",
+        ],
+    }
+
+
+def jsa_estimate(inputs: Dict[str, Any]) -> Dict[str, Any]:
+    if not inputs["has_recent_ni_record"] or inputs["hours_worked"] >= 16:
+        weekly_amount = 0.0
+    else:
+        weekly_amount = 95.55 if inputs["age_band"] == "25_plus" else 75.65
+    return {
+        "primary_amount": round_money(weekly_amount),
+        "secondary_amount": round_money(min(182 / 7 * weekly_amount, weekly_amount * 26)),
+        "primary_label": "Indicative weekly New Style JSA",
+        "secondary_label": "Indicative six-month JSA total",
+        "summary": "New Style JSA depends heavily on National Insurance history, age and whether you are working fewer than 16 hours a week.",
+        "breakdown": [
+            ("Weekly JSA used", weekly_amount),
+            ("Hours worked each week", inputs["hours_worked"]),
+        ],
+        "notes": [
+            "New claims are for New Style JSA. Income-based JSA is a legacy benefit.",
+            "If your NI record is weak or your income is low, Universal Credit may be the more relevant route to check.",
+        ],
+    }
+
+
+def working_tax_credit_estimate(inputs: Dict[str, Any]) -> Dict[str, Any]:
+    max_award = 2435.0
+    if inputs["household"] in {"couple", "lone_parent"}:
+        max_award += 2500.0
+    if inputs["hours_worked"] >= 30:
+        max_award += 1015.0
+    if inputs["disabled_worker"]:
+        max_award += 3935.0
+    threshold = 7955.0
+    withdrawal = max(0.0, inputs["annual_income"] - threshold) * 0.41
+    annual_award = max(0.0, max_award - withdrawal)
+    return {
+        "primary_amount": round_money(annual_award),
+        "secondary_amount": round_money(annual_to_monthly(annual_award)),
+        "primary_label": "Indicative annual Working Tax Credit",
+        "secondary_label": "Indicative monthly equivalent",
+        "summary": "Working Tax Credit ended for new claims on 5 April 2025. This page is a legacy reference estimator using the last published 2024 to 2025 rates.",
+        "breakdown": [
+            ("Maximum award basis used", max_award),
+            ("Income reduction applied", -withdrawal),
+            ("Legacy annual estimate", annual_award),
+        ],
+        "notes": [
+            "This is mainly useful for transitional protection conversations, disputes and historic award checking.",
+            "Most new low-income support claims now go through Universal Credit instead of tax credits.",
+        ],
+    }
+
+
+def child_tax_credit_estimate(inputs: Dict[str, Any]) -> Dict[str, Any]:
+    children = max(0, int(inputs["children"]))
+    max_award = 545.0 + children * 3455.0
+    threshold = 19995.0 if inputs["ctc_only"] else 7955.0
+    withdrawal = max(0.0, inputs["annual_income"] - threshold) * 0.41
+    annual_award = max(0.0, max_award - withdrawal)
+    return {
+        "primary_amount": round_money(annual_award),
+        "secondary_amount": round_money(annual_to_monthly(annual_award)),
+        "primary_label": "Indicative annual Child Tax Credit",
+        "secondary_label": "Indicative monthly equivalent",
+        "summary": "Child Tax Credit also closed to new claims on 5 April 2025. This page uses the final published legacy rates as a reference estimate.",
+        "breakdown": [
+            ("Family and child elements", max_award),
+            ("Income reduction applied", -withdrawal),
+            ("Legacy annual estimate", annual_award),
+        ],
+        "notes": [
+            "Use this for historic or transitional cases only. New support for children is generally through Universal Credit and Child Benefit.",
+            "Disability additions are not fully modelled on this simplified page.",
+        ],
+    }
+
+
+def tax_free_childcare_estimate(inputs: Dict[str, Any]) -> Dict[str, Any]:
+    children = max(1, int(inputs["children"]))
+    quarterly_top_up_cap = 1000.0 if inputs["disabled_child"] else 500.0
+    annual_top_up_cap = quarterly_top_up_cap * 4 * children
+    annual_spend = max(0.0, inputs["annual_childcare_cost"])
+    top_up = min(annual_spend * 0.25, annual_top_up_cap)
+    return {
+        "primary_amount": round_money(top_up),
+        "secondary_amount": round_money(top_up / 12),
+        "primary_label": "Estimated annual Tax-Free Childcare top-up",
+        "secondary_label": "Estimated monthly equivalent",
+        "summary": "Tax-Free Childcare adds £2 for every £8 you pay in, up to the published quarterly caps for each child.",
+        "breakdown": [
+            ("Annual childcare cost entered", annual_spend),
+            ("Government top-up used", top_up),
+        ],
+        "notes": [
+            "You cannot get Tax-Free Childcare at the same time as Universal Credit childcare support.",
+            "The scheme normally stops the September after your child turns 11, or 16 if they are disabled.",
+        ],
+    }
+
+
+def sure_start_estimate(inputs: Dict[str, Any]) -> Dict[str, Any]:
+    eligible = inputs["qualifying_benefit"] and (inputs["first_child"] or inputs["multiple_birth_with_other_children"])
+    amount = 500.0 if eligible else 0.0
+    return {
+        "primary_amount": amount,
+        "secondary_amount": amount,
+        "primary_label": "Indicative Sure Start Maternity Grant",
+        "secondary_label": "One-off payment if eligible",
+        "summary": "Sure Start Maternity Grant is a one-off £500 payment for eligible households, usually linked to a first child or some multiple birth cases.",
+        "breakdown": [
+            ("One-off grant", amount),
+        ],
+        "notes": [
+            "The claim window is usually from 11 weeks before the due date until 6 months after birth.",
+            "Scotland uses different family payment schemes instead of Sure Start Maternity Grant.",
+        ],
+    }
+
+
+def healthy_start_estimate(inputs: Dict[str, Any]) -> Dict[str, Any]:
+    eligible = inputs["pregnant_or_child_under_4"] and (inputs["qualifying_benefit"] or inputs["under_18_and_pregnant"])
+    monthly_value = 17.0 if eligible else 0.0
+    return {
+        "primary_amount": monthly_value,
+        "secondary_amount": round_money(monthly_value * 12),
+        "primary_label": "Indicative monthly Healthy Start value",
+        "secondary_label": "Indicative annual value",
+        "summary": "This checker focuses on whether you are in the right pregnancy or child age group and whether a qualifying benefit route is in place.",
+        "breakdown": [
+            ("Indicative monthly support", monthly_value),
+        ],
+        "notes": [
+            "Healthy Start support is delivered through a prepaid card and free vitamins rather than a standard benefit payment.",
+            "The exact value varies by household composition and nation-specific alternatives apply in Scotland.",
+        ],
+    }
+
+
+def free_school_meals_estimate(inputs: Dict[str, Any]) -> Dict[str, Any]:
+    uc_route = inputs["on_universal_credit"] and inputs["annual_take_home_income"] < 7400
+    eligible = uc_route or inputs["other_qualifying_benefit"] or inputs["infant_pupil"]
+    meals = 190 * int(inputs["children"]) if eligible else 0
+    return {
+        "primary_amount": float(meals),
+        "secondary_amount": float(meals),
+        "primary_label": "Indicative school-year value of free meals",
+        "secondary_label": "Indicative annual family value",
+        "summary": "Eligibility in England depends mainly on qualifying benefits, with a specific £7,400 post-tax earnings test for most Universal Credit cases and universal infant free meals for reception to year 2.",
+        "breakdown": [
+            ("Children included", inputs["children"]),
+            ("School-year value used", meals),
+        ],
+        "notes": [
+            "This page is aimed at England. Scotland, Wales and Northern Ireland use different rules.",
+            "The cash value shown is illustrative. Your actual gain depends on school term dates and meal pricing locally.",
+        ],
+    }
+
+
+def winter_fuel_estimate(inputs: Dict[str, Any]) -> Dict[str, Any]:
+    eligible = inputs["born_before_cutoff"] and inputs["lives_in_england_or_wales"]
+    amount = 0.0
+    if eligible:
+        amount = 300.0 if inputs["born_before_older_cutoff"] else 200.0
+        if inputs["income_over_35000"]:
+            amount = 0.0
+    return {
+        "primary_amount": amount,
+        "secondary_amount": amount,
+        "primary_label": "Indicative Winter Fuel Payment",
+        "secondary_label": "One-off winter payment",
+        "summary": "This follows the 2026 to 2027 qualifying week age tests and flags the current £35,000 personal income clawback.",
+        "breakdown": [
+            ("Indicative payment", amount),
+        ],
+        "notes": [
+            "Most eligible households are paid automatically in November or December.",
+            "Scotland uses Pension Age Winter Heating Payment instead, and Northern Ireland has separate arrangements.",
+        ],
+    }
+
+
+def cold_weather_estimate(inputs: Dict[str, Any]) -> Dict[str, Any]:
+    eligible = inputs["qualifying_benefit"] and inputs["lives_outside_scotland"]
+    total = 25.0 * max(0, int(inputs["triggered_periods"])) if eligible else 0.0
+    return {
+        "primary_amount": total,
+        "secondary_amount": total,
+        "primary_label": "Estimated Cold Weather Payment total",
+        "secondary_label": "Winter total based on triggered periods",
+        "summary": "Cold Weather Payments are £25 for each 7-day cold spell trigger in your area between 1 November and 31 March.",
+        "breakdown": [
+            ("Triggered cold spells entered", inputs["triggered_periods"]),
+            ("Estimated total", total),
+        ],
+        "notes": [
+            "The payment is automatic when your postcode area triggers and you meet the qualifying benefit rules.",
+            "Scotland uses Winter Heating Payment instead of Cold Weather Payments.",
+        ],
+    }
+
+
+def savings_impact_estimate(inputs: Dict[str, Any]) -> Dict[str, Any]:
+    savings = inputs["savings"]
+    threshold = 6000.0
+    excess = max(0.0, savings - threshold)
+    tariff_periods = math.ceil(excess / 250.0) if excess > 0 else 0
+    monthly_deduction = tariff_periods * 4.35
+    if savings >= 16000:
+        return {
+            "primary_amount": 0.0,
+            "secondary_amount": 0.0,
+            "primary_label": "Monthly UC deduction from savings",
+            "secondary_label": "Annual UC reduction",
+            "summary": "Savings of £16,000 or more mean you are not normally eligible for Universal Credit at all.",
+            "breakdown": [
+                ("Savings threshold", threshold),
+                ("Savings entered", savings),
+                ("UC award", 0.0),
+            ],
+            "notes": [
+                "At £16,000 or more in savings, Universal Credit is not normally payable.",
+                "Savings below £6,000 have no effect on your Universal Credit award.",
+            ],
+        }
+    return {
+        "primary_amount": round_money(monthly_deduction),
+        "secondary_amount": round_money(monthly_deduction * 12),
+        "primary_label": "Monthly UC deduction from savings",
+        "secondary_label": "Annual UC reduction from savings",
+        "summary": f"Savings of {currency(savings)} generate an assumed monthly income of {currency(monthly_deduction)}, which reduces your Universal Credit by that amount.",
+        "breakdown": [
+            ("Lower threshold", threshold),
+            ("Excess savings above £6,000", excess),
+            ("£250 bands above threshold", tariff_periods),
+            ("Tariff income rate per band", 4.35),
+            ("Monthly UC deduction", monthly_deduction),
+        ],
+        "notes": [
+            "For every complete £250 above £6,000, DWP adds £4.35 to assumed monthly income, reducing Universal Credit by the same amount.",
+            "Savings below £6,000 are fully disregarded. At £16,000 or more, UC eligibility normally stops entirely.",
+        ],
+    }
+
+
+def earnings_impact_estimate(inputs: Dict[str, Any]) -> Dict[str, Any]:
+    earnings = inputs["earnings"]
+    household = inputs["household"]
+    children = int(inputs["children"])
+    housing_cost = inputs["housing_cost"]
+    has_work_allowance = children > 0
+    work_allowance = 404.0 if (has_work_allowance and housing_cost > 0) else (673.0 if has_work_allowance else 0.0)
+    taper = 0.55
+    taxable = max(0.0, earnings - work_allowance)
+    uc_reduction = round_money(taxable * taper)
+    extra_100_impact = round_money(100 * taper if earnings >= work_allowance else max(0.0, earnings + 100 - work_allowance) * taper)
+    kept_per_100 = round_money(100 - extra_100_impact)
+    return {
+        "primary_amount": round_money(uc_reduction),
+        "secondary_amount": round_money(kept_per_100),
+        "primary_label": "Monthly UC reduction at current earnings",
+        "secondary_label": "UC kept per extra £100 earned",
+        "summary": f"After the {currency(work_allowance)} work allowance, the 55% taper reduces UC by {currency(uc_reduction)} a month. For each extra £100 earned, you keep {currency(kept_per_100)} net.",
+        "breakdown": [
+            ("Monthly earnings entered", earnings),
+            ("Work allowance", work_allowance),
+            ("Earnings above work allowance", max(0.0, taxable)),
+            ("55% taper deduction", -uc_reduction),
+            ("UC kept per £100 extra earned", kept_per_100),
+        ],
+        "notes": [
+            "The work allowance (£404 or £673 depending on housing support) only applies if you have children or a health/disability element.",
+            "Without a work allowance the 55% taper starts from the first pound of net earnings.",
+        ],
+    }
+
+
+def maternity_pay_estimate(inputs: Dict[str, Any]) -> Dict[str, Any]:
+    weekly_pay = inputs["weekly_pay"]
+    weeks_higher = min(int(inputs["weeks_higher"]), 6)
+    weeks_lower = min(int(inputs["weeks_lower"]), 33)
+    smp_rate_lower = 184.03
+    higher_total = weekly_pay * 0.9 * weeks_higher
+    lower_total = smp_rate_lower * weeks_lower
+    total = higher_total + lower_total
+    return {
+        "primary_amount": round_money(total),
+        "secondary_amount": round_money(weekly_pay * 0.9),
+        "primary_label": "Estimated total SMP over maternity leave",
+        "secondary_label": "Weekly SMP in the first 6 weeks (90%)",
+        "summary": f"Statutory Maternity Pay estimated at {currency(weekly_pay * 0.9)}/week for the first {weeks_higher} weeks, then {currency(smp_rate_lower)}/week for {weeks_lower} weeks.",
+        "breakdown": [
+            ("Average weekly pay entered", weekly_pay),
+            ("First 6 weeks — 90% of pay", round_money(weekly_pay * 0.9)),
+            (f"Weeks at higher rate ({weeks_higher})", higher_total),
+            (f"Flat rate weeks — £{smp_rate_lower}/week", smp_rate_lower),
+            (f"Weeks at flat rate ({weeks_lower})", lower_total),
+            ("Estimated total SMP", total),
+        ],
+        "notes": [
+            "SMP is normally payable for up to 39 weeks. The first 6 weeks are paid at 90% of average weekly earnings; weeks 7 to 39 are paid at the statutory flat rate (£184.03 in 2026/27) or 90% of earnings if lower.",
+            "You need to have been employed for at least 26 weeks into the qualifying week and earning above the lower earnings limit to qualify.",
+        ],
+    }
+
+
+def tax_free_childcare_monthly_estimate(inputs: Dict[str, Any]) -> Dict[str, Any]:
+    monthly_childcare = inputs["monthly_childcare"]
+    children = max(1, int(inputs["children"]))
+    annual_spend = monthly_childcare * 12
+    annual_cap_per_child = 2000.0
+    annual_cap = annual_cap_per_child * children
+    annual_top_up = min(annual_spend * 0.25, annual_cap)
+    monthly_top_up = annual_top_up / 12
+    return {
+        "primary_amount": round_money(monthly_top_up),
+        "secondary_amount": round_money(annual_top_up),
+        "primary_label": "Estimated monthly government top-up",
+        "secondary_label": "Estimated annual government top-up",
+        "summary": f"For {currency(monthly_childcare)}/month on childcare, the government adds {currency(monthly_top_up)}/month — up to the annual cap of {currency(annual_cap)} for {children} child{'ren' if children > 1 else ''}.",
+        "breakdown": [
+            ("Monthly childcare entered", monthly_childcare),
+            ("Annual childcare spend", annual_spend),
+            ("Annual cap used", annual_cap),
+            ("Government top-up (20p per 80p)", annual_top_up),
+            ("Monthly equivalent", monthly_top_up),
+        ],
+        "notes": [
+            "The government adds 20p for every 80p you pay in, up to £500 per child per quarter (£2,000 per year) for most children.",
+            "You cannot use Tax-Free Childcare at the same time as Universal Credit childcare support — compare both before choosing.",
+        ],
+    }
+
+
+def attendance_allowance_estimate(inputs: Dict[str, Any]) -> Dict[str, Any]:
+    rate = inputs["rate"]  # "lower" or "higher"
+    weekly = 73.90 if rate == "lower" else 110.40
+    annual = round_money(weekly * 52)
+    label = "lower rate" if rate == "lower" else "higher rate"
+    return {
+        "primary_amount": round_money(weekly),
+        "secondary_amount": annual,
+        "primary_label": "Estimated weekly Attendance Allowance",
+        "secondary_label": "Estimated annual Attendance Allowance",
+        "summary": f"The {label} of Attendance Allowance is {currency(weekly)} a week in 2026/27 ({currency(annual)} a year). It is not means tested — income and savings have no effect.",
+        "breakdown": [
+            ("Weekly Attendance Allowance", weekly),
+            ("Annual equivalent (52 weeks)", annual),
+        ],
+        "notes": [
+            "Attendance Allowance is non-means-tested — income, savings and whether you live with a partner have no effect.",
+            "Lower rate: care needs during the day or night. Higher rate: care needs day and night, or terminally ill.",
+            "Receiving Attendance Allowance can passport you to higher Pension Credit, Council Tax Reduction and Housing Benefit awards.",
+            "Attendance Allowance is for people over State Pension age. Under State Pension age, PIP applies instead.",
+        ],
+    }
+
+
+def carers_allowance_estimate(inputs: Dict[str, Any]) -> Dict[str, Any]:
+    weekly_earnings = inputs["weekly_earnings"]
+    hours_caring = inputs["hours_caring"]
+    has_qualifying_benefit = inputs["has_qualifying_benefit"]
+    earnings_limit = 151.0
+    weekly_rate = 81.90
+
+    if hours_caring < 35:
+        eligible = False
+        reason = f"You need to care for at least 35 hours a week. You entered {hours_caring} hours."
+        weekly = 0.0
+    elif not has_qualifying_benefit:
+        eligible = False
+        reason = "The person you care for must receive a qualifying disability benefit (PIP daily living, DLA care, Attendance Allowance or similar)."
+        weekly = 0.0
+    elif weekly_earnings > earnings_limit:
+        eligible = False
+        reason = f"Your weekly earnings ({currency(weekly_earnings)}) are above the £{earnings_limit}/week earnings limit after permitted deductions."
+        weekly = 0.0
+    else:
+        eligible = True
+        reason = "Indicative eligibility: contribution conditions and other rules may apply."
+        weekly = weekly_rate
+
+    annual = round_money(weekly * 52)
+    return {
+        "primary_amount": round_money(weekly),
+        "secondary_amount": annual,
+        "primary_label": "Estimated weekly Carer's Allowance",
+        "secondary_label": "Estimated annual Carer's Allowance",
+        "summary": reason if not eligible else f"Carer's Allowance is {currency(weekly_rate)} a week in 2026/27 ({currency(annual)} a year) if eligible. It is taxable and may reduce Universal Credit by the same amount.",
+        "breakdown": [
+            ("Weekly Carer's Allowance rate", weekly_rate),
+            ("Your weekly earnings", weekly_earnings),
+            ("Earnings limit", earnings_limit),
+            ("Hours caring per week", hours_caring),
+            ("Estimated weekly award", weekly),
+        ],
+        "notes": [
+            "Carer's Allowance is taxable and counts as income for Universal Credit purposes — UC will usually be reduced by £1 for every £1 of Carer's Allowance received.",
+            "You may still have 'underlying entitlement' to Carer's Allowance even if a higher benefit (like State Pension) prevents actual payment — this can still trigger a carer element in UC.",
+            "The earnings limit is £151/week net after tax, NI and 50% of pension contributions.",
+            "The person you care for must receive PIP (daily living component), DLA (middle or high care), Attendance Allowance, or similar.",
+        ],
+    }
+
+
+CALCULATION_FUNCTIONS = {
+    "universal_credit": universal_credit_estimate,
+    "child_benefit": child_benefit_estimate,
+    "hicbc": hicbc_estimate,
+    "pension_credit": pension_credit_estimate,
+    "pip": pip_estimate,
+    "council_tax_reduction": council_tax_reduction_estimate,
+    "housing_benefit": housing_benefit_estimate,
+    "benefit_cap": benefit_cap_estimate,
+    "ssp": ssp_estimate,
+    "maternity_comparison": maternity_comparison_estimate,
+    "esa": esa_estimate,
+    "jsa": jsa_estimate,
+    "working_tax_credit": working_tax_credit_estimate,
+    "child_tax_credit": child_tax_credit_estimate,
+    "tax_free_childcare": tax_free_childcare_estimate,
+    "sure_start": sure_start_estimate,
+    "healthy_start": healthy_start_estimate,
+    "free_school_meals": free_school_meals_estimate,
+    "winter_fuel": winter_fuel_estimate,
+    "cold_weather": cold_weather_estimate,
+    "savings_impact": savings_impact_estimate,
+    "earnings_impact": earnings_impact_estimate,
+    "maternity_pay": maternity_pay_estimate,
+    "tax_free_childcare_monthly": tax_free_childcare_monthly_estimate,
+    "attendance_allowance": attendance_allowance_estimate,
+    "carers_allowance": carers_allowance_estimate,
+}
+
+
+def calc_page(
+    slug: str,
+    name: str,
+    description: str,
+    summary: str,
+    formula: str,
+    fields: List[Dict[str, Any]],
+    faq: List[Dict[str, str]],
+    sections: List[Dict[str, Any]],
+    aliases: List[str],
+    related: List[str],
+) -> Dict[str, Any]:
+    return {
+        "slug": slug,
+        "url": f"/{slug}",
+        "title": name,
+        "description": description,
+        "summary": summary,
+        "formula": formula,
+        "fields": fields,
+        "faq": faq,
+        "sections": sections,
+        "aliases": aliases,
+        "related": related,
+    }
+
+
+COMMON_CHILDREN_FIELD = {"name": "children", "label": "Children included", "type": "number", "default": 2, "step": 1, "min": 0}
+COMMON_SAVINGS_FIELD = {"name": "savings", "label": "Savings and investments", "type": "number", "default": 0, "step": 100, "min": 0, "prefix": "£"}
+
+CALCULATORS: Dict[str, Dict[str, Any]] = {
+    "universal-credit-calculator": calc_page(
+        "universal-credit-calculator",
+        "Universal Credit calculator",
+        "Estimate monthly Universal Credit using household type, children, housing costs, childcare, earnings and savings. Independent UK estimator.",
+        "Estimate what support you may get through Universal Credit using a simplified but practical monthly model.",
+        "universal_credit",
+        [
+            {"name": "age_band", "label": "Main claimant age", "type": "select", "default": "25_plus", "options": [{"value": "under_25", "label": "Under 25"}, {"value": "25_plus", "label": "25 or over"}]},
+            {"name": "household", "label": "Household type", "type": "select", "default": "single", "options": [{"value": "single", "label": "Single"}, {"value": "couple", "label": "Couple"}]},
+            COMMON_CHILDREN_FIELD,
+            {"name": "first_child_pre_2017", "label": "First child born before 6 April 2017", "type": "boolean", "default": False},
+            {"name": "housing_cost", "label": "Monthly eligible rent", "type": "number", "default": 750, "step": 25, "min": 0, "prefix": "£"},
+            {"name": "earnings", "label": "Monthly take-home earnings", "type": "number", "default": 1200, "step": 25, "min": 0, "prefix": "£"},
+            COMMON_SAVINGS_FIELD,
+            {"name": "childcare_cost", "label": "Monthly registered childcare cost", "type": "number", "default": 0, "step": 25, "min": 0, "prefix": "£"},
+            {"name": "health", "label": "Health element assumption", "type": "select", "default": "none", "options": [{"value": "none", "label": "None"}, {"value": "standard", "label": "Lower LCWRA rate"}, {"value": "severe", "label": "Higher LCWRA rate"}]},
+        ],
+        [
+            {"q": "Is this an official Universal Credit calculator?", "a": "No. This is an independent estimator designed to help you sense-check likely entitlement before you use an official claim or adviser route."},
+            {"q": "Does it include the April 2026 child element change?", "a": "Yes. The estimator assumes the child element can apply for every eligible child from 6 April 2026, while still warning that the benefit cap can limit the outcome."},
+            {"q": "Why is housing support only an estimate?", "a": "Actual housing help depends on your rent type, bedroom entitlement, local housing allowance area, service charges and whether you are in temporary or supported housing."},
+        ],
+        [
+            {"heading": "What this Universal Credit calculator covers", "paragraphs": ["This page is built for people who want a fast but sensible Universal Credit estimate without pretending to be a full DWP decision engine. It uses the current standard allowances, child element, childcare reimbursement, savings taper and earnings taper, then shows how those pieces interact.", "The output is most useful for quick scenario planning: checking whether extra earnings are likely to reduce support sharply, seeing whether childcare support changes the picture, and understanding whether savings are the main reason an award looks low."]},
+            {"heading": "Where the estimate is deliberately simplified", "paragraphs": ["Housing support is one of the most complex parts of Universal Credit, so this site uses your entered rent with a visible cap rather than pretending it knows your exact local housing allowance or service-charge position. That keeps the page useful without inventing false precision.", "The same principle applies to deductions, sanctions, transitional protection and managed migration. They can materially affect real awards, but they are specific enough that a short on-page estimator should flag them rather than fake certainty."]},
+            {"heading": "Best next steps after using the estimate", "paragraphs": ["If this checker suggests you may qualify, keep a note of your monthly earnings, rent, childcare invoices and savings because those are the numbers most likely to change the final award. If your estimate looks low, compare it against the benefit cap page and the council tax reduction page because those can explain the gap.", "For childcare planning, also compare Tax-Free Childcare before you commit. You cannot normally claim both schemes at the same time, and the stronger option can change depending on your hours and childcare bill."]},
+        ],
+        ["universal-credit-estimator", "universal-credit-checker"],
+        ["child-benefit-calculator", "benefit-cap-calculator", "council-tax-reduction-calculator", "tax-free-childcare-calculator"],
+    ),
+    "child-benefit-calculator": calc_page(
+        "child-benefit-calculator",
+        "Child Benefit calculator",
+        "Estimate weekly, monthly and annual Child Benefit for 2026 to 2027 using the latest published UK rates.",
+        "Work out the current Child Benefit amount for your household and compare it with the HICBC charge if income is higher.",
+        "child_benefit",
+        [COMMON_CHILDREN_FIELD],
+        [
+            {"q": "What rates does this Child Benefit calculator use?", "a": "It uses the confirmed 2026 to 2027 weekly rates of £27.05 for the eldest or only child and £17.90 for each additional child."},
+            {"q": "Does Child Benefit affect Universal Credit?", "a": "Child Benefit is paid separately, but it can still count towards the benefit cap if the cap applies to your household."},
+            {"q": "Should higher earners still claim Child Benefit?", "a": "Often yes. Some households still claim and either pay the HICBC or opt out of payments so National Insurance credits are protected."},
+        ],
+        [
+            {"heading": "A straightforward Child Benefit estimate", "paragraphs": ["Child Benefit is one of the simplest mainstream UK family payments to estimate because the weekly rates are fixed and not means tested. That makes this page useful as both a quick budgeting tool and a first step before checking whether the High Income Child Benefit Charge could claw some or all of it back.", "The output is shown as weekly and annual totals because many parents think about Child Benefit in weekly terms, while tax planning for HICBC usually works better on an annual basis."]},
+            {"heading": "Why this page links directly to HICBC", "paragraphs": ["A Child Benefit figure on its own can be misleading for households with one higher earner. If either partner’s adjusted net income goes above the threshold, some or all of the benefit may need to be paid back through PAYE or Self Assessment.", "That is why this calculator deliberately sends you onwards to the HICBC page rather than leaving the family payment isolated. Search intent here is often a combined question: how much do I get, and do I actually keep it."]},
+            {"heading": "When Child Benefit still matters even if payments stop", "paragraphs": ["Some people opt out of receiving Child Benefit payments because of the tax charge, but keep the claim live. That can still protect National Insurance credits and help make sure a child gets a National Insurance number automatically later on.", "For many households the practical question is not just whether the payment lands in the bank, but whether the claim itself should exist. This page is written with that real-world decision in mind."]},
+        ],
+        ["child-benefit-estimator", "child-benefit-rates", "how-much-child-benefit"],
+        ["hicbc-calculator", "tax-free-childcare-calculator", "free-school-meals-checker", "universal-credit-calculator"],
+    ),
+    "hicbc-calculator": calc_page(
+        "hicbc-calculator",
+        "High Income Child Benefit Charge calculator 2026",
+        "Calculate the High Income Child Benefit Charge (HICBC) using adjusted net income and 2026/27 Child Benefit rates.",
+        "Check how much Child Benefit a higher earner may have to repay through the HICBC in 2026/27.",
+        "hicbc",
+        [COMMON_CHILDREN_FIELD, {"name": "adjusted_net_income", "label": "Adjusted net income", "type": "number", "default": 68000, "step": 100, "min": 0, "prefix": "£"}],
+        [
+            {"q": "When does the High Income Child Benefit Charge start?", "a": "For tax years from 2024 to 2025 onwards, it starts when adjusted net income is above £60,000 and reaches 100% at £80,000."},
+            {"q": "How quickly does the charge rise?", "a": "The charge increases by 1% of your Child Benefit for every £200 of adjusted net income above £60,000."},
+            {"q": "Can pension contributions reduce the charge?", "a": "Often yes. Because the charge is based on adjusted net income, some pension contributions and Gift Aid donations can reduce the figure used."},
+        ],
+        [
+            {"heading": "How this HICBC calculator works", "paragraphs": ["This page first estimates the annual Child Benefit attached to your household, then applies the current taper used by HMRC. The result is intentionally shown as an annual tax charge because that mirrors how most people eventually deal with it through PAYE coding changes or Self Assessment.", "The calculation is simple enough to be useful, but the page still uses adjusted net income language rather than basic salary because that distinction matters. A family can sit above or below the threshold depending on pension contributions, dividends, savings interest and Gift Aid."]},
+            {"heading": "Why HICBC planning matters before you change salary sacrifice or pension contributions", "paragraphs": ["This is one of those tax charges where a small planning decision can have a visible impact. If you are close to the taper band, pension contributions can sometimes reduce the charge more efficiently than people expect.", "That does not mean everyone should change contributions just to avoid the charge. It means the charge should be part of the same conversation as childcare costs, household cashflow and tax planning rather than treated as a surprise later."]},
+            {"heading": "Use this alongside the Child Benefit page", "paragraphs": ["Families often search for HICBC after hearing they may need to repay Child Benefit, but the right next question is usually whether they should still claim or whether they should opt out of payments. This site is built so the Child Benefit and HICBC pages support that full decision path.", "If your income is volatile, run a couple of scenarios rather than one. The charge is tax-year based, so bonuses and dividend changes can shift the answer late in the year."]},
+        ],
+        ["high-income-child-benefit-charge-calculator", "child-benefit-tax-charge-calculator"],
+        ["child-benefit-calculator", "tax-free-childcare-calculator", "working-tax-credit-calculator"],
+    ),
+    "pension-credit-calculator": calc_page(
+        "pension-credit-calculator",
+        "Pension Credit calculator",
+        "Estimate Guarantee Credit using weekly income, savings and key additions such as severe disability or carer status.",
+        "Check whether low retirement income could translate into Pension Credit and the wider passported help that often comes with it.",
+        "pension_credit",
+        [
+            {"name": "household", "label": "Household type", "type": "select", "default": "single", "options": [{"value": "single", "label": "Single"}, {"value": "couple", "label": "Couple"}]},
+            {"name": "weekly_income", "label": "Weekly income before Pension Credit", "type": "number", "default": 180, "step": 1, "min": 0, "prefix": "£"},
+            COMMON_SAVINGS_FIELD,
+            {"name": "severe_disability", "label": "Severe disability addition likely", "type": "boolean", "default": False},
+            {"name": "carer", "label": "Carer addition likely", "type": "boolean", "default": False},
+        ],
+        [
+            {"q": "Can you get Pension Credit if you own your home?", "a": "Yes. Home ownership does not stop Pension Credit on its own."},
+            {"q": "Do savings rule Pension Credit out?", "a": "Not necessarily. Savings under £10,000 are ignored, and amounts above that are usually treated as extra weekly income rather than an automatic disqualification."},
+            {"q": "Why check Pension Credit even for a small award?", "a": "Because even a modest award can unlock other help such as council tax support, cold weather support, NHS cost help and sometimes heating discounts."},
+        ],
+        [
+            {"heading": "Why Pension Credit is often missed", "paragraphs": ["A common mistake is assuming Pension Credit is only for people with no savings or no pension income. In reality the scheme is designed to top income up to a minimum level, and small occupational pensions or modest savings do not automatically remove entitlement.", "That makes a quick checker genuinely useful. Many households are not asking whether they will receive a large benefit. They are asking whether they may qualify for the gateway to wider support."]},
+            {"heading": "The importance of passported support", "paragraphs": ["Pension Credit can trigger help that matters as much as the weekly cash top-up itself. Council Tax Reduction, Cold Weather Payments, NHS support and housing help can change a household budget materially once entitlement is in place.", "For that reason, this calculator shows the core Guarantee Credit estimate but the page copy repeatedly points to the wider system around it. Ranking value comes from answering the real search intent, not just the arithmetic."]},
+            {"heading": "Where this estimate is still only a guide", "paragraphs": ["This page does not fully model Savings Credit, housing costs, mixed-age couples or all disability-linked additions. Those details can shift the final award, especially where legacy entitlement overlaps with current claims.", "Even so, it is a practical first-pass checker because it highlights the main thresholds and the savings treatment that many people misunderstand."]},
+        ],
+        ["pension-credit-estimator", "can-i-get-pension-credit"],
+        ["winter-fuel-payment-checker", "cold-weather-payment-checker", "council-tax-reduction-calculator"],
+    ),
+    "pip-eligibility-checker": calc_page(
+        "pip-eligibility-checker",
+        "PIP eligibility checker",
+        "Use a simplified points-based PIP checker to estimate whether a daily living or mobility award may be in range.",
+        "Sense-check a likely PIP band by entering your likely points for daily living and mobility activities.",
+        "pip",
+        [
+            {"name": "daily_living_points", "label": "Daily living points", "type": "number", "default": 8, "step": 1, "min": 0},
+            {"name": "mobility_points", "label": "Mobility points", "type": "number", "default": 4, "step": 1, "min": 0},
+        ],
+        [
+            {"q": "Is PIP based on income or savings?", "a": "No. PIP is not means tested. It depends on how your condition affects you in daily living and mobility activities."},
+            {"q": "What points usually trigger an award?", "a": "Standard rate generally starts at 8 points and enhanced rate at 12 points within either component."},
+            {"q": "Can you get only one component?", "a": "Yes. Some people qualify for only daily living, some only mobility, and some receive both."},
+        ],
+        [
+            {"heading": "What this PIP checker is designed to do well", "paragraphs": ["PIP is one of the most searched-for UK benefits because the official process feels opaque. This page does not try to replace the descriptor-by-descriptor assessment, but it does give you a quick way to translate points into likely rate bands and weekly amounts.", "That makes it useful for preparation. If your likely points are close to 8 or 12 in a component, the priority becomes evidence quality and descriptor accuracy rather than just the headline amount."]},
+            {"heading": "Why this checker avoids pretending to predict a DWP decision", "paragraphs": ["PIP outcomes depend on the detail behind each activity: whether help is needed safely, repeatedly, to an acceptable standard and in a reasonable time. A two-box checker cannot replicate that properly, so this page is explicit that the result is indicative only.", "That honesty is useful for both users and search quality. A misleadingly precise PIP calculator would look stronger on first glance but would be worse in practice."]},
+            {"heading": "Use the estimate to guide evidence gathering", "paragraphs": ["If this checker suggests a standard or enhanced rate could be in range, the next step is usually to map your points against the evidence you already have: letters, care plans, prescriptions, specialist reports or symptom diaries. That is where many PIP claims become stronger.", "If the estimate looks low but your condition still affects you heavily, it may mean the issue is how your likely descriptor points are being framed rather than whether support exists."]},
+        ],
+        ["pip-calculator", "personal-independence-payment-checker"],
+        ["esa-calculator", "universal-credit-calculator", "cold-weather-payment-checker"],
+    ),
+    "council-tax-reduction-calculator": calc_page(
+        "council-tax-reduction-calculator",
+        "Council Tax Reduction estimator",
+        "Estimate possible council tax support using local-bill size, income, benefits and savings. Independent UK checker.",
+        "Check whether a low income or means-tested benefit could reduce your council tax bill.",
+        "council_tax_reduction",
+        [
+            {"name": "monthly_council_tax", "label": "Monthly council tax bill", "type": "number", "default": 165, "step": 1, "min": 0, "prefix": "£"},
+            {"name": "monthly_income", "label": "Monthly household income", "type": "number", "default": 1350, "step": 25, "min": 0, "prefix": "£"},
+            COMMON_SAVINGS_FIELD,
+            {"name": "single_adult", "label": "Single adult in the home", "type": "boolean", "default": False},
+            {"name": "on_means_tested_benefit", "label": "On a means-tested benefit", "type": "boolean", "default": False},
+            {"name": "on_guarantee_pension_credit", "label": "On Guarantee Pension Credit", "type": "boolean", "default": False},
+        ],
+        [{"q": "Is Council Tax Reduction the same everywhere?", "a": "No. Each local authority runs its own scheme, so this page is a broad estimator rather than a final decision tool."}, {"q": "Can you get help if you work?", "a": "Often yes. Many working households still qualify if income is low enough."}, {"q": "Does the 25% single person discount matter?", "a": "Yes. It is separate from means-tested Council Tax Reduction, and some households can benefit from both."}],
+        [
+            {"heading": "A practical local-scheme estimator", "paragraphs": ["Council Tax Reduction is one of the hardest benefits to model nationally because the rule set is local, not single-source. That is why this estimator uses transparent income bands and clear warning text rather than pretending every council behaves the same way.", "Even with that limitation, the page is useful because the search intent is usually directional: am I likely to get meaningful help, and is it worth applying."]},
+            {"heading": "What usually changes the result most", "paragraphs": ["The biggest variables are your local scheme, household income, savings, whether you are on a means-tested benefit already and whether there are other adults in the property. People often focus only on income, but local rules can be just as important.", "Single-person discount is another area that confuses users. It is not the same as CTR, so this page explains how the two can interact."]},
+            {"heading": "Why this page links to rent and heating support pages", "paragraphs": ["People searching for Council Tax Reduction are often facing wider affordability pressure rather than an isolated bill issue. That means rent support, Pension Credit, Free School Meals and winter help are commonly part of the same search journey.", "The site architecture keeps those pages tightly linked on purpose so the calculator cluster behaves like a serious support hub, not a one-page tool."]},
+        ],
+        ["council-tax-support-calculator", "council-tax-reduction-estimator"],
+        ["housing-benefit-calculator", "pension-credit-calculator", "winter-fuel-payment-checker"],
+    ),
+    "housing-benefit-calculator": calc_page(
+        "housing-benefit-calculator",
+        "Housing Benefit estimator",
+        "Check whether a legacy Housing Benefit case may still qualify using weekly rent, income, savings and pension-age status.",
+        "Estimate possible Housing Benefit in legacy cases and understand when Universal Credit housing costs are more relevant.",
+        "housing_benefit",
+        [
+            {"name": "weekly_rent", "label": "Weekly eligible rent", "type": "number", "default": 140, "step": 1, "min": 0, "prefix": "£"},
+            {"name": "weekly_income", "label": "Weekly household income", "type": "number", "default": 180, "step": 1, "min": 0, "prefix": "£"},
+            COMMON_SAVINGS_FIELD,
+            {"name": "legacy_claimant", "label": "Legacy or pension-age route", "type": "boolean", "default": True},
+            {"name": "pension_age", "label": "At least one claimant is over State Pension age", "type": "boolean", "default": False},
+            {"name": "spare_room", "label": "Social housing spare room reduction may apply", "type": "boolean", "default": False},
+        ],
+        [{"q": "Can working-age households still make new Housing Benefit claims?", "a": "Usually no, unless the case falls into a specialist category such as supported or temporary accommodation. Most new working-age housing support is through Universal Credit."}, {"q": "Does savings matter?", "a": "Yes. For many working-age cases, savings of £16,000 or more can stop entitlement."}, {"q": "Is rent covered in full?", "a": "Not always. Bedroom rules, service charge rules, income deductions and local caps can all reduce the final award."}],
+        [
+            {"heading": "Built as a legacy Housing Benefit checker", "paragraphs": ["This page is intentionally framed as an estimator rather than a universal rent calculator because Housing Benefit is now mostly a legacy or specialist route. That positioning matters: it helps the site answer the search term while steering most new claimants towards the more relevant Universal Credit housing path.", "The logic focuses on broad weekly support bands, which is usually enough for someone trying to understand whether a historic award or pension-age claim is plausible."]},
+            {"heading": "Why rent help is difficult to model perfectly", "paragraphs": ["Housing support depends on the kind of tenancy you have, whether your accommodation is private or social, local housing allowance rules, eligible service charges and any spare room deductions. Those are too specific to model cleanly in a lightweight public-facing page without postcode-level data.", "Rather than hide that, the page keeps the calculation modest and pushes users towards the exact issues most likely to change the answer."]},
+            {"heading": "When to use Universal Credit instead", "paragraphs": ["If you are working age and thinking about a new housing support claim, Universal Credit housing costs are usually the first page to understand, especially if you also need help with living costs. That is why this page cross-links back into the broader benefits cluster.", "The aim is not to trap users on a legacy route, but to meet the search intent and then guide them towards the right next step."]},
+        ],
+        ["housing-benefit-estimator", "rent-benefit-calculator"],
+        ["universal-credit-calculator", "council-tax-reduction-calculator", "benefit-cap-calculator"],
+    ),
+    "benefit-cap-calculator": calc_page(
+        "benefit-cap-calculator",
+        "Benefit Cap calculator",
+        "Check whether your monthly benefits appear to be above the current cap inside or outside Greater London.",
+        "See whether a household benefit total looks higher than the current Benefit Cap limit.",
+        "benefit_cap",
+        [
+            {"name": "monthly_benefits", "label": "Monthly benefits total", "type": "number", "default": 1950, "step": 10, "min": 0, "prefix": "£"},
+            {"name": "inside_london", "label": "Home is inside Greater London", "type": "boolean", "default": False},
+            {"name": "household", "label": "Household type", "type": "select", "default": "single_parent", "options": [{"value": "single_adult", "label": "Single adult"}, {"value": "single_parent", "label": "Single parent"}, {"value": "couple", "label": "Couple"}]},
+        ],
+        [{"q": "Which benefits count towards the cap?", "a": "Universal Credit, Housing Benefit, Child Benefit and several income-replacement benefits can count towards the cap."}, {"q": "Are some households exempt?", "a": "Yes. Many people receiving disability-related benefits are exempt, and earnings can also stop the cap applying in some Universal Credit cases."}, {"q": "Why show monthly figures?", "a": "The cap is often discussed monthly in Universal Credit and household budgeting, even though some official tables also show weekly figures."}],
+        [
+            {"heading": "Why the Benefit Cap still matters in calculator journeys", "paragraphs": ["People often leave a Universal Credit estimator wondering why the number still looks lower than expected. One of the main reasons is the Benefit Cap, especially for larger households with rent support. This page is designed to answer that follow-up question quickly.", "It does not try to check every exemption because that would turn a practical page into a maze. Instead, it shows the cap amount clearly and warns where exemptions commonly apply."]},
+            {"heading": "Greater London and household type are the key first split", "paragraphs": ["Most users do not need a detailed legal explainer to start. They need to know whether they should use the London or outside-London figure, and whether the household is treated as a single adult or a family household for cap purposes.", "That is why the interface is simple: it captures the two variables that explain most of the headline outcome before pushing further into exemptions if needed."]},
+            {"heading": "Use this after the Universal Credit and Child Benefit pages", "paragraphs": ["The Benefit Cap page is deliberately integrated with the wider benefits cluster because the cap often explains why adding children or rent does not produce the increase users expect. That connection is important for both UX and internal linking depth.", "In practice, if this page suggests you are over the cap, the next step is usually checking disability-linked exemptions, earnings rules or specialist housing advice."]},
+        ],
+        ["benefits-cap-calculator", "benefit-cap-estimator"],
+        ["universal-credit-calculator", "child-benefit-calculator", "housing-benefit-calculator"],
+    ),
+    "ssp-calculator": calc_page(
+        "ssp-calculator",
+        "Statutory Sick Pay calculator",
+        "Estimate weekly and total Statutory Sick Pay under the current 2026 rules using average weekly earnings and time off.",
+        "Quickly estimate SSP under the latest weekly-rate or 80%-of-earnings rule.",
+        "ssp",
+        [
+            {"name": "average_weekly_earnings", "label": "Average weekly earnings", "type": "number", "default": 420, "step": 1, "min": 0, "prefix": "£"},
+            {"name": "weeks_off", "label": "Weeks off sick", "type": "number", "default": 4, "step": 1, "min": 0},
+        ],
+        [{"q": "What weekly rate does this use?", "a": "It uses the 2026 to 2027 SSP rule of the lower of £123.25 a week or 80% of average weekly earnings."}, {"q": "How long can SSP be paid for?", "a": "Up to 28 weeks."}, {"q": "Can my employer pay more?", "a": "Yes. Contractual or occupational sick pay can be more generous than SSP."}],
+        [
+            {"heading": "SSP changed materially in April 2026", "paragraphs": ["This page reflects the updated SSP framework now used from 6 April 2026, where eligible employees can receive the lower of the flat weekly rate or 80% of average weekly earnings. That makes an updated estimator genuinely useful because older SSP pages can now be wrong.", "The calculator is intentionally simple because the core search intent is usually immediate: what is the likely weekly amount, and what does a period off sick add up to."]},
+            {"heading": "Where real-world payroll can still differ", "paragraphs": ["Employers calculate SSP using average weekly earnings, qualifying days and payroll timing rules. If your absences cross the April 2026 change point or involve linked periods, the real payment can differ from this clean estimate.", "There is also a separate question of whether an employer offers contractual sick pay. Many people search SSP when what they really need is to compare the statutory minimum with their workplace scheme."]},
+            {"heading": "Why SSP fits naturally on a broader benefits site", "paragraphs": ["Statutory Sick Pay sits at the boundary between payroll and the benefits system. If SSP is low or ending, the next search is often ESA, Universal Credit or PIP depending on how long the condition lasts and whether work is still possible.", "That is why this page is included in the benefits suite rather than treated as an isolated employment-law tool."]},
+        ],
+        ["statutory-sick-pay-calculator", "sick-pay-calculator"],
+        ["esa-calculator", "universal-credit-calculator", "pip-eligibility-checker"],
+    ),
+    "maternity-pay-comparison": calc_page(
+        "maternity-pay-comparison",
+        "Maternity Allowance vs Statutory Maternity Pay calculator",
+        "Compare likely Statutory Maternity Pay and Maternity Allowance totals using average weekly earnings and basic eligibility checks.",
+        "Compare the two main maternity payment routes and see which looks more relevant for your situation.",
+        "maternity_comparison",
+        [
+            {"name": "average_weekly_earnings", "label": "Average weekly earnings", "type": "number", "default": 380, "step": 1, "min": 0, "prefix": "£"},
+            {"name": "employed_long_enough", "label": "Employed long enough for SMP route", "type": "boolean", "default": True},
+            {"name": "employed_or_self_employed_long_enough", "label": "Worked or self-employed long enough for MA route", "type": "boolean", "default": True},
+        ],
+        [{"q": "Which is usually worth more?", "a": "If you qualify, SMP is often stronger for the first 6 weeks because it pays 90% of average weekly earnings with no flat-rate cap in that period."}, {"q": "Can self-employed people get SMP?", "a": "No. Self-employed claimants normally look at Maternity Allowance instead."}, {"q": "Are both paid for 39 weeks?", "a": "Yes, both are typically payable for up to 39 weeks."}],
+        [
+            {"heading": "Two routes, very different entry rules", "paragraphs": ["Many maternity-related searches are not really asking for one flat number. They are trying to work out whether Statutory Maternity Pay or Maternity Allowance is the route that actually applies. This page is built around that decision rather than treating everything as one benefit.", "The calculator therefore compares totals side by side and explains why one route may be stronger even when the other is not available."]},
+            {"heading": "Why a comparison page works better than a single figure", "paragraphs": ["If you are employed with one employer for long enough, SMP is usually the first route to test. If not, Maternity Allowance often becomes the important fallback. A comparison page lets users see both without making legalistic assumptions they may not be ready to verify yet.", "That structure also makes the page stronger from an SEO perspective because it serves both direct calculator intent and the very common 'SMP vs Maternity Allowance' comparison query."]},
+            {"heading": "Use this alongside SSP and Universal Credit pages", "paragraphs": ["For some households maternity support is not the only moving part. Childcare support, rent help and other means-tested support may change once work patterns and income shift. That makes the maternity page a natural hub into Universal Credit and childcare pages.", "The site keeps those links dense on purpose so the whole cluster behaves like a serious family-support resource."]},
+        ],
+        ["maternity-allowance-calculator", "statutory-maternity-pay-calculator", "smp-vs-ma"],
+        ["tax-free-childcare-calculator", "universal-credit-calculator", "sure-start-maternity-grant-checker"],
+    ),
+    "esa-calculator": calc_page(
+        "esa-calculator",
+        "ESA guide and estimator",
+        "Estimate New Style ESA using likely group, private pension income and contribution history.",
+        "Check whether New Style ESA could be relevant and what the weekly amount may look like.",
+        "esa",
+        [
+            {"name": "group", "label": "Likely ESA group", "type": "select", "default": "work_related", "options": [{"value": "work_related", "label": "Work-related activity"}, {"value": "support", "label": "Support group"}]},
+            {"name": "private_pension_weekly", "label": "Weekly private pension income", "type": "number", "default": 0, "step": 1, "min": 0, "prefix": "£"},
+            {"name": "has_recent_ni_record", "label": "Recent NI record likely strong enough", "type": "boolean", "default": True},
+        ],
+        [{"q": "What are the current ESA weekly amounts used here?", "a": "This estimator uses up to £95.55 a week for the work-related activity group and up to £145.90 for the support group in 2026/27."}, {"q": "Does private pension income affect ESA?", "a": "Yes. If private pension income is over £85 a week, half of the amount above £85 is usually deducted from New Style ESA."}, {"q": "Can you get ESA and Universal Credit together?", "a": "Sometimes, but Universal Credit is usually reduced by the ESA amount."}, {"q": "How do I calculate ESA back pay?", "a": "ESA back pay arises when a claim is awarded from a date in the past — for example after a successful appeal or a delayed work capability assessment. To estimate ESA back pay, multiply the weekly rate by the number of weeks the award is backdated. Use the work-related activity rate (up to £95.55/week) or support group rate (up to £145.90/week) as applicable, then deduct any weeks already paid at a lower rate or weeks where private pension income above £85/week would have reduced the award."}, {"q": "How far back can an ESA claim be backdated?", "a": "New Style ESA can normally be backdated by up to 3 months if you were unable to claim earlier due to your health condition. If an award results from a successful appeal, back pay covers the period from the original decision date."}],
+        [
+            {"heading": "ESA is now mostly a New Style decision", "paragraphs": ["Most searchers still type ESA calculator, but what they usually need is a New Style ESA guide with a realistic amount estimate and a clear warning that NI record matters. This page is written around that modern search intent rather than old income-related ESA assumptions.", "That matters for usefulness. A page that simply recites old ESA terms without explaining the current route is not genuinely helpful."]},
+            {"heading": "Where the simple estimate is strongest", "paragraphs": ["The estimator is most useful for people trying to sense-check whether the support group or work-related activity rate is the main range to think about, and whether a private pension will reduce the final payment. Those are two of the most practical questions before a claim or appeal conversation.", "It is deliberately not trying to predict the work capability assessment outcome. That would be false precision."]},
+            {"heading": "How ESA fits into the wider benefits cluster", "paragraphs": ["ESA sits close to SSP, Universal Credit and PIP in real user journeys. People often move across those pages as their health condition, work status and contribution history become clearer. That is why the site links them tightly together.", "It also strengthens the site's topical authority because the disability-and-work support topic is covered through calculators and explanatory guides rather than just one article."]},
+        ],
+        ["employment-support-allowance-calculator", "new-style-esa-calculator"],
+        ["ssp-calculator", "pip-eligibility-checker", "universal-credit-calculator"],
+    ),
+    "jsa-calculator": calc_page(
+        "jsa-calculator",
+        "Contribution-based JSA calculator (New Style)",
+        "Estimate contribution-based New Style Jobseeker’s Allowance using age, hours worked and recent National Insurance contribution history.",
+        "Check whether contribution-based New Style JSA may apply and what the weekly amount could be.",
+        "jsa",
+        [
+            {"name": "age_band", "label": "Age band", "type": "select", "default": "25_plus", "options": [{"value": "under_25", "label": "18 to 24"}, {"value": "25_plus", "label": "25 or over"}]},
+            {"name": "hours_worked", "label": "Hours worked each week", "type": "number", "default": 0, "step": 1, "min": 0},
+            {"name": "has_recent_ni_record", "label": "Recent NI record likely strong enough", "type": "boolean", "default": True},
+        ],
+        [{"q": "How much contribution-based JSA does this estimator use?", "a": "It uses up to £75.65 a week for ages 18 to 24 and up to £95.55 a week for age 25 or over — the 2026/27 New Style (contribution-based) JSA rates."}, {"q": "What is the difference between contribution-based JSA and income-based JSA?", "a": "New Style (contribution-based) JSA is based on your National Insurance record and is available for up to 182 days. Income-based JSA is no longer open to new claims — Universal Credit replaces it."}, {"q": "Can you get JSA if you work 16 hours or more a week?", "a": "Usually no, which is why this page sets the estimate to zero once hours reach 16 or more."}, {"q": "Does contribution-based JSA depend on savings?", "a": "No. New Style (contribution-based) JSA is not means tested and is not affected by your savings or partner's income. Only your NI record and hours worked matter."}],
+        [
+            {"heading": "A modern JSA page for current search intent", "paragraphs": ["Many search results for JSA are still mixed with old legacy information. This page is aimed at the live reality: New Style JSA, contribution conditions, and the interaction with low-hours work. That makes it more useful for someone trying to decide what to claim now.", "The output is intentionally modest because a lot of the real value is in showing whether JSA is even the right route to investigate."]},
+            {"heading": "Why hours and NI record matter most", "paragraphs": ["The two questions that knock out many would-be JSA claims are whether recent Class 1 contributions are strong enough and whether work exceeds the low-hours limit. Those are handled directly in the page rather than buried in long eligibility text.", "That keeps the experience practical while still leaving room for explanatory content underneath the tool."]},
+            {"heading": "When Universal Credit is likely to be the more important page", "paragraphs": ["If your NI record is weak, your savings are low and you need broader support with rent or children, Universal Credit is often the more relevant next page. The architecture of this site assumes that users move across those clusters rather than staying inside one benefit only.", "That cross-linking is deliberate: it improves usefulness and preserves the internal-topic-cluster strengths of the original site."]},
+        ],
+        ["jobseekers-allowance-calculator", "new-style-jsa-calculator"],
+        ["universal-credit-calculator", "esa-calculator", "free-school-meals-checker"],
+    ),
+    "working-tax-credit-calculator": calc_page(
+        "working-tax-credit-calculator",
+        "Working Tax Credit legacy calculator",
+        "Reference calculator for legacy Working Tax Credit using the last published 2024 to 2025 rates and thresholds.",
+        "Use a legacy Working Tax Credit estimate for historic or transitional cases only.",
+        "working_tax_credit",
+        [
+            {"name": "annual_income", "label": "Annual household income", "type": "number", "default": 18000, "step": 100, "min": 0, "prefix": "£"},
+            {"name": "hours_worked", "label": "Hours worked each week", "type": "number", "default": 30, "step": 1, "min": 0},
+            {"name": "household", "label": "Household type", "type": "select", "default": "couple", "options": [{"value": "single", "label": "Single without children"}, {"value": "lone_parent", "label": "Lone parent"}, {"value": "couple", "label": "Couple"}]},
+            {"name": "disabled_worker", "label": "Disabled worker element likely", "type": "boolean", "default": False},
+        ],
+        [{"q": "Is Working Tax Credit still open to new claims?", "a": "No. Working Tax Credit ended on 5 April 2025, so this page is for legacy or historic reference use only."}, {"q": "Why keep a Working Tax Credit page on this site?", "a": "Because people still search for it during migration, transitional protection or historic award checks."}, {"q": "Which rates are used?", "a": "The final published 2024 to 2025 maximum rates and threshold structure."}],
+        [
+            {"heading": "A legacy page that still answers live search demand", "paragraphs": ["Working Tax Credit has ended for new claims, but search demand has not disappeared. People still need to understand historic awards, migration notices and how older entitlement compared with Universal Credit. This page is built for that reality rather than pretending the topic no longer exists.", "That makes the page useful commercially and editorially: it serves genuine user intent while strengthening the site's broader low-income family cluster."]},
+            {"heading": "Why the calculator uses the last published rates", "paragraphs": ["The page uses the final published 2024 to 2025 rates and thresholds because those are the last meaningful reference point for Working Tax Credit. It is labelled clearly as a legacy estimate so there is no ambiguity about whether it can be used for a new claim.", "That clear labelling matters for trust. Users should never be left thinking they can still open a fresh Working Tax Credit claim in 2026."]},
+            {"heading": "Where to go next", "paragraphs": ["If the historic award matters because you are moving to Universal Credit or checking what support now replaces it, the key next pages are Universal Credit, Tax-Free Childcare and Child Benefit. Those links are part of the page by design.", "The site is intended to behave like a support ecosystem, not just a stack of disconnected calculators."]},
+        ],
+        ["working-tax-credit-estimator", "legacy-working-tax-credit"],
+        ["universal-credit-calculator", "child-tax-credit-calculator", "tax-free-childcare-calculator"],
+    ),
+    "child-tax-credit-calculator": calc_page(
+        "child-tax-credit-calculator",
+        "Child Tax Credit legacy calculator",
+        "Reference calculator for legacy Child Tax Credit using the last published 2024 to 2025 rates and thresholds.",
+        "Use a legacy Child Tax Credit estimate for historic, dispute or migration-reference purposes.",
+        "child_tax_credit",
+        [
+            {"name": "annual_income", "label": "Annual household income", "type": "number", "default": 15000, "step": 100, "min": 0, "prefix": "£"},
+            COMMON_CHILDREN_FIELD,
+            {"name": "ctc_only", "label": "Child Tax Credit only case", "type": "boolean", "default": True},
+        ],
+        [{"q": "Can you make a new Child Tax Credit claim?", "a": "No. Child Tax Credit ended for new claims on 5 April 2025."}, {"q": "Why does this page still exist?", "a": "Because people still need legacy-reference figures for migrations, historic awards and family support comparisons."}, {"q": "Are disability additions included?", "a": "Not fully. This is a simplified legacy estimator focused on the family and child elements."}],
+        [
+            {"heading": "Why a Child Tax Credit reference page still matters", "paragraphs": ["Child Tax Credit is another legacy benefit that continues to attract live search intent because families are comparing old support with new support, checking managed migration outcomes or trying to understand past awards. A good benefits site should answer that intent cleanly rather than ignoring it.", "This page therefore keeps the calculation transparent and the warning language explicit: legacy reference only, not a new-claim tool."]},
+            {"heading": "How the estimate is framed", "paragraphs": ["The estimator uses the final family and child element framework and applies the published withdrawal structure. That gives a useful directional answer without trying to replicate every corner case in a system that has already closed to new claims.", "It is best used for comparison and understanding rather than final entitlement work."]},
+            {"heading": "Why this page strengthens the family support cluster", "paragraphs": ["Legacy tax-credit pages sit naturally beside Universal Credit, Child Benefit, Free School Meals and childcare support content. Together they answer the broader search question of what support exists for low-income families and how the system changed.", "That cluster value is important for topical authority and for preserving the scale potential of the original site architecture."]},
+        ],
+        ["child-tax-credit-estimator", "legacy-child-tax-credit"],
+        ["universal-credit-calculator", "child-benefit-calculator", "free-school-meals-checker"],
+    ),
+    "tax-free-childcare-calculator": calc_page(
+        "tax-free-childcare-calculator",
+        "Tax-Free Childcare calculator",
+        "Estimate how much government top-up you could get through Tax-Free Childcare based on annual childcare spending.",
+        "Estimate the annual Tax-Free Childcare top-up and compare it with other childcare support routes.",
+        "tax_free_childcare",
+        [
+            COMMON_CHILDREN_FIELD,
+            {"name": "annual_childcare_cost", "label": "Annual childcare cost", "type": "number", "default": 6000, "step": 100, "min": 0, "prefix": "£"},
+            {"name": "disabled_child", "label": "A child qualifies for the disabled-child limit", "type": "boolean", "default": False},
+        ],
+        [{"q": "How does Tax-Free Childcare work?", "a": "For every £8 you pay in, the government adds £2. That is effectively a 25% top-up on what you deposit."}, {"q": "What is the annual top-up cap?", "a": "Normally up to £2,000 a year per child, or up to £4,000 for a disabled child."}, {"q": "Can I use this with Universal Credit childcare support?", "a": "No. You cannot usually claim Tax-Free Childcare and Universal Credit childcare support at the same time."}],
+        [
+            {"heading": "A childcare support calculator built for comparison", "paragraphs": ["Tax-Free Childcare is simple enough to estimate accurately on headline amounts, but users rarely search it in isolation. They are usually comparing it against Universal Credit childcare help or trying to understand whether the top-up is worth the admin.", "That is why this page makes the top-up obvious and then directs people to the Universal Credit cluster rather than pretending one scheme is always better."]},
+            {"heading": "Where this estimate is strongest", "paragraphs": ["The page is particularly useful for moderate and higher earners who want a fast sense check on how much the account could add over a year. It is also useful for families whose circumstances change during the year and want to see how different childcare spend levels affect the top-up.", "Because the cap is per child, the page keeps the child count visible and easy to change."]},
+            {"heading": "Scheme choice matters more than the headline top-up", "paragraphs": ["A smaller-looking top-up can still be the better option if you are not eligible for Universal Credit, while a larger-looking annual figure can be the wrong route if it blocks stronger means-tested help. That is why scheme comparison is built into the content strategy here.", "This is a benefits site built for decisions, not just arithmetic."]},
+        ],
+        ["tax-free-childcare-estimator", "childcare-top-up-calculator"],
+        ["universal-credit-calculator", "child-benefit-calculator", "free-school-meals-checker"],
+    ),
+    "sure-start-maternity-grant-checker": calc_page(
+        "sure-start-maternity-grant-checker",
+        "Sure Start Maternity Grant checker",
+        "Check whether a household may qualify for the one-off £500 Sure Start Maternity Grant.",
+        "Quickly check the main first-child and qualifying-benefit routes for Sure Start Maternity Grant.",
+        "sure_start",
+        [
+            {"name": "qualifying_benefit", "label": "Receiving a qualifying benefit", "type": "boolean", "default": True},
+            {"name": "first_child", "label": "This is your first child", "type": "boolean", "default": True},
+            {"name": "multiple_birth_with_other_children", "label": "Multiple birth while already responsible for children", "type": "boolean", "default": False},
+        ],
+        [{"q": "How much is the Sure Start Maternity Grant?", "a": "It is a one-off payment of £500."}, {"q": "Is it usually only for a first child?", "a": "Usually yes, although there are some multiple-birth and special household exceptions."}, {"q": "When do you need to claim?", "a": "Normally from 11 weeks before the due date until 6 months after birth."}],
+        [
+            {"heading": "A focused grant checker rather than a broad maternity article", "paragraphs": ["Sure Start Maternity Grant search intent is narrow and practical. Most people just want to know whether the £500 grant could apply. This page is built around that narrow intent, with the wider explanation sitting underneath rather than getting in the way.", "That makes it a good fit for a scalable benefits site because not every page needs the same interface weight."]},
+            {"heading": "Why this page still matters", "paragraphs": ["One-off grants are easy to miss because they are not always discussed alongside mainstream maternity pay. For lower-income households, though, the grant can be one of the more immediate and useful pieces of support around birth costs.", "That is why this checker is linked tightly with the maternity comparison and Healthy Start pages. They answer adjacent questions for the same life stage."]},
+            {"heading": "Nation-specific warning", "paragraphs": ["The page also flags that Scotland uses different family payment routes. That distinction matters because a lot of UK-wide benefits content becomes less trustworthy the moment nation-specific differences are ignored.", "This site keeps those differences visible rather than burying them in fine print."]},
+        ],
+        ["sure-start-grant-checker", "maternity-grant-checker"],
+        ["maternity-pay-comparison", "healthy-start-checker", "universal-credit-calculator"],
+    ),
+    "healthy-start-checker": calc_page(
+        "healthy-start-checker",
+        "Healthy Start checker",
+        "Check whether pregnancy or having a child under 4 could make you eligible for Healthy Start support.",
+        "Use a quick eligibility-style checker for Healthy Start food support and vitamins.",
+        "healthy_start",
+        [
+            {"name": "pregnant_or_child_under_4", "label": "Pregnant or responsible for a child under 4", "type": "boolean", "default": True},
+            {"name": "qualifying_benefit", "label": "Receiving a qualifying benefit", "type": "boolean", "default": True},
+            {"name": "under_18_and_pregnant", "label": "Under 18 and pregnant", "type": "boolean", "default": False},
+        ],
+        [{"q": "What is Healthy Start for?", "a": "Healthy Start can help with food such as milk, fruit and infant formula, and it also includes free vitamins."}, {"q": "Who can qualify without benefits?", "a": "People who are under 18 and pregnant can qualify even if they do not receive benefits."}, {"q": "Does Scotland use Healthy Start?", "a": "No. Scotland uses Best Start Foods instead."}],
+        [
+            {"heading": "An eligibility checker built around the real decision points", "paragraphs": ["Healthy Start is best understood as a route check rather than a cash-benefit calculator. The key issues are whether the household includes a pregnancy or child under 4, and whether a qualifying benefit route exists.", "That is why this page is framed as a checker with a modest indicative value rather than a high-precision payment calculator."]},
+            {"heading": "Why Healthy Start belongs in a serious benefits network", "paragraphs": ["This is exactly the kind of support page that rounds out a topical authority site. It may not be the biggest payment, but it answers a high-intent practical question and fits naturally beside maternity, low-income family and food-support searches.", "Those pages help the whole site look like a complete support resource, which is important for topical relevance."]},
+            {"heading": "What the checker does not try to do", "paragraphs": ["The page does not try to replicate every immigration-status edge case or nation-specific alternative in a short form. Instead, it explains the main routes clearly and tells users where the scheme changes by nation.", "That keeps the page useful without creating false certainty."]},
+        ],
+        ["healthy-start-voucher-checker", "healthy-start-eligibility"],
+        ["sure-start-maternity-grant-checker", "free-school-meals-checker", "universal-credit-calculator"],
+    ),
+    "free-school-meals-checker": calc_page(
+        "free-school-meals-checker",
+        "Free School Meals eligibility checker",
+        "Check likely Free School Meals eligibility in England using Universal Credit income, other qualifying benefits and infant-year rules.",
+        "Estimate whether Free School Meals look likely and the rough school-year value of that support.",
+        "free_school_meals",
+        [
+            COMMON_CHILDREN_FIELD,
+            {"name": "annual_take_home_income", "label": "Annual take-home income from work", "type": "number", "default": 6000, "step": 100, "min": 0, "prefix": "£"},
+            {"name": "on_universal_credit", "label": "Receiving Universal Credit", "type": "boolean", "default": True},
+            {"name": "other_qualifying_benefit", "label": "Receiving another qualifying benefit", "type": "boolean", "default": False},
+            {"name": "infant_pupil", "label": "Child in reception, year 1 or year 2", "type": "boolean", "default": False},
+        ],
+        [{"q": "What Universal Credit earnings limit is used here?", "a": "For most England applications made on or after 1 April 2018, this page uses the £7,400 a year post-tax earnings test."}, {"q": "Do infant pupils need the means test?", "a": "No. Reception, year 1 and year 2 pupils in state-funded schools in England generally get universal infant free school meals."}, {"q": "Does this checker cover the whole UK?", "a": "No. It is mainly designed around England. Other nations use different rules."}],
+        [
+            {"heading": "Why Free School Meals searches are usually urgent", "paragraphs": ["Searchers often arrive here because they need a yes-or-no direction quickly rather than a long policy history. This page is built around that reality, showing the key Universal Credit threshold and alternative qualifying benefit routes near the top.", "The page still adds context underneath because users often need to understand why a school or council asked for evidence even when meals are available to younger pupils automatically."]},
+            {"heading": "Why this page fits a broader low-income family cluster", "paragraphs": ["Free School Meals sit naturally beside Child Benefit, Universal Credit, Healthy Start and Council Tax Reduction. Families rarely think about these supports in isolation, so the internal linking reflects how the questions are actually searched.", "That dense interlinking is one of the SEO strengths preserved from the original site structure."]},
+            {"heading": "Cash value shown as a planning aid", "paragraphs": ["The school-year value shown on this page is illustrative. It helps families understand the practical weight of the support, but it is not an official reimbursement figure or a guarantee of what any school meal would cost locally.", "That sort of directional value still improves usability because it turns an eligibility question into a budgeting question too."]},
+        ],
+        ["free-school-meals-estimator", "school-meals-eligibility-checker"],
+        ["universal-credit-calculator", "healthy-start-checker", "child-benefit-calculator"],
+    ),
+    "winter-fuel-payment-checker": calc_page(
+        "winter-fuel-payment-checker",
+        "Winter Fuel Payment checker",
+        "Check age, location and income assumptions against the current Winter Fuel Payment rules.",
+        "Estimate whether a Winter Fuel Payment looks likely and what one-off amount may apply.",
+        "winter_fuel",
+        [
+            {"name": "born_before_cutoff", "label": "Born on or before 27 June 1960", "type": "boolean", "default": True},
+            {"name": "born_before_older_cutoff", "label": "Born before 28 September 1946", "type": "boolean", "default": False},
+            {"name": "lives_in_england_or_wales", "label": "Lives in England or Wales", "type": "boolean", "default": True},
+            {"name": "income_over_35000", "label": "Personal income over £35,000", "type": "boolean", "default": False},
+        ],
+        [{"q": "How much can Winter Fuel Payment be?", "a": "For winter 2026 to 2027, the published amount is generally £200 or £300 depending on age and circumstances."}, {"q": "What income threshold matters now?", "a": "This page flags the current £35,000 personal income clawback threshold."}, {"q": "Does this apply in Scotland?", "a": "No. Scotland uses Pension Age Winter Heating Payment instead."}],
+        [
+            {"heading": "Winter Fuel Payment changed meaningfully for higher-income households", "paragraphs": ["This page includes the current income clawback rule because it is one of the main reasons searchers now need an eligibility checker rather than just a static age table. Older Winter Fuel content can look current while still missing the income point entirely.", "That makes current-date accuracy especially important here."]},
+            {"heading": "A simple one-off payment checker", "paragraphs": ["The page is intentionally simple because Winter Fuel Payment is mostly a one-off eligibility question. Users usually want to know whether they are in the age range, whether the nation is right and whether income means the payment will be taken back.", "That clarity also makes the page a strong supporting entry point into Pension Credit and other pension-age support content."]},
+            {"heading": "Built as part of the pension-age support cluster", "paragraphs": ["Winter Fuel, Cold Weather Payments and Pension Credit belong together in search behaviour and in site structure. A serious UK benefits site should treat them as a cluster rather than three disconnected pages.", "This page therefore uses tight internal linking and matching content patterns so the pension-age support section can scale further later."]},
+        ],
+        ["winter-fuel-payment-estimator", "winter-heating-payment-checker"],
+        ["pension-credit-calculator", "cold-weather-payment-checker", "council-tax-reduction-calculator"],
+    ),
+    "cold-weather-payment-checker": calc_page(
+        "cold-weather-payment-checker",
+        "Cold Weather Payment checker",
+        "Estimate Cold Weather Payments using qualifying-benefit assumptions and the number of triggered cold spells in your area.",
+        "Check whether Cold Weather Payments may apply and how much they could add up to in a cold winter.",
+        "cold_weather",
+        [
+            {"name": "qualifying_benefit", "label": "On a qualifying benefit route", "type": "boolean", "default": True},
+            {"name": "lives_outside_scotland", "label": "Lives outside Scotland", "type": "boolean", "default": True},
+            {"name": "triggered_periods", "label": "7-day cold weather triggers", "type": "number", "default": 2, "step": 1, "min": 0},
+        ],
+        [{"q": "How much is each Cold Weather Payment?", "a": "£25 for each qualifying 7-day period of very cold weather."}, {"q": "Do you need to apply?", "a": "Usually no. The payment is automatic if you qualify and your weather station area triggers."}, {"q": "Does Scotland use Cold Weather Payments?", "a": "No. Scotland uses Winter Heating Payment instead."}],
+        [
+            {"heading": "A weather-linked support checker", "paragraphs": ["Cold Weather Payments are unusual because entitlement depends on both benefit status and local weather triggers. This page turns that into a simple seasonal estimate by combining the qualifying-benefit question with the number of triggered periods you expect or have seen.", "That makes it useful in winter traffic spikes and as a supporting page inside the pension-age and low-income heating cluster."]},
+            {"heading": "Why this page works best as a seasonal estimator", "paragraphs": ["The exact answer depends on weather station data and payment automation, so a public-facing page should not pretend to know your postcode trigger history unless it really does. This site keeps the logic honest by letting users enter the number of triggered periods instead.", "That approach is simple, transparent and still useful."]},
+            {"heading": "Where this fits in the site structure", "paragraphs": ["Cold Weather Payment is a strong supporting keyword because it connects naturally with Winter Fuel Payment, Pension Credit and broader low-income support queries. It broadens topical coverage without forcing every page to be a complex means-tested calculator.", "That type of page is important for scaling the site into a wider UK benefits authority."]},
+        ],
+        ["cold-weather-payment-estimator", "cold-weather-checker"],
+        ["winter-fuel-payment-checker", "pension-credit-calculator", "healthy-start-checker"],
+    ),
+    "savings-impact-calculator": calc_page(
+        "savings-impact-calculator",
+        "Savings and Universal Credit calculator",
+        "See how savings between £6,000 and £16,000 reduce your Universal Credit through the tariff income rule.",
+        "Work out the monthly UC deduction generated by savings above the £6,000 threshold.",
+        "savings_impact",
+        [
+            {"name": "savings", "label": "Total savings and investments", "type": "number", "default": 8000, "step": 250, "min": 0, "prefix": "£"},
+            {"name": "household", "label": "Household type", "type": "select", "default": "single", "options": [{"value": "single", "label": "Single"}, {"value": "couple", "label": "Couple"}]},
+            {"name": "children", "label": "Number of children", "type": "number", "default": 0, "step": 1, "min": 0},
+        ],
+        [
+            {"q": "How do savings reduce Universal Credit?", "a": "For every complete £250 above £6,000, DWP adds £4.35 to your assumed monthly income. That assumed income reduces your UC award by the same amount."},
+            {"q": "At what savings level does UC stop entirely?", "a": "For most claimants, UC is not payable when savings reach £16,000 or more."},
+            {"q": "Are savings below £6,000 counted?", "a": "No. Savings up to £6,000 are fully disregarded and have no effect on UC."},
+        ],
+        [
+            {"heading": "The £6,000 and £16,000 savings thresholds", "paragraphs": ["Universal Credit uses two capital thresholds. Below £6,000, savings are completely ignored. Between £6,000 and £16,000, the system applies a tariff income rule. For every complete £250 above £6,000, DWP adds £4.35 a month to assumed income — which reduces the UC award by the same amount.", "At £16,000 or more, eligibility for a standard UC award stops entirely. This is stricter than Pension Credit, which has more lenient savings rules and no hard upper cut-off for pension-age claimants."]},
+            {"heading": "What counts as savings for UC purposes", "paragraphs": ["Savings, investments, Premium Bonds, shares and most cash accounts count. Your main home does not count. Some compensation payments can be disregarded, and money specifically set aside for care needs may also be treated differently.", "Couples are assessed jointly. If one partner has £3,000 and the other has £5,000, the combined £8,000 falls into the tapered range."]},
+            {"heading": "Spending savings to qualify — what to know", "paragraphs": ["DWP can treat you as still holding money you have deliberately spent or given away to qualify for UC. This is called deprivation of capital. Normal spending on living costs is unlikely to trigger this, but large transfers to family members shortly before a claim can be questioned.", "If you are near either threshold, keeping a clear record of your savings position when you claim matters."]},
+        ],
+        ["savings-and-universal-credit", "how-savings-affect-uc"],
+        ["universal-credit-calculator", "earnings-impact-calculator", "benefit-cap-calculator"],
+    ),
+    "earnings-impact-calculator": calc_page(
+        "earnings-impact-calculator",
+        "Earnings and Universal Credit calculator",
+        "See how working more hours affects your Universal Credit award — work allowance, 55% taper and net change per £100 earned.",
+        "Understand how earnings reduce Universal Credit through the work allowance and 55% earnings taper.",
+        "earnings_impact",
+        [
+            {"name": "earnings", "label": "Monthly take-home earnings", "type": "number", "default": 1000, "step": 25, "min": 0, "prefix": "£"},
+            {"name": "household", "label": "Household type", "type": "select", "default": "single", "options": [{"value": "single", "label": "Single"}, {"value": "couple", "label": "Couple"}]},
+            {"name": "children", "label": "Number of children", "type": "number", "default": 0, "step": 1, "min": 0},
+            {"name": "housing_cost", "label": "Monthly eligible rent", "type": "number", "default": 600, "step": 25, "min": 0, "prefix": "£"},
+        ],
+        [
+            {"q": "What is the UC earnings taper?", "a": "55%. For every £1 of net earnings above your work allowance, UC is reduced by 55p — meaning you keep 45p."},
+            {"q": "Who gets a work allowance?", "a": "Only households with a child element or a limited capability for work element. Households without children or a qualifying health condition have no work allowance."},
+            {"q": "How does the work allowance differ?", "a": "It is £404 a month if housing costs are included in your UC award, or £673 a month if they are not."},
+        ],
+        [
+            {"heading": "How the 55% taper works in practice", "paragraphs": ["The earnings taper is one of the most important things to understand about Universal Credit. For every £1 of net earnings above your work allowance, UC is reduced by 55p. That means you keep 45p of each additional pound you earn — a real financial gain, though lower than many people expect.", "A household without a work allowance faces the taper from the first pound of earnings. That makes the taper especially sharp for couples without children or health conditions."]},
+            {"heading": "The work allowance changes the picture significantly", "paragraphs": ["If your household includes children or a limited capability for work element, you receive a work allowance — a band of earnings that are fully disregarded before the taper kicks in. In 2026/27 that is £673 a month where no housing costs element is in payment, or £404 a month where housing support is included.", "Up to the allowance, every pound you earn is kept in full. Above it, you keep 45p per pound. That means there is a strong incentive to work at least enough to use the work allowance each month."]},
+            {"heading": "Understanding the net change per £100 earned", "paragraphs": ["A useful way to think about the taper is in terms of what happens to a hypothetical extra £100 of earnings. If you are already above the work allowance, earning £100 more reduces UC by £55 — leaving you £45 better off overall.", "If your earnings are below the work allowance, some or all of the £100 extra may be in the disregarded band, meaning you could keep more than £45. This calculator shows both the current deduction and the net effect of an extra £100."]},
+        ],
+        ["earnings-and-universal-credit", "uc-taper-rate-calculator"],
+        ["universal-credit-calculator", "savings-impact-calculator", "benefit-cap-calculator"],
+    ),
+    "maternity-pay-calculator": calc_page(
+        "maternity-pay-calculator",
+        "Statutory Maternity Pay calculator",
+        "Estimate SMP for the first 39 weeks — 90% of weekly pay for 6 weeks, then the flat rate for up to 33 weeks.",
+        "Calculate estimated Statutory Maternity Pay across the higher-rate and lower-rate periods.",
+        "maternity_pay",
+        [
+            {"name": "weekly_pay", "label": "Average weekly pay", "type": "number", "default": 550, "step": 10, "min": 0, "prefix": "£"},
+            {"name": "weeks_higher", "label": "Weeks at 90% rate (max 6)", "type": "number", "default": 6, "step": 1, "min": 0},
+            {"name": "weeks_lower", "label": "Weeks at flat rate (max 33)", "type": "number", "default": 33, "step": 1, "min": 0},
+        ],
+        [
+            {"q": "How long is SMP paid for?", "a": "Up to 39 weeks — 6 weeks at 90% of average weekly earnings, then up to 33 weeks at the flat statutory rate (£184.03 in 2026/27)."},
+            {"q": "What is the flat SMP rate for 2026/27?", "a": "£184.03 a week for weeks 7 to 39, or 90% of average weekly earnings if that is lower."},
+            {"q": "How do I qualify for SMP?", "a": "You normally need to have worked for the same employer for at least 26 weeks into the qualifying week and be earning above the lower earnings limit."},
+        ],
+        [
+            {"heading": "SMP over 39 weeks — two distinct phases", "paragraphs": ["Statutory Maternity Pay works in two phases. The first 6 weeks are paid at 90% of your average weekly earnings with no flat-rate cap. This is often the highest-value period and where SMP is most clearly linked to what you were earning before maternity leave.", "Weeks 7 to 39 are paid at the statutory flat rate — £184.03 a week in 2026/27 — or 90% of your average weekly earnings if that is lower. For most employees earning above around £205 a week, the flat rate applies from week 7 onwards."]},
+            {"heading": "How SMP compares to Maternity Allowance", "paragraphs": ["SMP is generally the better route for employees who have been with the same employer long enough, because the 90% first-6-weeks phase has no flat cap. Maternity Allowance, which is available to those who do not qualify for SMP, uses a different eligibility test and a different rate structure.", "If you are self-employed or have recently changed jobs, the maternity comparison page is the place to check both routes side by side."]},
+            {"heading": "Other support that can run alongside SMP", "paragraphs": ["SMP is taxable and counts as income, which can affect means-tested support. Universal Credit can still be claimed alongside SMP, but the SMP is counted as income and will reduce the UC award through the earnings taper.", "Sure Start Maternity Grant and Healthy Start support can also be relevant around the time of birth and early months. Those sit outside the main SMP calculation but are worth checking if income is under pressure."]},
+        ],
+        ["statutory-maternity-pay-calculator", "smp-calculator", "maternity-pay-estimator"],
+        ["maternity-pay-comparison", "sure-start-maternity-grant-checker", "universal-credit-calculator"],
+    ),
+    "tax-free-childcare-monthly-calculator": calc_page(
+        "tax-free-childcare-monthly-calculator",
+        "Tax-Free Childcare monthly calculator",
+        "Estimate the monthly government top-up on childcare costs — 20p for every 80p spent, up to £2,000 per child per year.",
+        "Calculate your monthly Tax-Free Childcare top-up from monthly childcare spend.",
+        "tax_free_childcare_monthly",
+        [
+            {"name": "monthly_childcare", "label": "Monthly childcare cost", "type": "number", "default": 800, "step": 25, "min": 0, "prefix": "£"},
+            {"name": "children", "label": "Number of children", "type": "number", "default": 1, "step": 1, "min": 1},
+        ],
+        [
+            {"q": "How much does the government top up?", "a": "20p for every 80p you pay in — effectively a 25% top-up on what you deposit, or 20% of the final childcare cost."},
+            {"q": "Is there an annual cap per child?", "a": "Yes. The maximum government top-up is £2,000 per child per year (£500 per quarter). For disabled children the limit is £4,000 per year."},
+            {"q": "Can I use this with Universal Credit childcare support?", "a": "No. You must choose one or the other. For households on UC with high childcare bills, UC childcare support is often more valuable."},
+        ],
+        [
+            {"heading": "How the monthly top-up is calculated", "paragraphs": ["Tax-Free Childcare works by matching your deposits at a ratio of 20p for every 80p you put in. If you spend £800 a month on childcare, you deposit £800 and the government adds £200. The cap is £500 per child per quarter, which works out at roughly £167 per child per month.", "For two children, the combined monthly cap is around £333. For three, around £500. Once you hit the cap, additional spending above that level does not attract further top-up."]},
+            {"heading": "Comparing the monthly route against the UC childcare element", "paragraphs": ["Tax-Free Childcare gives a flat 20% top-up capped by family size. Universal Credit childcare support reimburses up to 85% of eligible costs, but is reduced as earnings rise and is only available to UC claimants. For low-income families already on UC with large childcare bills, UC childcare support is usually worth significantly more.", "For moderate to higher earners who are not on UC, or families whose income is above the UC taper-out point, Tax-Free Childcare is the main option. The comparison calculator on the full Tax-Free Childcare page shows the trade-off side by side."]},
+            {"heading": "Applying and maintaining your account", "paragraphs": ["Applications are through the Government Gateway. Both partners in a couple must be working and earning at least the equivalent of 16 hours at the National Minimum Wage to qualify. Eligibility is reconfirmed every 3 months — missing the reconfirmation window pauses the top-up.", "Free childcare hours (15 or 30 hours depending on age and entitlement) can be combined with Tax-Free Childcare. The free hours are applied to the nursery invoice first; TFC top-up then applies to the remaining privately paid portion."]},
+        ],
+        ["tfc-monthly-calculator", "tax-free-childcare-estimator"],
+        ["tax-free-childcare-calculator", "universal-credit-calculator", "child-benefit-calculator"],
+    ),
+    "attendance-allowance-calculator": calc_page(
+        "attendance-allowance-calculator",
+        "Attendance Allowance calculator 2026/27",
+        "Check the weekly and annual Attendance Allowance amount for lower and higher rate in 2026/27. Non-means-tested and available over State Pension age.",
+        "Check the Attendance Allowance rate that applies — lower or higher — and what it may unlock in additional support.",
+        "attendance_allowance",
+        [
+            {"name": "rate", "label": "Care needs", "type": "select", "default": "lower", "options": [{"value": "lower", "label": "Day or night care needs (lower rate — £73.90/week)"}, {"value": "higher", "label": "Day and night care needs, or terminally ill (higher rate — £110.40/week)"}]},
+        ],
+        [
+            {"q": "What is the Attendance Allowance rate for 2026/27?", "a": "Lower rate: £73.90 a week. Higher rate: £110.40 a week. Both rates are non-means-tested."},
+            {"q": "Who can claim Attendance Allowance?", "a": "People over State Pension age who need help with personal care because of a physical or mental disability. Age under State Pension age: PIP applies instead."},
+            {"q": "Does income or savings affect Attendance Allowance?", "a": "No. Attendance Allowance is not means tested. Income, savings and whether you live with a partner have no effect on entitlement."},
+            {"q": "Can Attendance Allowance increase other benefits?", "a": "Yes. Receiving Attendance Allowance can passport you to a higher Pension Credit award (the severe disability addition), higher Council Tax Reduction and higher Housing Benefit."},
+            {"q": "What is the difference between Attendance Allowance lower and higher rate?", "a": "Lower rate (£73.90/week) is for people who need frequent attention or supervision during the day or night. Higher rate (£110.40/week) is for people who need attention or supervision both day and night, or who are terminally ill."},
+        ],
+        [
+            {"heading": "Attendance Allowance is for pension-age adults — PIP is for working age", "paragraphs": ["Attendance Allowance and PIP are separate non-means-tested disability benefits for different age groups. Attendance Allowance is for people who have reached State Pension age. PIP is for people aged 16 to State Pension age. You cannot receive both at the same time.", "If you were already receiving PIP when you reached State Pension age, your PIP award continues. New claims after State Pension age must be made as Attendance Allowance."]},
+            {"heading": "Why claiming Attendance Allowance is often worth doing even when other income is decent", "paragraphs": ["A common reason for not claiming is the assumption that income or savings will disqualify you. That is wrong — Attendance Allowance is non-means-tested. The only eligibility tests are age, residency and the care needs threshold.", "Even if the weekly payment itself is modest relative to other income, the bigger impact can be in what it unlocks: the Severe Disability Addition to Pension Credit adds £81.50 a week on top of Pension Credit if you receive Attendance Allowance and no one claims Carer's Allowance for looking after you. That alone can be worth more than the Attendance Allowance itself."]},
+            {"heading": "Lower rate and higher rate — what the care conditions actually mean", "paragraphs": ["The lower rate is for people who need frequent attention throughout the day in connection with bodily functions, or continual supervision throughout the day to avoid danger, or repeated or prolonged attention during the night. The higher rate requires both day and night care needs, or being terminally ill.", "DWP considers reliability and frequency. Needing help with washing, dressing, eating, medication or getting around the home on most days is the relevant test — not occasional help or general supervision."]},
+        ],
+        ["attendance-allowance-checker", "aa-calculator"],
+        ["pension-credit-calculator", "council-tax-reduction-calculator", "pip-eligibility-checker"],
+    ),
+    "carers-allowance-calculator": calc_page(
+        "carers-allowance-calculator",
+        "Carer's Allowance calculator 2026/27",
+        "Check whether Carer's Allowance may apply and estimate the weekly amount. Uses the 2026/27 rate of £81.90/week, 35-hour care rule and £151/week earnings limit.",
+        "Check whether Carer's Allowance may be in range based on your caring hours, earnings and the disability benefit the person you care for receives.",
+        "carers_allowance",
+        [
+            {"name": "hours_caring", "label": "Hours caring per week", "type": "number", "default": 35, "step": 1, "min": 0},
+            {"name": "weekly_earnings", "label": "Your weekly earnings (net, after tax and NI)", "type": "number", "default": 0, "step": 1, "min": 0, "prefix": "£"},
+            {"name": "has_qualifying_benefit", "label": "The person I care for receives PIP, DLA, Attendance Allowance or similar", "type": "boolean", "default": True},
+        ],
+        [
+            {"q": "How much is Carer's Allowance in 2026/27?", "a": "£81.90 a week, which is £4,258.80 a year. It is taxable income."},
+            {"q": "How many hours do you need to care to claim?", "a": "At least 35 hours a week providing care for someone who receives a qualifying disability benefit."},
+            {"q": "What is the earnings limit for Carer's Allowance?", "a": "£151 per week net of tax, National Insurance and 50% of pension contributions in 2026/27. Earnings above this disqualify you."},
+            {"q": "Does Carer's Allowance affect Universal Credit?", "a": "Yes. Carer's Allowance counts as income for UC. UC is normally reduced pound-for-pound, but you receive a carer element addition of £198.31/month which often more than offsets the reduction."},
+            {"q": "What if I get the State Pension — can I still get Carer's Allowance?", "a": "State Pension and Carer's Allowance cannot usually both be paid at full rate — the higher of the two is paid. But you may still have 'underlying entitlement', which can trigger a carer element addition in Universal Credit."},
+        ],
+        [
+            {"heading": "The earnings limit — what counts and what does not", "paragraphs": ["The £151/week earnings limit for 2026/27 applies to net earnings after deducting income tax, National Insurance contributions, and 50% of any pension contributions you make. If you work part-time and stay below that net figure, earnings do not prevent a claim.", "Earnings from self-employment use the same threshold but can be complex — allowable business expenses are deducted before comparing against the limit."]},
+            {"heading": "How Carer's Allowance interacts with Universal Credit", "paragraphs": ["Carer's Allowance is counted as income in UC and reduces your UC award pound-for-pound. However, claiming Carer's Allowance also triggers a carer element addition in Universal Credit of £198.31 a month. For most UC claimants, the net effect of claiming Carer's Allowance is positive.", "If you receive a higher 'overlapping benefit' such as the State Pension or Contributory ESA that is already equal to or greater than Carer's Allowance, actual payment is blocked. But you still have 'underlying entitlement', which is enough to trigger the UC carer element."]},
+            {"heading": "Why Carer's Allowance is one of the most under-claimed benefits", "paragraphs": ["Two common misconceptions stop people claiming: that earnings will definitely disqualify them (only earnings over £151/week net do), and that getting State Pension means they can no longer claim anything related (underlying entitlement still applies). Around 400,000 eligible carers are estimated to be missing Carer's Allowance each year.", "The carer element in Universal Credit is also frequently missed because people do not realise that even without actual Carer's Allowance payment, underlying entitlement triggers the addition."]},
+        ],
+        ["carers-allowance-estimator", "carer-allowance-calculator"],
+        ["universal-credit-calculator", "pip-eligibility-checker", "pension-credit-calculator"],
+    ),
+}
+
+GUIDES: Dict[str, Dict[str, Any]] = {
+    "what-benefits-can-i-claim": {
+        "title": "What benefits can I claim?",
+        "description": "A practical UK guide to the main benefits and support routes for low income, disability, children, rent and pension-age households.",
+        "topic": "Benefits basics",
+        "sections": [
+            {"heading": "Start with your household, not with one benefit name", "paragraphs": ["The quickest way to get lost in the UK benefits system is to search for one payment in isolation. Most households are not really asking whether one specific benefit exists. They are trying to work out which mix of support might apply to their income, rent, children, health and age.", "That is why the better starting question is usually: what type of household am I, and which support routes normally fit households like mine. Working-age low-income households often begin with Universal Credit. Pension-age households often need to look at Pension Credit, council tax help and winter support. Families with children may also need Child Benefit, childcare help and school-related support."]},
+            {"heading": "The main support groups most people need to check", "paragraphs": ["If your income is low, Universal Credit is often the first route to check because it can cover day-to-day living costs and sometimes rent. If you are over State Pension age, Pension Credit may be more relevant. If you have a long-term health condition or disability, PIP, ESA and sometimes Universal Credit health elements become more important.", "Families should usually check Child Benefit separately because it is not the same thing as means-tested support. Childcare help, Free School Meals, Healthy Start and Sure Start Maternity Grant also sit in their own part of the system and are easy to miss if you focus only on one monthly payment."]},
+            {"heading": "You can often get more than one kind of support", "paragraphs": ["A common mistake is assuming support comes as one single award. In reality, a household might receive Universal Credit, Child Benefit and Council Tax Reduction at the same time. A pensioner might get Pension Credit and then unlock help with heating or council tax on top of it.", "That overlap is why this site is built as a network of connected pages rather than one giant calculator with a false sense of precision. The right answer is often a combination of support routes rather than one headline number."]},
+            {"heading": "Work does not automatically rule support out", "paragraphs": ["Many people still assume benefits stop the moment you start work. That is not how the system works. Plenty of working households qualify for support, especially through Universal Credit, Council Tax Reduction, Child Benefit and childcare schemes.", "In practical terms, the better question is not 'do I work', but 'how much do I earn, what other costs do I have, and which support rules still apply once those details are taken into account'."]},
+            {"heading": "Use independent estimators the right way", "paragraphs": ["Independent calculators are most useful at the planning stage. They help you see whether a claim looks worth exploring, which figures matter most, and which other pages you should check next. They are less useful if you expect them to reproduce every official rule exactly.", "That is the standard this site aims for: useful enough to guide your next step, but clear where an estimate is simplified and where only an official service or specialist adviser can give a final answer."]},
+        ],
+        "related": ["universal-credit-calculator", "pension-credit-calculator", "pip-eligibility-checker", "council-tax-reduction-calculator"],
+        "faq": [
+            {"q": "What is usually the main benefit for working-age low-income households?", "a": "Universal Credit is often the main route, especially if you also need help with rent or children."},
+            {"q": "Can you get more than one type of support?", "a": "Yes. Many households receive a mix of support, such as Universal Credit, Child Benefit and Council Tax Reduction."},
+            {"q": "What if I am not sure where to start?", "a": "Start with your biggest pressure point. If it is rent and bills, check Universal Credit and council tax help. If it is children, check Child Benefit and childcare support. If it is health, look at PIP and ESA-related pages."},
+        ],
+        "related_guides": ["universal-credit-explained", "benefits-for-low-income-families", "help-with-rent-and-council-tax", "pension-credit-explained", "pip-explained-simply"],
+    },
+    "universal-credit-explained": {
+        "title": "Universal Credit explained",
+        "description": "Plain-English guide to Universal Credit 2026/27 — what drives the award, how earnings and savings affect it, and what to check alongside it.",
+        "topic": "Universal Credit",
+        "sections": [
+            {"heading": "Universal Credit is one payment built from several elements", "paragraphs": [
+                "Universal Credit replaced six legacy benefits — income-based JSA, income-related ESA, Income Support, Housing Benefit, Working Tax Credit and Child Tax Credit — and brought them into a single monthly payment. Understanding it means understanding how those parts combine rather than treating it as one flat amount.",
+                "The award starts with a standard allowance, which is set by age and household type. For a single person aged 25 or over, the standard allowance in 2026/27 is £424.90 a month. For a couple where both are 25 or over, it is £666.97 a month. These are the floor amounts before any additions or deductions.",
+                "On top of the standard allowance, the system may add a child element for each dependent child, a housing costs element to help with rent, a childcare costs element for registered childcare, a limited capability for work or work-related activity element if a health condition is relevant, and a carer element if you care for a severely disabled person.",
+            ]},
+            {"heading": "How earnings affect the award — the taper and work allowance", "paragraphs": [
+                "Most working-age claimants face a 55% earnings taper. For every £1 of net earnings above your work allowance, Universal Credit is reduced by 55p. That means you keep 45p in every additional pound you earn, which is still a meaningful gain even if it feels modest.",
+                "The work allowance is only available to households with a child or a limited capability for work element. In 2026/27 it is £673 a month where no housing costs element is included, or £404 a month where housing costs are part of the award. Earnings up to that level are fully disregarded before the taper kicks in.",
+                "For households without a work allowance — typically couples or single adults without children or a health condition — the taper starts from the first pound of net earnings. That is one reason why the same gross wage can produce a very different Universal Credit figure depending on household composition.",
+            ]},
+            {"heading": "How housing costs are handled inside Universal Credit", "paragraphs": [
+                "The housing costs element covers rent for private tenants, social tenants and some supported accommodation. For private renters, the maximum support is capped at the Local Housing Allowance rate for your area, which is the 30th percentile of local rents in a given Broad Rental Market Area. That can leave a gap between the LHA cap and actual rent.",
+                "Social tenants receive a notional rent figure subject to bedroom rules. If you have more bedrooms than the social size criteria allow, a deduction of 14% (one spare room) or 25% (two or more spare rooms) typically applies.",
+                "Service charges and some other housing costs may or may not be covered, depending on whether they are eligible under the rules. Owner-occupiers in Universal Credit face different rules again — support for mortgage interest now comes through the Support for Mortgage Interest loan scheme rather than directly inside the Universal Credit award.",
+            ]},
+            {"heading": "Savings, capital and the £16,000 rule", "paragraphs": [
+                "Universal Credit uses a capital limit. If you or your partner have savings and investments totalling £16,000 or more, you are generally not eligible for a standard Universal Credit award. This applies to most types of savings, investments and property other than the home you live in.",
+                "Between £6,000 and £16,000, savings are treated as generating assumed income. For every £250 above £6,000, the system adds £4.35 to your assumed monthly income — regardless of what the savings actually earn. That assumed income reduces the award in the same way as real earnings.",
+                "Some capital is fully disregarded, including some compensation payments and money set aside to meet specific care or housing needs. If your savings have recently changed significantly, a benefits adviser can help clarify the treatment.",
+            ]},
+            {"heading": "Children and the two-child limit (April 2026 change)", "paragraphs": [
+                "From 6 April 2026, the government removed the two-child limit for Universal Credit child elements. All eligible dependent children in a household now generate a child element, regardless of when they were born. This is a significant change for larger families who were previously capped at two children in the UC child element.",
+                "The child element for each child is £303.94 a month in 2026/27. An additional amount applies for the first child if they were born before April 2017, reflecting legacy transitional rules.",
+                "Child Benefit is a separate payment and sits entirely outside Universal Credit. Receiving Child Benefit does not reduce your Universal Credit award directly, though very high child benefit amounts could theoretically interact with the Benefit Cap in some larger households.",
+            ]},
+            {"heading": "The Benefit Cap and when it applies", "paragraphs": [
+                "Even a correctly calculated award can be reduced by the Benefit Cap, which sets a ceiling on the total monthly benefits a household can receive. For 2026/27, the cap is broadly £1,835 a month outside Greater London and £2,110 inside London for families or single parents. Single adults without children face lower caps.",
+                "Several groups are exempt from the cap — including households receiving PIP, DLA, ESA in the support group, the limited capability for work-related activity element of Universal Credit, carer's allowance or Working Tax Credit. Earning enough to cross the earnings threshold can also lift the cap.",
+                "If your estimate comes out lower than expected and the household has multiple children or high rent, it is worth checking whether the Benefit Cap is the reason.",
+            ]},
+            {"heading": "Use Universal Credit as the starting point, not the endpoint", "paragraphs": [
+                "Universal Credit is usually the largest monthly support for a working-age household, but it rarely covers everything. Council Tax Reduction is a separate local scheme with its own application process. Child Benefit is paid separately and should always be claimed, even if HICBC could reduce its value. Tax-Free Childcare and the UC childcare element cannot be used at the same time, so a comparison is worth doing.",
+                "Disability-related support such as PIP is not part of Universal Credit and is not affected by UC income rules. ESA may interact with Universal Credit, but the details depend on whether the claim is New Style ESA or a legacy route.",
+            ]},
+        ],
+        "related": ["universal-credit-calculator", "benefit-cap-calculator", "tax-free-childcare-calculator", "council-tax-reduction-calculator"],
+        "faq": [
+            {"q": "Is Universal Credit paid weekly or monthly?", "a": "Universal Credit is normally paid monthly. The first payment usually takes about five weeks to arrive, and an advance is available to cover the gap."},
+            {"q": "Can you get Universal Credit if you work full time?", "a": "Yes, in some circumstances. It depends on your earnings, household size, rent and other factors. The 55% taper means higher earners usually receive less, but the award does not cut off immediately when you start working."},
+            {"q": "What is the work allowance in 2026/27?", "a": "It is £673 a month if you do not have a housing costs element, or £404 a month if you do. Only households with a child or a limited capability for work element receive a work allowance."},
+            {"q": "Do savings always stop Universal Credit?", "a": "Not until they reach £16,000 for most standard cases. Between £6,000 and £16,000 they reduce the award through an assumed income calculation. Below £6,000 they are usually fully disregarded."},
+            {"q": "Does Universal Credit cover council tax?", "a": "No. Council Tax Reduction is a separate local scheme and usually needs its own application to the local authority."},
+        ],
+        "related_guides": ["how-savings-affect-benefits", "universal-credit-if-my-wages-go-up", "universal-credit-rent-increase-explained", "help-with-rent-and-council-tax", "what-counts-as-income-for-benefits"],
+    },
+    "universal-credit-if-my-wages-go-up": {
+        "title": "Universal Credit if my wages go up",
+        "description": "What usually happens to Universal Credit when wages rise, with the taper, work allowance and practical budgeting impact explained in plain English.",
+        "topic": "Universal Credit scenarios",
+        "sections": [
+            {"heading": "A pay rise usually reduces Universal Credit, but does not wipe out the gain", "paragraphs": ["The most common worry is that a pay rise will make the extra work pointless because Universal Credit will simply take it all back. In most cases that is not what happens. The award usually falls gradually rather than disappearing in a single jump.", "Once earnings are above any work allowance, Universal Credit normally falls by 55p for every extra £1 of net earnings. That still means you keep 45p of the extra pound before thinking about any tax, council tax support or childcare changes."]},
+            {"heading": "The work allowance is what makes some pay rises feel much better than others", "paragraphs": ["If your household has a child or a health-related work capability element, part of your earnings can be ignored before the taper starts. That ignored amount is the work allowance. It makes the first slice of extra earnings more valuable.", "Households without a work allowance still gain from earning more, but the Universal Credit reduction starts from the first pound. That is one reason two people with the same wage rise can experience very different outcomes."]},
+            {"heading": "The useful next step is to compare before and after, not just read the rule", "paragraphs": ["A quick estimator is best used as a scenario tool here. Run the Universal Credit calculator with your current wages, then run it again with the higher figure. The difference between the two results is usually more useful than trying to picture the taper abstractly.", "If the result still feels tight, check council tax support and childcare pages as well. The real household position is often shaped by more than one scheme moving at once."]},
+        ],
+        "related": ["universal-credit-calculator", "earnings-impact-calculator", "council-tax-reduction-calculator"],
+        "faq": [
+            {"q": "Do you always keep some of a pay rise on Universal Credit?", "a": "Usually yes. Universal Credit is reduced by a taper, but it does not normally remove the whole increase."},
+            {"q": "Does overtime affect Universal Credit?", "a": "Yes. Universal Credit uses actual earnings reported in the assessment period, so overtime can reduce the award in the same month."},
+        ],
+    },
+    "universal-credit-if-partner-moves-in": {
+        "title": "Universal Credit if a partner moves in",
+        "description": "What usually changes when a partner moves in while you claim Universal Credit, including household assessment, joint savings and what to re-check next.",
+        "topic": "Universal Credit scenarios",
+        "sections": [
+            {"heading": "Universal Credit switches from a single claim to a household assessment", "paragraphs": ["If a partner moves in, Universal Credit is usually no longer assessed just on you. The system starts looking at the household as a couple instead. That changes the standard allowance, but it also brings the other person's earnings and savings into the same calculation.", "The couple allowance is higher than the single allowance, but that does not guarantee a higher final award. In practice, the new partner's income is often the bigger driver."]},
+            {"heading": "Savings and earnings are combined", "paragraphs": ["Couples are assessed on joint capital. A partner's savings can therefore move the household into the tapered range or above the usual capital limit even if you had little saved yourself.", "The same is true for wages. A partner moving in can change the whole result because their net earnings become part of the same assessment."]},
+            {"heading": "Treat this as both a reporting issue and a planning issue", "paragraphs": ["A partner moving in is one of the clearest examples of why this site is built around connected pages rather than a single headline estimate. Child Benefit, HICBC, council tax help and childcare support can all change when the household changes.", "Use the calculator to understand the direction of travel, but report the change promptly to the official service once it becomes real."]},
+        ],
+        "related": ["universal-credit-calculator", "child-benefit-calculator", "council-tax-reduction-calculator"],
+        "faq": [
+            {"q": "Do I need to report a partner moving in?", "a": "Yes. Universal Credit should reflect the current household, so a new partner is normally a reportable change."},
+            {"q": "Can the award go down even though the couple allowance is higher?", "a": "Yes. The higher couple allowance can be outweighed by the partner's earnings or savings."},
+        ],
+    },
+    "how-savings-affect-benefits": {
+        "title": "How savings affect benefits",
+        "description": "How savings affect Universal Credit 2026/27: the £6,000 lower limit, tariff income, £16,000 upper limit and what counts as capital — ISAs yes, CTFs no.",
+        "topic": "Savings rules",
+        "sections": [
+            {"heading": "There is no single savings rule for the whole benefits system", "paragraphs": [
+                "The most common mistake people make with savings and benefits is assuming one rule covers everything. In reality, different benefits use different capital thresholds, different assumed-income formulas, and different lists of disregarded amounts.",
+                "Universal Credit has a lower capital limit and a relatively strict treatment of amounts between the thresholds. Pension Credit is much more lenient and uses a different formula. Non-means-tested benefits like PIP, Carer's Allowance and Child Benefit are not affected by savings at all.",
+                "Before you assume savings rule out any benefit, it is worth identifying which benefit is in play and what that specific scheme says about capital — rather than applying a rule you heard about a different benefit.",
+            ]},
+            {"heading": "Universal Credit: the £6,000 and £16,000 thresholds in 2026/27", "paragraphs": [
+                "For Universal Credit, savings and capital below £6,000 are fully disregarded. They do not reduce your award at all. Savings between £6,000 and £15,999 are treated as generating assumed income: for every complete £250 above £6,000, DWP adds £4.35 a month to your assumed income. That assumed income then reduces your award through the standard calculation.",
+                "If savings reach £16,000 or more, you generally lose eligibility for a normal Universal Credit award. This applies to most savings accounts, investments, and some other assets, but your main home is disregarded.",
+                "Couples are assessed on combined capital. So if one partner has £3,000 and the other has £5,000, the joint total is £8,000 — which takes the household into the tapered range rather than the fully disregarded range.",
+            ]},
+            {"heading": "Pension Credit: a much gentler treatment of capital", "paragraphs": [
+                "Pension Credit ignores the first £10,000 of capital entirely. Above £10,000, the rules use a similar assumed-income calculation to Universal Credit but with a more generous starting point and the same £1 per £500 formula rather than a strict cut-off.",
+                "There is no equivalent of the £16,000 stop-point that Universal Credit uses. That means a pensioner with £25,000 in savings can still receive Pension Credit, though the award will be reduced by the assumed weekly income generated by the capital above £10,000.",
+                "This matters enormously for older people who have accumulated modest savings over working life. Many self-exclude from Pension Credit because they have savings, not realising how much more forgiving the rules are compared with working-age benefits.",
+            ]},
+            {"heading": "Some types of capital are disregarded or treated differently", "paragraphs": [
+                "Not all money is treated as capital. Personal injury compensation payments can be disregarded, sometimes indefinitely and sometimes for a set period, depending on the circumstances. Money specifically set aside to meet care needs may also be disregarded under certain conditions.",
+                "Property you own beyond your main home can count as capital, with a notional value calculation applied. Joint savings accounts, ISAs and some investment accounts are usually counted. Premium Bonds are generally counted. The face value of the bonds, not any prize money already paid out, is what matters.",
+                "If you have recently received a lump sum — an inheritance, a redundancy payment, a compensation settlement — the treatment can be complex. Timing of the payment and how it has been used since can affect whether and how it is counted.",
+            ]},
+            {"heading": "Deliberate deprivation: spending savings to claim benefits", "paragraphs": [
+                "DWP can treat you as still holding capital you have deliberately given away or spent to get below a threshold. This is called deprivation of capital, and it can result in a notional capital figure being used even after the money is gone.",
+                "The rules are not as aggressive as some people assume for ordinary spending. Paying off debt, covering living expenses and making reasonable purchases are unlikely to be treated as deliberate deprivation. Giving large amounts to family members specifically before claiming is where problems arise.",
+                "If you are concerned about how a recent capital change might be treated, talking to Citizens Advice or a welfare rights adviser before making a claim is sensible.",
+            ]},
+            {"heading": "What to do when savings are close to a threshold", "paragraphs": [
+                "If your savings are close to a threshold, it is worth tracking the exact amount carefully and understanding how it relates to the relevant benefit's rules. A small difference can shift you from fully eligible to slightly reduced or from reduced to ineligible.",
+                "It is also worth noting that Pension Credit savings rules and Universal Credit savings rules work independently of each other. Someone transitioning from UC to pension-age support does not carry the same capital thresholds across.",
+                "A benefits calculator gives you a useful starting estimate, but for edge cases around capital — especially inherited money, property, business assets or compensation payments — taking specific advice from a welfare rights specialist gives the most reliable answer.",
+            ]},
+        ],
+        "related": ["universal-credit-calculator", "housing-benefit-calculator", "pension-credit-calculator"],
+        "faq": [
+            {"q": "Do savings affect PIP or Carer's Allowance?", "a": "No. PIP, DLA and Carer's Allowance are not means tested. Income and savings do not affect them."},
+            {"q": "Does Universal Credit stop at exactly £16,000 in savings?", "a": "Yes, for most standard cases the award stops when capital reaches £16,000 or more. Between £6,000 and £16,000 the award is reduced through an assumed-income calculation of £4.35 a month per £250 above the lower threshold."},
+            {"q": "Does Pension Credit have the same £16,000 limit?", "a": "No. Pension Credit uses different rules. It disregards the first £10,000 and then applies an assumed-income formula above that, but there is no hard upper limit equivalent to the £16,000 UC stop-point."},
+            {"q": "Does a joint account count as capital for one person or two?", "a": "Joint accounts are usually split 50:50 between partners for benefits purposes unless there is evidence of a different beneficial ownership split."},
+            {"q": "Can spending savings before claiming be a problem?", "a": "It can be. DWP can apply a deprivation of capital rule if they believe savings were deliberately reduced to get below a threshold. Ordinary spending on living expenses is unlikely to trigger this, but large transfers to family members shortly before a claim may be questioned."},
+        ],
+    },
+    "help-with-rent-and-council-tax": {
+        "title": "Help with rent and council tax",
+        "description": "UK rent and council tax support 2026/27: Universal Credit housing costs, Housing Benefit eligibility and Council Tax Reduction explained.",
+        "topic": "Housing support",
+        "sections": [
+            {"heading": "Help with rent and council tax usually comes from different places", "paragraphs": ["One of the most common misunderstandings is assuming rent support and council tax support are part of the same claim. They are not. Rent help is often routed through Universal Credit or, in some cases, Housing Benefit. Council tax help usually sits in a separate local authority scheme.", "That split matters because many households claim one type of support and miss the other entirely."]},
+            {"heading": "Rent help usually starts with Universal Credit now", "paragraphs": ["For most working-age households making a new claim, help with rent usually sits inside Universal Credit rather than Housing Benefit. That means the rent question is often tied closely to earnings, children and other living-cost support.", "Housing Benefit still matters in pension-age cases and some specialist housing situations, which is why it still deserves its own page rather than being written off as a dead topic."]},
+            {"heading": "Council Tax Reduction is local, which is why it feels inconsistent", "paragraphs": ["Council Tax Reduction schemes are run locally, so two councils can handle low-income cases differently. That is one reason people find council tax help harder to understand than headline national benefits.", "A national estimator can still be useful, but it needs to be honest about local variation instead of pretending there is one single UK formula."]},
+            {"heading": "A gap after support does not always mean there is no more help", "paragraphs": ["If your rent support or council tax support estimate still leaves a big shortfall, it may be worth checking discretionary housing help, local welfare support or council hardship routes. The mainstream award is not always the full picture.", "That matters especially for households dealing with temporary income drops, arrears pressure or unusually high housing costs."]},
+            {"heading": "The strongest next step is to check both bills together", "paragraphs": ["If housing costs are the reason you are searching for support, check rent help and council tax help side by side rather than one after the other. A partial answer on only one bill can make the overall situation look worse than it really is.", "That is why this guide sits between Universal Credit, Housing Benefit and Council Tax Reduction pages in the site structure."]},
+        ],
+        "related": ["universal-credit-calculator", "housing-benefit-calculator", "council-tax-reduction-calculator"],
+        "faq": [
+            {"q": "Can you get help with council tax if you work?", "a": "Yes. Many working households with a low income still qualify for Council Tax Reduction."},
+            {"q": "Is Housing Benefit still available?", "a": "Yes, but it is now mainly relevant for pension-age households and some specialist accommodation cases."},
+            {"q": "Does Universal Credit automatically reduce council tax?", "a": "No. Council Tax Reduction is usually a separate local scheme and often needs its own application."},
+        ],
+    },
+    "benefits-for-low-income-families": {
+        "title": "Benefits for low-income families",
+        "description": "UK support for low-income families 2026/27: Universal Credit, Child Benefit, Free School Meals, Healthy Start and childcare help explained.",
+        "topic": "Families",
+        "sections": [
+            {"heading": "Family support usually comes in layers", "paragraphs": ["Low-income family support rarely comes through one single payment. A family may have Universal Credit as the core award, but Child Benefit, school support, childcare help and local council support can all sit around it.", "That is why looking only for one number often gives the wrong impression. The better question is which pieces of help may stack together for your household."]},
+            {"heading": "Universal Credit is often the centre, but not the whole picture", "paragraphs": ["For many working-age families, Universal Credit is the biggest means-tested support route. But it does not replace Child Benefit, and it does not make school-related help or food support irrelevant.", "Families often miss smaller schemes because they are focused on the monthly Universal Credit amount. In practice, those smaller schemes can still make a visible difference to the weekly budget."]},
+            {"heading": "Childcare support is one of the biggest decision areas", "paragraphs": ["Universal Credit childcare support and Tax-Free Childcare cannot usually be used together. That makes childcare one of the most important comparisons for working parents.", "The better option depends on earnings, hours worked, childcare bills and whether the family is already relying on means-tested support. There is no single answer that suits everyone."]},
+            {"heading": "School and food support often gets overlooked", "paragraphs": ["Free School Meals and Healthy Start do not always dominate headlines, but they can still matter a lot to family budgets. They also tend to fit the same search journey as Child Benefit and Universal Credit, which is why they deserve strong standalone pages rather than a passing mention.", "A good support check for a family should always look beyond the biggest monthly payment."]},
+            {"heading": "Use the family pages together, not in isolation", "paragraphs": ["The cleanest way to use a benefits site as a parent is to move through the family cluster together: Universal Credit, Child Benefit, HICBC if relevant, childcare help, Free School Meals and Healthy Start. That gives a much better sense of the real support picture.", "That is also how these pages are written. They are meant to work as a connected set rather than as disconnected blog posts."]},
+        ],
+        "related": ["universal-credit-calculator", "child-benefit-calculator", "tax-free-childcare-calculator", "free-school-meals-checker"],
+        "faq": [
+            {"q": "Can working families still get help?", "a": "Yes. Work does not automatically stop support, especially through Universal Credit, Child Benefit and some childcare schemes."},
+            {"q": "What is often missed by low-income families?", "a": "Free School Meals, Healthy Start and childcare support are commonly missed because people focus only on Universal Credit."},
+            {"q": "Should I check Child Benefit separately from Universal Credit?", "a": "Yes. Child Benefit sits outside Universal Credit and should usually be checked on its own."},
+        ],
+    },
+    "pip-explained-simply": {
+        "title": "PIP explained simply",
+        "description": "PIP explained 2026/27 — daily living and mobility components, how the points system works, weekly rates, and what evidence strengthens a claim.",
+        "topic": "Disability support",
+        "sections": [
+            {"heading": "What PIP is and who it is for", "paragraphs": [
+                "Personal Independence Payment (PIP) is a non-means-tested benefit for people aged 16 to State Pension age who have a long-term physical or mental health condition or disability that affects their ability to carry out daily activities or move around.",
+                "Non-means-tested means income and savings do not affect it at all. It does not matter how much you earn, what savings you have, or whether your partner works. PIP is assessed purely on how your condition affects you.",
+                "PIP has two components: daily living (for difficulties with things like cooking, washing, dressing, communicating or managing medication) and mobility (for difficulties getting around). Each is assessed separately using a points-based descriptors system.",
+            ]},
+            {"heading": "The 2026/27 PIP weekly rates", "paragraphs": [
+                "Standard daily living rate: £76.70 a week. Enhanced daily living rate: £114.60 a week. Standard mobility rate: £30.30 a week. Enhanced mobility rate: £80.00 a week.",
+                "If you qualify for both components, the total can be up to £194.60 a week — over £10,000 a year. Even the standard daily living rate alone adds up to nearly £4,000 a year.",
+                "PIP is usually paid every four weeks. It is generally not taxable. Receiving PIP does not reduce Universal Credit directly (though it may affect whether you are included in certain benefit cap exemptions).",
+            ]},
+            {"heading": "How the points system works", "paragraphs": [
+                "Each component has a list of activities. For daily living, these include preparing food, eating and drinking, managing treatments, washing and bathing, managing toilet needs, dressing and undressing, communicating verbally, reading, engaging with other people face to face and making budgeting decisions. For mobility, the activities are planning and following journeys, and moving around.",
+                "Each activity has several descriptors describing different levels of difficulty. Each descriptor has a point value, typically from 0 to 12. DWP selects the highest-scoring descriptor that consistently applies to you.",
+                "Standard rate starts at 8 points in a component. Enhanced rate starts at 12 points. You need at least 8 points in the daily living component for a daily living award, and at least 8 points in the mobility component for a mobility award. You can score points in one component only, both, or neither.",
+            ]},
+            {"heading": "The four tests that apply to every descriptor", "paragraphs": [
+                "A descriptor does not just apply because you occasionally struggle with an activity. DWP applies four tests when scoring each one. First, can you carry out the activity safely? Second, can you carry it out to an acceptable standard? Third, can you do it repeatedly throughout the day if needed? Fourth, can you do it within a reasonable time period?",
+                "If you can do something technically, but only unsafely (risking harm), or only once but not repeatedly, or only with significant pain or fatigue — these factors can lead to a higher-scoring descriptor being applied.",
+                "The word 'reliably' summarises these tests. The question is not whether you can do something on your best day. It is whether you can do it reliably, across your typical range of days, as your condition actually presents.",
+            ]},
+            {"heading": "Why evidence quality is often the decisive factor", "paragraphs": [
+                "The PIP assessment process involves a face-to-face or phone assessment conducted by a healthcare professional contracted by DWP. Their report informs — but does not determine — the DWP decision maker's outcome.",
+                "The quality of evidence you provide before and during the assessment makes a significant difference. Useful evidence includes GP letters that describe the functional impact of your condition (not just the diagnosis), letters from specialists or consultants, care plans, physiotherapy notes, occupational health reports and records from social care.",
+                "A symptom diary kept for several weeks before the assessment can help demonstrate the variability of the condition. Many conditions fluctuate, and showing that bad days are frequent matters. The assessor sees you on one day — evidence shows the pattern.",
+                "Many unsuccessful PIP claims or appeals succeed after additional evidence is submitted. The initial decision is not final. Mandatory reconsideration and appeal to a tribunal are options if the outcome seems wrong.",
+            ]},
+            {"heading": "What PIP can unlock beyond the direct payment", "paragraphs": [
+                "Certain rates of PIP can passport into other support. Enhanced mobility PIP usually qualifies for the Motability scheme, Blue Badge eligibility, and Vehicle Excise Duty exemption. Standard mobility PIP is also relevant for Blue Badge in many areas.",
+                "PIP can exempt a household from the Benefit Cap in Universal Credit, because claimants receiving PIP (or DLA) are usually exempt. A carer who receives Carer's Allowance for a PIP recipient may also gain entitlement to carer-related elements in their own benefits.",
+                "PIP is not a one-off award. It is reviewed periodically and can also be renewed when awards expire. If circumstances worsen, a change of circumstances can be reported and a reassessment requested.",
+            ]},
+        ],
+        "related": ["pip-eligibility-checker", "esa-calculator", "benefit-cap-calculator"],
+        "faq": [
+            {"q": "Does PIP stop if you start working?", "a": "No. PIP is not affected by whether you work, how much you earn, or any savings you have. It is assessed purely on how your condition affects daily activities and mobility."},
+            {"q": "What are the 2026/27 PIP weekly rates?", "a": "Standard daily living: £76.70. Enhanced daily living: £114.60. Standard mobility: £30.30. Enhanced mobility: £80.00. Both components can be paid together."},
+            {"q": "How many points do you need for standard PIP?", "a": "At least 8 points in the daily living component for a daily living award, or at least 8 points in the mobility component for a mobility award."},
+            {"q": "What if the PIP assessment seems wrong?", "a": "You can request a mandatory reconsideration and then appeal to an independent tribunal. A significant proportion of PIP appeals succeed, particularly when additional evidence is provided."},
+            {"q": "Does receiving PIP affect Universal Credit?", "a": "Not directly in terms of reducing UC. However, PIP can exempt a household from the Benefit Cap and may affect whether certain elements of Universal Credit are in scope."},
+        ],
+        "related_guides": ["pip-points-explained", "pip-daily-living-explained", "pip-mobility-explained", "esa-vs-universal-credit", "what-benefits-can-i-claim"],
+    },
+    "pip-points-explained": {
+        "title": "PIP points explained",
+        "description": "A plain-English guide to how PIP points work, what 8 and 12 points mean, and how the daily living and mobility components are scored.",
+        "topic": "Disability support",
+        "sections": [
+            {"heading": "PIP points decide the rate, not the diagnosis", "paragraphs": ["PIP is built around activities and descriptors. Points are awarded because of the level of difficulty you have with those activities, not simply because of the name of a condition.", "That is why understanding the points system matters so much. It tells you where a claim looks strong, borderline or likely to need better evidence."]},
+            {"heading": "The key thresholds are 8 points and 12 points", "paragraphs": ["In each component, 8 points usually means standard rate and 12 points usually means enhanced rate. The components are separate, so you can score enough in one component without qualifying in the other.", "This is the reason even a simple checker can be useful. It helps you sense-check the likely band before getting lost in the full assessment language."]},
+            {"heading": "Points only matter if the descriptor applies reliably", "paragraphs": ["A point total is only useful if the descriptor genuinely applies most of the time and meets the reliability tests: safely, repeatedly, to an acceptable standard and within a reasonable time.", "Use a points guide to orient yourself, but use evidence and examples to make the case stronger."]},
+        ],
+        "related": ["pip-eligibility-checker", "esa-calculator", "benefit-cap-calculator"],
+        "faq": [
+            {"q": "How many points do you need for standard PIP?", "a": "Usually 8 points in a component."},
+            {"q": "How many points do you need for enhanced PIP?", "a": "Usually 12 points in a component."},
+        ],
+    },
+    "esa-vs-universal-credit": {
+        "title": "ESA vs Universal Credit",
+        "description": "When ESA, Universal Credit or both may apply, and why the two systems often overlap for people with health conditions.",
+        "topic": "Health and work",
+        "sections": [
+            {"heading": "ESA and Universal Credit answer different questions", "paragraphs": ["New Style ESA is mainly about contribution history and capability for work. Universal Credit is means tested and can include rent, children and other household support. That is why some people can be entitled to both, even though one can reduce the other.", "If you only look at one system, you can misunderstand the overall position."]},
+            {"heading": "Why SSP often sits before both", "paragraphs": ["If you are employed and off sick, SSP may be the first payment in the chain. Once SSP ends or is too low, ESA and Universal Credit become more relevant.", "That is why the site architecture connects SSP, ESA and Universal Credit closely."]},
+            {"heading": "Use the right estimator for the right question", "paragraphs": ["Use an ESA page to sense-check contribution-based support and pension interactions. Use Universal Credit pages when household income, rent and children are the bigger issue. The real-world answer is often not either-or.", "This guide exists to make that split easier to understand."]},
+        ],
+        "related": ["esa-calculator", "ssp-calculator", "universal-credit-calculator"],
+        "faq": [{"q": "Can Universal Credit replace ESA?", "a": "For some households UC becomes the main means-tested route, but New Style ESA can still matter if the NI record is there."}],
+    },
+    "child-benefit-and-hicbc": {
+        "title": "Child Benefit and HICBC explained",
+        "description": "Child Benefit 2026/27: £27.05/week first child. How the High Income Child Benefit Charge applies above £60,000 and why some higher earners still claim.",
+        "topic": "Family tax",
+        "sections": [
+            {"heading": "Child Benefit in 2026/27 — rates and who gets it", "paragraphs": [
+                "Child Benefit is a universal payment available to anyone responsible for a child under 16 (or under 20 if they are in approved education or training). Unlike Universal Credit, it is not means tested at the point of claim. The current 2026/27 weekly rates are £27.05 for the eldest or only child and £17.90 for each additional child.",
+                "Those rates add up. A family with two children receives £44.95 a week — £2,337 a year — just in Child Benefit. A family with three children receives £62.85 a week. The amounts are meaningful for family budgets and worth claiming even when other support is not available.",
+                "Child Benefit is paid every four weeks into a bank account. You can claim as soon as your child is born or as soon as a child comes to live with you. Claims can be backdated by up to three months.",
+            ]},
+            {"heading": "What the High Income Child Benefit Charge is", "paragraphs": [
+                "The High Income Child Benefit Charge (HICBC) is a tax charge that recovers some or all of Child Benefit if anyone in the household has adjusted net income over a threshold. From the 2024/25 tax year onwards, the threshold is £60,000 and the charge reaches 100% — meaning the full Child Benefit is recovered — at £80,000.",
+                "The charge applies to the highest earner in the household, not both earners. So a couple where one earns £75,000 and the other earns £30,000 are subject to HICBC based on the £75,000 figure, not the combined income.",
+                "The rate of the charge is 1% of the annual Child Benefit for every £200 of adjusted net income above £60,000. At £70,000, that is 50% of Child Benefit repaid. At £80,000 or above, the full amount is repaid through the charge.",
+            ]},
+            {"heading": "Adjusted net income — the figure that actually matters", "paragraphs": [
+                "Adjusted net income is not the same as gross salary. It is your gross income minus certain deductions. The most important deductions for many higher earners are pension contributions paid into a registered pension scheme and Gift Aid donations to charity.",
+                "If you earn £65,000 and make £6,000 a year in pension contributions, your adjusted net income is £59,000 — below the £60,000 HICBC threshold. In that case, no charge applies at all.",
+                "This is why salary sacrifice pension contributions can make sense for earners close to the threshold. They reduce the adjusted net income figure dollar-for-dollar (up to the pension contribution rules), which can move a household from a partial or full HICBC position to no charge at all.",
+            ]},
+            {"heading": "Why keeping the claim alive still makes sense for some families", "paragraphs": [
+                "Even when a household decides to opt out of receiving Child Benefit payments — to avoid the hassle of registering for Self Assessment and repaying the charge — it usually makes sense to keep the claim active.",
+                "An active claim protects National Insurance credits for the non-working or lower-earning partner. These credits count toward the State Pension and are valuable over a working life. Without them, a career break for childcare can leave a permanent gap in the NI record.",
+                "A live claim also ensures the child receives a National Insurance number automatically at age 16. Without a claim, the child may need to apply separately later.",
+                "Opting out of payments is straightforward. HMRC allows this online, and the claim continues to exist even with payments suspended. If circumstances change and the income position improves, payments can be reinstated.",
+            ]},
+            {"heading": "How to pay the HICBC — Self Assessment", "paragraphs": [
+                "The person subject to the charge needs to register for Self Assessment and declare the Child Benefit received through a tax return. HMRC can also collect it through a tax code adjustment if you prefer.",
+                "If you have not been completing Self Assessment and realise HICBC may have applied in past years, HMRC has a backdating process. The rules on penalties and interest for late registration have been updated in recent years, and many families who came forward voluntarily received a reduced penalty.",
+                "Once registered, the charge is straightforward to calculate. It is the annual Child Benefit received, adjusted by the taper rate for your income above the threshold.",
+            ]},
+            {"heading": "The planning question — should we claim or not?", "paragraphs": [
+                "For households with a higher earner significantly above £80,000, the charge equals 100% of Child Benefit. In that case, many families opt out of payments entirely. The claim still exists (protecting NI credits and the child's NI number), but no money changes hands.",
+                "For households with the higher earner between £60,000 and £80,000, the decision is more nuanced. The net benefit after the charge is partial but real. Running the HICBC calculator alongside a pension contribution review can show whether small changes to contributions change the position meaningfully.",
+                "For households where pension contributions could bring adjusted net income below £60,000, the full Child Benefit can be retained without any charge. That is often the most financially attractive outcome and worth planning before the tax year rather than after.",
+            ]},
+        ],
+        "related": ["child-benefit-calculator", "hicbc-calculator", "tax-free-childcare-calculator"],
+        "faq": [
+            {"q": "Should a higher earner still claim Child Benefit if they will repay it all?", "a": "Often yes, because a live claim protects National Insurance credits for the non-working or lower-earning partner and ensures the child gets an NI number automatically. Payments can be opted out of while the claim stays active."},
+            {"q": "At what income does HICBC reach 100%?", "a": "At £80,000 adjusted net income and above (from 2024/25 onwards), the charge equals 100% of Child Benefit. Between £60,000 and £80,000, the charge is proportional."},
+            {"q": "Can pension contributions really reduce HICBC?", "a": "Yes. Because HICBC is based on adjusted net income, pension contributions reduce the figure used. If contributions bring income below £60,000, no charge applies at all."},
+            {"q": "What if my employer pays pension contributions?", "a": "Only contributions you make yourself (including salary sacrifice) reduce adjusted net income. Employer contributions made directly by the employer do not reduce your adjusted net income for HICBC purposes."},
+            {"q": "Do I need to do a tax return for HICBC?", "a": "Yes, if you or your partner received Child Benefit and anyone in the household had adjusted net income over £60,000 in any year since 2012/13. You need to register for Self Assessment and complete a tax return."},
+        ],
+        "related_guides": ["how-much-child-benefit-for-1-2-3-children", "child-benefit-tax-charge-examples", "tax-free-childcare-guide", "benefits-for-low-income-families"],
+    },
+    "how-much-child-benefit-for-1-2-3-children": {
+        "title": "How much Child Benefit for 1, 2 or 3 children?",
+        "description": "Child Benefit amounts for 1, 2 and 3 children in 2026/27 — weekly, monthly and annual totals, plus what to check if the High Income Charge may apply.",
+        "topic": "Child Benefit examples",
+        "sections": [
+            {"heading": "One child is the cleanest place to start", "paragraphs": ["For one child, Child Benefit uses the eldest-or-only-child rate. That makes it the simplest example and a useful starting point for understanding the value of the claim in weekly, monthly and annual terms.", "It is also the clearest way to compare the value of Child Benefit with other support such as childcare help or council tax support if the household budget is tight."]},
+            {"heading": "Two or three children increase the award, but not in a straight line", "paragraphs": ["Once there is more than one child, the first child uses the higher rate and each additional child uses the lower additional-child rate. So the total rises, but it does not simply double or triple in a straight line.", "That is why worked examples are useful. They show the real scale of the payment rather than leaving parents to guess from a rate table."]},
+            {"heading": "If household income is higher, the next question is HICBC", "paragraphs": ["For some households the more important question is not just how much Child Benefit is paid, but how much is kept after the High Income Child Benefit Charge. That is especially true where one partner has adjusted net income above the threshold.", "The practical workflow is simple: check the household Child Benefit amount first, then test the HICBC page if higher income is in the picture."]},
+        ],
+        "related": ["child-benefit-calculator", "hicbc-calculator", "free-school-meals-checker"],
+        "faq": [
+            {"q": "Does Child Benefit double when you have two children?", "a": "No. The first child uses the higher rate and each additional child uses the lower additional-child rate."},
+            {"q": "Should I check HICBC after this page?", "a": "Yes, if anyone in the household has adjusted net income above the HICBC threshold."},
+        ],
+    },
+    "child-benefit-tax-charge-examples": {
+        "title": "Child Benefit tax charge examples",
+        "description": "Worked HICBC examples showing how much Child Benefit is repaid at different incomes and child counts, in plain English.",
+        "topic": "Family tax examples",
+        "sections": [
+            {"heading": "The charge builds through a taper band", "paragraphs": ["The High Income Child Benefit Charge does not arrive all at once. It rises through the taper band, which is why examples are often easier to understand than a written formula.", "A household just inside the band can still keep some of the Child Benefit, while a household much further through it may effectively lose most or all of it."]},
+            {"heading": "The number of children changes the size of the charge", "paragraphs": ["The charge is based on the Child Benefit attached to the household, so more children means more benefit potentially being clawed back. A family with three children faces a visibly different charge profile from a family with one child.", "That is why this site separates the Child Benefit amount and the tax charge examples rather than treating them as one blurred topic."]},
+            {"heading": "Adjusted net income keeps the examples practical", "paragraphs": ["Examples are most useful when they show why adjusted net income matters more than rough salary. Pension contributions and Gift Aid can shift the figure used for the charge and therefore change the real outcome.", "Use the examples for orientation, then run your own household numbers through the calculator for a more realistic sense-check."]},
+        ],
+        "related": ["hicbc-calculator", "child-benefit-calculator", "tax-free-childcare-calculator"],
+        "faq": [
+            {"q": "Is HICBC based on salary only?", "a": "No. It is based on adjusted net income, which can differ from headline salary."},
+            {"q": "Can a household still keep some Child Benefit in the taper band?", "a": "Yes. Households inside the taper band often keep part of the Child Benefit rather than losing all of it immediately."},
+        ],
+    },
+    "pension-credit-explained": {
+        "title": "Pension Credit explained",
+        "description": "Pension Credit 2026/27: who qualifies, Guarantee Credit rates, savings rules, and how a small award unlocks council tax, heating and NHS support.",
+        "topic": "Pension age support",
+        "sections": [
+            {"heading": "What Pension Credit is and who it is for", "paragraphs": [
+                "Pension Credit is a means-tested benefit for people who have reached State Pension age and whose income falls below a minimum weekly level. In 2026/27, the Guarantee Credit standard minimum is £238.00 a week for a single person and £363.25 a week for a couple.",
+                "If your income from all sources — State Pension, private pensions, earnings, savings income and other benefits — comes in below that figure, Pension Credit tops it up to the minimum. If it is above, you receive nothing in Guarantee Credit, though you may still be eligible for Savings Credit in some legacy cases.",
+                "Around 880,000 households eligible for Pension Credit are not currently claiming it, according to government estimates. Many have self-excluded based on incorrect assumptions about savings, home ownership or occupational pension income.",
+            ]},
+            {"heading": "Guarantee Credit — the core of Pension Credit", "paragraphs": [
+                "The Guarantee Credit element is the main part of Pension Credit. It tops income up to the minimum figures above. The calculation is broadly: take the standard minimum, add any applicable additions (explained below), and subtract all counted income. If the result is positive, that is the weekly Guarantee Credit award.",
+                "Income counted includes State Pension, private or occupational pension payments, earnings and most other income. Some income is fully or partially disregarded — for example, £5 a week of earnings is normally disregarded, and earnings from self-employment or part-time work may be treated more generously in some circumstances.",
+                "Owning your home has no effect on Guarantee Credit eligibility. Home ownership is not treated as capital or income. A pensioner living in a house worth £400,000 can still receive Pension Credit if their weekly income is below the minimum.",
+            ]},
+            {"heading": "Additional elements that can increase the award", "paragraphs": [
+                "Pension Credit is not just the standard minimum figure. Several additions can increase it significantly. The Severe Disability Addition (£86.05 a week in 2026/27) applies where the claimant or partner receives the highest rate DLA care component, enhanced daily living PIP or similar, and no one is paid Carer's Allowance for caring for them.",
+                "The Carer Addition (£48.15 a week) can be included where the claimant is caring for a severely disabled person, even if Carer's Allowance is not currently being received (because the claimant's State Pension might be higher than Carer's Allowance).",
+                "Housing costs can sometimes be included within Pension Credit assessments for owner-occupiers, covering some mortgage interest or certain service charges through the Support for Mortgage Interest route. Transitional protection and specific individual circumstances can also affect the total.",
+            ]},
+            {"heading": "How savings are treated — much more gently than Universal Credit", "paragraphs": [
+                "Pension Credit ignores the first £10,000 of capital entirely. Above £10,000, each £500 of additional savings is treated as £1 a week of assumed income. So savings of £14,000 would generate £8 a week of assumed income — which reduces the award by £8, not eliminates it.",
+                "There is no hard upper capital cut-off equivalent to Universal Credit's £16,000 rule. A pensioner with £25,000 in savings has £30,000 of excess above the £10,000 disregard. At £1 per £500, that generates £60 of assumed weekly income. If their other income is below the minimum, they may still qualify for a reduced Guarantee Credit award.",
+                "This is fundamentally different from Universal Credit, where £16,000 in savings typically means no award at all. Many pensioners with moderate savings wrongly assume they are in the same position as Universal Credit claimants would be.",
+            ]},
+            {"heading": "Why Pension Credit matters beyond the weekly cash amount", "paragraphs": [
+                "Even a small Pension Credit award can trigger a package of other support that collectively makes a much bigger difference than the direct weekly payment alone.",
+                "Guarantee Credit receipt passports entitlement to maximum Council Tax Reduction, full Housing Benefit for those who still receive it, and Cold Weather Payments. It can also provide access to NHS cost help including free prescriptions, dental treatment and sight tests, as well as the Warm Home Discount.",
+                "From 2026, the Winter Fuel Payment also carries an income-based condition in England and Wales, and Pension Credit receipt is one of the key qualifying routes. A pensioner with income just above the minimum and no Pension Credit award could miss both the Winter Fuel Payment and the other passported support — representing a significant annual gap.",
+            ]},
+            {"heading": "How to claim and what happens next", "paragraphs": [
+                "Pension Credit can be claimed by phone (the Pension Credit claim line), online or by post. The claim normally covers both Guarantee Credit and any applicable Savings Credit in one application. A successful claim can sometimes be backdated by up to three months.",
+                "The claim process involves providing details of all income, savings, property and relevant personal circumstances. DWP may ask for supporting evidence, particularly for savings, pension income and disability-related additions.",
+                "If you are unsure whether to claim, a benefits calculator or a welfare rights adviser can give a reasonably accurate indication before you go through the full application. Many councils and charities also offer free benefit checks specifically designed for older people.",
+            ]},
+        ],
+        "related": ["pension-credit-calculator", "winter-fuel-payment-checker", "cold-weather-payment-checker", "council-tax-reduction-calculator"],
+        "faq": [
+            {"q": "Can you claim Pension Credit if you have savings?", "a": "Yes. Savings up to £10,000 are ignored completely. Above that, they generate assumed income rather than stopping the claim outright. There is no hard savings cut-off for Pension Credit like the £16,000 limit in Universal Credit."},
+            {"q": "Does home ownership affect Pension Credit?", "a": "No. Owning your home — regardless of its value — does not count as capital or affect Pension Credit eligibility."},
+            {"q": "What is the 2026/27 Pension Credit minimum?", "a": "£238.00 a week for a single person and £363.25 a week for a couple (Guarantee Credit standard minimum)."},
+            {"q": "How does Pension Credit affect other benefits?", "a": "It can passport you into maximum Council Tax Reduction, Cold Weather Payments, full Housing Benefit, NHS cost help and potentially the Winter Fuel Payment in England and Wales."},
+            {"q": "Can you get Pension Credit if you have a private pension?", "a": "Yes. Private or occupational pension income reduces the award, but does not automatically remove eligibility if total income is still below the minimum."},
+        ],
+        "related_guides": ["what-pension-credit-unlocks", "pension-credit-examples-for-single-pensioner", "pension-credit-examples-for-couple", "how-savings-affect-benefits", "what-benefits-can-i-claim"],
+    },
+    "pension-credit-examples-for-single-pensioner": {
+        "title": "Pension Credit examples for a single pensioner",
+        "description": "Pension Credit worked examples 2026/27: how weekly income, savings and additions affect the estimate and why even a small award can matter.",
+        "topic": "Pension Credit examples",
+        "sections": [
+            {"heading": "Examples are more useful than a bare threshold", "paragraphs": ["A single pensioner often wants to know not just the weekly minimum, but what happens if they have a small occupational pension, modest savings or a disability-related addition. Worked examples answer that much better than a single headline figure.", "They also show why a small award can still matter if it opens the door to wider support."]},
+            {"heading": "Savings do not automatically rule a single pensioner out", "paragraphs": ["This is one of the most useful example patterns because many single pensioners wrongly assume savings mean the answer is no. Pension Credit is much more forgiving than working-age means-tested support.", "Examples make that clear quickly: savings can reduce the award, but they do not automatically eliminate it."]},
+            {"heading": "The award is only part of the value", "paragraphs": ["A worked estimate should usually lead into winter support, council tax help and NHS cost help. The weekly top-up matters, but the connected support can matter just as much.", "That is why the strongest next step after a positive example is to check the linked pension-age support pages as well."]},
+        ],
+        "related": ["pension-credit-calculator", "winter-fuel-payment-checker", "council-tax-reduction-calculator"],
+        "faq": [
+            {"q": "Can a single pensioner with savings still get Pension Credit?", "a": "Yes. Savings can reduce the award, but they do not automatically rule it out."},
+            {"q": "Why are examples useful here?", "a": "Because many real cases involve a mix of State Pension, a small private pension and some savings rather than a simple zero-income situation."},
+        ],
+    },
+    "pension-credit-examples-for-couple": {
+        "title": "Pension Credit examples for a couple",
+        "description": "Worked Pension Credit examples for couples, showing how joint income and savings usually change the estimate and why even a modest award can still matter.",
+        "topic": "Pension Credit examples",
+        "sections": [
+            {"heading": "Couples are assessed together", "paragraphs": ["For Pension Credit, the usual position is to assess the couple together rather than as two separate claims. That means joint income and joint capital matter, which is why examples are often easier to understand than a bare rules summary.", "A worked example shows the relationship between the couple guarantee level and the income already coming into the household."]},
+            {"heading": "A modest award can still unlock wider help", "paragraphs": ["Couples often assume that if the weekly award looks small there is not much point checking. In reality, even a modest award can unlock council tax help, winter support and other pension-age support.", "That is why the examples on this site focus on the broader outcome, not just the headline weekly figure."]},
+            {"heading": "Use examples to understand the shape of the rules", "paragraphs": ["Examples are a way to understand direction rather than predict every detail. State Pension, occupational pensions, savings and additions for caring or disability can all move the final figure.", "The best pattern is to read the example, then run your own numbers through the calculator."]},
+        ],
+        "related": ["pension-credit-calculator", "cold-weather-payment-checker", "winter-fuel-payment-checker"],
+        "faq": [
+            {"q": "Is Pension Credit for couples assessed jointly?", "a": "Yes. The usual approach is to assess the couple together rather than as two separate single claims."},
+            {"q": "Can a couple still qualify if one person has a small private pension?", "a": "Yes. A small private pension can reduce the award but does not automatically rule it out."},
+        ],
+    },
+    "tax-free-childcare-guide": {
+        "title": "Tax-Free Childcare explained",
+        "description": "Tax-Free Childcare 2026/27: how the 20% top-up works, who qualifies, maximum savings per child, and how it compares to UC childcare support.",
+        "topic": "Childcare support",
+        "sections": [
+            {"heading": "What Tax-Free Childcare is and how the top-up works", "paragraphs": [
+                "Tax-Free Childcare (TFC) is a government-backed savings account scheme where for every £8 you deposit, the government adds £2. That is effectively a 20% top-up on your childcare costs, or to put it another way, you pay 80p in every £1 of eligible childcare.",
+                "The scheme works through a government online childcare account. You deposit money into the account, and the top-up is added automatically. Payments are made directly to registered childcare providers — nurseries, childminders, after-school clubs, holiday camps and similar.",
+                "For most children, the maximum government top-up is £2,000 per child per year. For a disabled child, the limit doubles to £4,000 per year. If you have two children, the maximum is £4,000 a year. Three children, £6,000 — and so on.",
+            ]},
+            {"heading": "Who qualifies for Tax-Free Childcare in 2026/27", "paragraphs": [
+                "To be eligible, you and your partner (if you have one) both need to be working. There is no minimum hours requirement, but you each need to earn at least the equivalent of 16 hours at the National Minimum Wage per week on average. That is currently around £187 a week for most adults.",
+                "There is also an upper earnings limit. If either you or your partner earns over £100,000 a year, neither of you can claim Tax-Free Childcare for that tax year.",
+                "The child must be 11 or under at the start of the relevant term (up to 1 September after their 11th birthday). Disabled children can use the scheme until age 16.",
+                "You need to use registered childcare. Cash payments to unregistered carers, including family members who are not registered childminders, do not qualify.",
+            ]},
+            {"heading": "How Tax-Free Childcare compares with Universal Credit childcare support", "paragraphs": [
+                "This is the most important comparison for many families. Tax-Free Childcare and Universal Credit childcare support cannot be claimed at the same time. You have to choose one route.",
+                "Universal Credit childcare support reimburses up to 85% of eligible registered childcare costs, capped at £1,071.09 a month for one child or £1,836.16 for two or more children. If your childcare bill is high and your income is within UC range, the UC route can be significantly more valuable than the flat 20% TFC top-up.",
+                "Tax-Free Childcare tends to be better for higher earners — particularly above the UC earnings threshold — where UC childcare support either does not apply or provides minimal help. A family spending £20,000 a year on childcare for two children gets £4,000 back through TFC rather than the lower percentage they might receive at high earnings through UC.",
+                "The comparison always comes down to your specific income, childcare costs and whether you are already on Universal Credit. Running both calculators side by side — the TFC calculator and the Universal Credit calculator — gives the clearest picture.",
+            ]},
+            {"heading": "Free hours and Tax-Free Childcare — can you combine them?", "paragraphs": [
+                "Tax-Free Childcare can generally be used alongside free hours entitlements. The government-funded free hours (15 or 30 hours depending on age and eligibility) are separate from TFC, and TFC can be used to cover costs beyond the free hours.",
+                "For example, if your child has 15 free hours and attends nursery for 40 hours a week, you pay for the extra 25 hours privately. Tax-Free Childcare top-up can be applied to those privately paid hours.",
+                "From September 2024, 15 hours free childcare was extended to children from 9 months old whose parents meet the working threshold. By September 2025, 30 free hours was extended to children from 9 months. That has significantly reduced the amount families need to pay privately, which in turn affects how much TFC top-up is available and how it stacks against the UC childcare route.",
+            ]},
+            {"heading": "How to apply and what to watch for", "paragraphs": [
+                "You apply through the Government Gateway or Childcare Choices website. DWP and HMRC both need to confirm you meet the eligibility conditions, which typically takes around 24 hours online.",
+                "Your eligibility is reconfirmed every three months. If you do not reconfirm, your account is paused and you lose access to the government top-up temporarily. Setting a diary reminder for the reconfirmation date matters.",
+                "If you or your partner has a gap in employment — for example during maternity leave or while between jobs — there is a grace period. You can continue using Tax-Free Childcare for a return-to-work period after employment ends, though specific rules apply. Checking the official Childcare Choices site is the most reliable source during a transition.",
+            ]},
+        ],
+        "related": ["tax-free-childcare-calculator", "universal-credit-calculator", "child-benefit-calculator"],
+        "faq": [
+            {"q": "How much can you save with Tax-Free Childcare per year?", "a": "Up to £2,000 per child per year (up to £4,000 for a disabled child). The government adds £2 for every £8 you pay in, up to the maximum."},
+            {"q": "Can you use Tax-Free Childcare and Universal Credit childcare support together?", "a": "No. These two schemes are mutually exclusive. You must choose one or the other in any given period."},
+            {"q": "What if one partner is not working?", "a": "Both partners generally need to be working and earning at least the equivalent of 16 hours at the National Minimum Wage. Some exceptions exist for partners on paid or unpaid leave and during return-to-work periods."},
+            {"q": "Can I use Tax-Free Childcare with free childcare hours?", "a": "Yes. TFC can be used on top of free hours — covering the costs of hours and days beyond the free entitlement at registered providers."},
+            {"q": "Does Tax-Free Childcare apply to after-school clubs and holiday camps?", "a": "Yes, as long as the provider is registered with Ofsted or the equivalent regulator. Many holiday camps, sports clubs and after-school clubs are registered and accept TFC payments."},
+        ],
+        "related_guides": ["benefits-for-low-income-families", "child-benefit-and-hicbc", "tax-free-childcare-top-up-examples", "universal-credit-explained"],
+    },
+    "what-counts-as-income-for-benefits": {
+        "title": "What counts as income for benefit calculations?",
+        "description": "A guide to the kinds of income that commonly affect means-tested benefits and where the rules vary between schemes.",
+        "topic": "Income rules",
+        "sections": [
+            {"heading": "There is no single income rule for every benefit", "paragraphs": ["Means-tested support such as Universal Credit, Housing Benefit and Council Tax Reduction all look at income, but they do not always count exactly the same things in exactly the same way. Contribution-based benefits such as New Style JSA and ESA work differently again.", "That is why a general guide is useful. It helps people understand the categories before they try a calculator."]},
+            {"heading": "Earnings, pensions and some benefits can reduce support", "paragraphs": ["Wages usually matter most for working-age means-tested support. Private pensions can matter more on ESA or Pension Credit. Some benefits count as income for other schemes, while disability benefits are often treated more favourably.", "If an estimate looks low, checking the income treatment is often more useful than checking the headline rate."]},
+            {"heading": "Adjusted net income is a different concept", "paragraphs": ["Tax-based charges such as HICBC use adjusted net income rather than the same income definition used in most means-tested benefits. That distinction catches people out regularly.", "The site therefore keeps those pages separate rather than mixing the terms."]},
+        ],
+        "related": ["universal-credit-calculator", "hicbc-calculator", "pension-credit-calculator"],
+        "faq": [{"q": "Does Child Benefit count as income for Universal Credit?", "a": "Not in the same way as earnings, but it can still matter through the Benefit Cap."}],
+    },
+    "universal-credit-rent-increase-explained": {
+        "title": "Universal Credit rent increase explained",
+        "description": "How a rent increase usually affects Universal Credit, Local Housing Allowance limits, social housing deductions and the Benefit Cap in 2026/27.",
+        "topic": "Universal Credit housing",
+        "sections": [
+            {"heading": "A rent increase does not always mean Universal Credit goes up by the same amount", "paragraphs": ["This is one of the most common points of confusion for renters. Many people assume that if rent rises by £75 a month, their Universal Credit housing support will also rise by £75. In practice, that only happens if the increase still sits within the relevant housing support rules.", "For private renters, the main restriction is usually the Local Housing Allowance. For social tenants, the issue is more often the bedroom rules. For some households, the overall Benefit Cap is the real limit." ]},
+            {"heading": "Private renters are usually limited by Local Housing Allowance", "paragraphs": ["If you rent privately, Universal Credit housing costs are usually capped at the Local Housing Allowance for your area and bedroom entitlement. So if your rent rises above the LHA rate, the extra amount usually has to be covered from wages, other benefits or savings rather than by Universal Credit.", "That is why two renters with the same rent increase can see very different results. One may still be below the LHA cap and get most of the increase covered. Another may already be at the cap and see no extra help at all." ]},
+            {"heading": "Social renters can still lose out if the bedroom rules apply", "paragraphs": ["For social tenants, the issue is usually not Local Housing Allowance but the eligible rent after any under-occupancy deduction. If the home is treated as having one spare bedroom, the eligible amount is reduced by 14%. With two or more spare bedrooms, it is reduced by 25%.", "That means a higher rent does not always produce a matching increase in support. The rent may go up, but the deduction still applies to the eligible figure." ]},
+            {"heading": "The Benefit Cap can cancel out the increase entirely", "paragraphs": ["Some households are already close to the Benefit Cap before rent rises. When that happens, a larger housing element can simply be swallowed up by the cap rather than increasing the amount paid out overall.", "This is especially relevant for larger families, single parents with high rent, and households in high-cost areas outside the cap exemption groups. If your estimate looks lower than expected, the cap is often the missing explanation." ]},
+            {"heading": "What to check if there is still a shortfall", "paragraphs": ["If a rent increase leaves a gap, the most practical next step is usually to check Council Tax Reduction, Discretionary Housing Payment and any local hardship support at the same time. A small improvement across several schemes can matter more than a single rent-support check in isolation.", "It is also worth checking whether your bedroom entitlement, council area or household composition has changed, because those details can alter the housing support figure more than the rent rise itself." ]},
+        ],
+        "related": ["universal-credit-calculator", "housing-benefit-calculator", "benefit-cap-calculator", "council-tax-reduction-calculator"],
+        "faq": [
+            {"q": "Will Universal Credit always cover a rent increase?", "a": "No. Private renters are usually limited by Local Housing Allowance, and other households can still be restricted by the bedroom rules or the Benefit Cap."},
+            {"q": "What if my rent is above Local Housing Allowance?", "a": "Universal Credit usually will not cover the full shortfall above the relevant LHA cap, so the extra amount normally has to be met elsewhere."},
+        ],
+        "related_guides": ["help-with-rent-and-council-tax", "universal-credit-explained", "how-savings-affect-benefits", "what-benefits-can-i-claim"],
+    },
+    "tax-free-childcare-top-up-examples": {
+        "title": "Tax-Free Childcare top-up examples",
+        "description": "Tax-Free Childcare amounts for 1, 2 and 3 children in 2026/27 — worked examples of the 20% top-up and when UC childcare support may be better value.",
+        "topic": "Childcare examples",
+        "sections": [
+            {"heading": "Examples make the Tax-Free Childcare top-up easier to understand", "paragraphs": ["The headline rule sounds simple: for every £8 you pay in, the government adds £2. But families often want to know what that means over a month, a quarter or a full year once they factor in real nursery or childminder bills.", "Worked examples are useful because they show both the benefit of the top-up and the point where the annual or quarterly cap starts to matter." ]},
+            {"heading": "One child example: £500 a month of eligible childcare", "paragraphs": ["A family spending £500 a month on one child would normally receive a £125 top-up, because the government adds 20% of the total childcare cost. Over a full year, that is £1,500 of government support if spending stays at that level.", "That sits below the annual cap, so the family gets the full percentage support for the whole year. For many middle-income working households, this is the cleanest example of how the scheme is meant to work." ]},
+            {"heading": "Two children example: when the cap becomes more important", "paragraphs": ["If a family spends £1,800 a month across two children, the simple 20% top-up would be £450 a month. But the cap limits how much support can be added per child over the year, so families with high childcare bills need to keep an eye on the annual maximum.", "In practice, high-spending households can still save a lot through Tax-Free Childcare, but they may stop receiving extra top-up once the cap is reached. That is where the Universal Credit childcare route can become much more valuable for lower-income families." ]},
+            {"heading": "When Universal Credit childcare support beats Tax-Free Childcare", "paragraphs": ["Tax-Free Childcare is often the cleaner scheme for families outside Universal Credit. But once a household is already on Universal Credit and childcare costs are high, the UC childcare element can be worth far more because it can reimburse up to 85% of eligible childcare costs.", "That is why the strongest comparison is not just to look at the TFC top-up in isolation, but to run both routes side by side if your household is anywhere near Universal Credit entitlement." ]},
+            {"heading": "Use examples to understand the shape of the rules, then run your own numbers", "paragraphs": ["Examples are useful because they show the direction of travel: higher childcare bills usually mean a larger top-up until you hit the cap, while lower-income households may still do better through Universal Credit childcare support.", "After reading the examples, the next step should be to use the monthly TFC calculator and then compare it against the Universal Credit calculator if UC might still apply." ]},
+        ],
+        "related": ["tax-free-childcare-calculator", "tax-free-childcare-monthly-calculator", "universal-credit-calculator"],
+        "faq": [
+            {"q": "How much does Tax-Free Childcare add each month?", "a": "Usually 20% of the eligible childcare cost, subject to the scheme cap for each child."},
+            {"q": "Why compare Tax-Free Childcare with Universal Credit?", "a": "Because households on Universal Credit with high childcare bills often get more support through the UC childcare element than through the flat TFC top-up."},
+        ],
+        "related_guides": ["tax-free-childcare-guide", "benefits-for-low-income-families", "child-benefit-and-hicbc", "what-benefits-can-i-claim"],
+    },
+    "what-pension-credit-unlocks": {
+        "title": "What Pension Credit unlocks",
+        "description": "Why even a small Pension Credit award can open the door to council tax help, winter support, NHS cost help and other pension-age support in 2026/27.",
+        "topic": "Pension age support",
+        "sections": [
+            {"heading": "The weekly Pension Credit figure is often only part of the real value", "paragraphs": ["Many pensioners focus only on the weekly cash top-up and decide it is not worth the effort if the amount looks modest. That can be a costly mistake. The wider support linked to a Pension Credit award is often worth more over a year than the top-up itself.", "That is why Pension Credit is one of the strongest examples of a gateway benefit in the UK system." ]},
+            {"heading": "Council tax help is often the first major gain", "paragraphs": ["One of the biggest knock-on benefits is council tax support. Pension-age Council Tax Reduction schemes are usually more generous than working-age ones, and Guarantee Credit can often lead to maximum support depending on the local rules.", "For older households on a tight fixed income, that can make a large difference to the regular monthly budget even if the Pension Credit top-up itself looks small." ]},
+            {"heading": "Heating and winter support matter more than many people realise", "paragraphs": ["Pension Credit can also help unlock Winter Fuel Payment routes under the newer income-based approach in England and Wales, as well as Cold Weather Payments where the qualifying conditions are met. These are easy to overlook because they do not always arrive as part of the main weekly award.", "The wider picture is that Pension Credit can improve winter resilience, not just weekly income." ]},
+            {"heading": "NHS costs, housing support and other linked help can follow", "paragraphs": ["Depending on circumstances, Pension Credit can also help with NHS costs such as dental treatment, prescriptions and sight tests, and it can interact with Housing Benefit or housing cost help for pension-age households. Some energy-related support schemes and local hardship routes also use Pension Credit as a qualifying route.", "This is why pension-age support is best checked as a package rather than a single weekly payment." ]},
+            {"heading": "A small award can still be worth checking", "paragraphs": ["The practical lesson is simple: do not dismiss Pension Credit because the estimated weekly top-up looks small. If it opens access to several other schemes, the total annual value can be much larger than the headline figure suggests.", "That is especially true for pensioners who have modest private pension income or savings and assume they are automatically excluded when they are not." ]},
+        ],
+        "related": ["pension-credit-calculator", "winter-fuel-payment-checker", "cold-weather-payment-checker", "council-tax-reduction-calculator"],
+        "faq": [
+            {"q": "Can a small Pension Credit award still matter?", "a": "Yes. Even a modest award can open the door to council tax help, winter support and other linked assistance."},
+            {"q": "Is Pension Credit only about the weekly payment?", "a": "No. The linked support can be just as important as the weekly top-up itself."},
+        ],
+        "related_guides": ["pension-credit-explained", "pension-credit-examples-for-single-pensioner", "pension-credit-examples-for-couple", "what-benefits-can-i-claim"],
+    },
+    "pip-daily-living-explained": {
+        "title": "PIP daily living explained",
+        "description": "A plain-English guide to the PIP daily living component, the activities that score points, and what usually makes evidence stronger in 2026/27.",
+        "topic": "Disability support",
+        "sections": [
+            {"heading": "The daily living component is about everyday functional difficulty", "paragraphs": ["The PIP daily living component looks at whether a health condition or disability makes everyday tasks difficult enough to score points. It is not about the diagnosis on its own. The focus is on the real-world impact on preparing food, washing, dressing, medication, communication, social contact and budgeting.", "That is why many claims turn on detailed examples of what happens in ordinary daily routines rather than on a medical label by itself." ]},
+            {"heading": "Eight points and twelve points are the important thresholds", "paragraphs": ["If the descriptors that apply to you add up to 8 points in the daily living component, that usually means the standard rate. If they add up to 12 points, that usually means the enhanced rate.", "The practical question is not whether one activity sounds difficult in general terms, but which descriptor best matches what you can do safely, repeatedly and in a reasonable time." ]},
+            {"heading": "The strongest evidence usually shows functional impact clearly", "paragraphs": ["Useful evidence for daily living issues often includes care plans, letters explaining help with preparing food or medication, occupational therapy notes, GP records and a clear symptom diary. The best evidence usually explains what help is needed, how often, and what happens when the person tries to do the activity alone.", "That is more persuasive than simply stating that a condition exists." ]},
+            {"heading": "Daily living can matter beyond the weekly PIP payment", "paragraphs": ["A daily living award can change other parts of the benefits picture. It may support a carer's claim, help with passported support, and in some households affect whether the Benefit Cap applies.", "That is why a daily living guide is useful even for people who already know the basic weekly rate. The wider knock-on effects matter too." ]},
+        ],
+        "related": ["pip-eligibility-checker", "benefit-cap-calculator", "esa-calculator"],
+        "faq": [
+            {"q": "What does PIP daily living look at?", "a": "It looks at how your condition affects ordinary daily tasks such as preparing food, washing, dressing, managing treatments, communication and budgeting."},
+            {"q": "How many points do you need for daily living?", "a": "Usually 8 points for standard rate and 12 points for enhanced rate in the daily living component."},
+        ],
+        "related_guides": ["pip-explained-simply", "pip-points-explained", "pip-mobility-explained", "esa-vs-universal-credit"],
+    },
+    "pip-mobility-explained": {
+        "title": "PIP mobility explained",
+        "description": "A plain-English guide to the PIP mobility component, how moving around and planning journeys are assessed, and what the main scoring issues are in 2026/27.",
+        "topic": "Disability support",
+        "sections": [
+            {"heading": "The mobility component is about more than distance alone", "paragraphs": ["People often think the mobility component is only about how far someone can physically walk. That is only part of it. The PIP mobility component also covers planning and following journeys, which is especially relevant where mental health conditions, cognitive impairment or sensory issues affect travel.", "This is why someone can struggle strongly with mobility descriptors even if the issue is not a straightforward physical walking problem." ]},
+            {"heading": "Moving around and planning journeys are scored separately", "paragraphs": ["The component uses two activities: planning and following journeys, and moving around. Points are awarded under the descriptor that best reflects what you can do reliably. For some people the stronger score comes from physical difficulty. For others it comes from overwhelming psychological distress, sensory impairment or the need for supervision outdoors.", "The overall mobility score then determines whether the standard or enhanced rate applies." ]},
+            {"heading": "Reliability and repeatability still matter", "paragraphs": ["As with the daily living component, the key issue is not whether you can complete a task once on a good day. The test is whether you can do it safely, repeatedly, to an acceptable standard and within a reasonable time on most days.", "Many mobility disputes turn on exactly this point, especially when pain, fatigue, dizziness or distress mean that a distance is technically possible once but not reliably." ]},
+            {"heading": "Mobility awards can unlock wider support", "paragraphs": ["A mobility award can matter well beyond the weekly payment. Enhanced mobility can link to the Motability scheme, Blue Badge routes and vehicle tax support. Even standard mobility can be relevant for practical travel help and evidence of need in other systems.", "That makes the mobility component important both financially and practically for day-to-day independence." ]},
+        ],
+        "related": ["pip-eligibility-checker", "benefit-cap-calculator", "ssp-calculator"],
+        "faq": [
+            {"q": "Is PIP mobility only about walking distance?", "a": "No. It also covers planning and following journeys, including some mental health and sensory-related barriers to travel."},
+            {"q": "Can a mobility award help with other support?", "a": "Yes. Enhanced mobility can help with schemes such as Motability and can matter for wider practical support."},
+        ],
+        "related_guides": ["pip-explained-simply", "pip-points-explained", "pip-daily-living-explained", "what-benefits-can-i-claim"],
+    },
+    "universal-credit-capital-disregards": {
+        "title": "Universal Credit capital disregards explained",
+        "description": "UC capital disregards explained 2026/27: which assets count, what is ignored, and how the £6,000 and £16,000 savings thresholds affect your award.",
+        "topic": "Universal Credit",
+        "sections": [
+            {"heading": "What 'capital' means in Universal Credit", "paragraphs": [
+                "In Universal Credit, 'capital' means money and assets that could be converted into cash. That includes savings accounts, current account balances, cash, ISAs, Premium Bonds, investments and shares. It does not include your main home — that is fully disregarded regardless of value.",
+                "The DWP adds up everything that counts as capital to produce a total figure. That total then determines whether and how much your UC award is reduced. The rules are the same regardless of whether the capital is held by you or your partner.",
+            ]},
+            {"heading": "The lower disregard: below £6,000 is ignored entirely", "paragraphs": [
+                "If your total capital is below £6,000, Universal Credit ignores it completely. You do not need to declare it on your award or worry about it reducing your payments. This lower threshold is sometimes called the 'lower capital disregard' and it applies in 2026/27 as it has since UC launched.",
+                "Assets that are disregarded in full regardless of the amount include: your main home and any property you are taking steps to sell, personal possessions, the surrender value of a life insurance policy, business assets if you are self-employed, and money received as a compensation payment that has been disregarded for 12 months.",
+            ]},
+            {"heading": "Between £6,000 and £16,000: tariff income reduces your award", "paragraphs": [
+                "Once capital goes above £6,000, UC applies a 'tariff income' calculation. For every complete £250 above the £6,000 threshold, the system assumes you receive £4.35 of monthly income. This assumed income reduces your UC award even if the capital earns nothing.",
+                "Example: savings of £9,500 means £3,500 above £6,000 — that is fourteen complete £250 bands, producing £60.90 of assumed monthly income. Your UC award is reduced by that £60.90 whether or not the savings actually generate any interest.",
+                "This is sometimes called the 'upper capital disregard zone' or 'tariff income zone'. The rate has not changed since UC launched: it remains £4.35 per £250 band.",
+            ]},
+            {"heading": "At £16,000 and above: no UC entitlement", "paragraphs": [
+                "If total capital reaches £16,000 or more, you are not entitled to Universal Credit at all. This is the hard upper capital limit, sometimes called the 'upper capital disregard'. It does not matter how low your income is or how high your rent is — if combined capital exceeds £16,000, a UC claim returns nil.",
+                "Capital can fluctuate, so if savings drop below £16,000 again, entitlement can resume. A change of circumstances should be reported to DWP.",
+            ]},
+            {"heading": "Capital disregards and Pension Credit — a different set of rules", "paragraphs": [
+                "Pension Credit uses different capital rules. There is no upper capital limit equivalent to UC's £16,000 stop-point. Savings under £10,000 are fully disregarded. Above £10,000 a similar tariff income approach applies, but the thresholds and rates differ. The UC capital disregard rules described here apply to working-age claimants only.",
+            ]},
+        ],
+        "related": ["universal-credit-calculator", "housing-benefit-calculator"],
+        "faq": [
+            {"q": "Does my house count as capital for Universal Credit?", "a": "No. Your main home is fully disregarded and does not count as capital for UC purposes, regardless of its value."},
+            {"q": "What is the lower capital disregard for Universal Credit in 2026/27?", "a": "Capital below £6,000 is ignored entirely. It has no effect on your UC award."},
+            {"q": "How does the tariff income rule work between £6,000 and £16,000?", "a": "For every complete £250 above £6,000, DWP assumes you receive £4.35 of monthly income. This reduces your UC award even if the savings earn nothing."},
+            {"q": "What happens to UC if savings go above £16,000?", "a": "You are not entitled to Universal Credit at all if total capital is £16,000 or more. A claim returns nil until capital falls below that level."},
+            {"q": "Does a compensation payment count as capital?", "a": "Not immediately. A personal injury compensation payment is disregarded for 12 months from receipt. After that it can be counted as capital."},
+        ],
+        "related_guides": ["how-savings-affect-benefits", "universal-credit-explained", "what-benefits-can-i-claim"],
+    },
+    "benefits-for-working-families": {
+        "title": "Benefits for working families 2026",
+        "description": "Benefits for working families 2026/27: UC work allowance, Child Benefit, childcare support, Free School Meals and council tax help explained.",
+        "topic": "Families",
+        "sections": [
+            {"heading": "Working does not end benefit entitlement for families", "paragraphs": [
+                "A common misconception is that taking a job or increasing hours stops all benefit support. For families, that is rarely true. Universal Credit, Child Benefit, childcare support and Council Tax Reduction can all remain in payment as earnings rise — the support tapers gradually rather than switching off sharply.",
+                "Understanding the work allowance and taper rate is the key to seeing how much support a working family actually keeps.",
+            ]},
+            {"heading": "The work allowance: earnings a working family keeps in full", "paragraphs": [
+                "If a UC household includes a child or a Limited Capability for Work element, it receives a work allowance — a band of earnings that are completely ignored before the 55p-in-the-pound taper applies. In 2026/27 the work allowance is £673 a month where no housing element is in payment, or £404 a month where rent support is included.",
+                "A working single parent earning £800 a month with no housing support keeps that £800 entirely — their work allowance is £673 and their UC is only tapered on the £127 above it, reducing the award by about £70. That is still meaningful UC income on top of their wages.",
+            ]},
+            {"heading": "Child Benefit for working families — always worth claiming", "paragraphs": [
+                "Child Benefit is entirely separate from UC and is not means tested at the point of claim. In 2026/27 it pays £27.05 a week for the first child and £17.90 for each subsequent child. A working family with two children receives around £2,596 a year in Child Benefit regardless of income — unless either parent earns above £60,000, at which point the High Income Child Benefit Charge starts to claw it back.",
+                "From April 2026, the two-child limit on UC child elements has been removed, meaning working families with three or more children also qualify for a child element for each child in Universal Credit.",
+            ]},
+            {"heading": "Childcare costs for working families", "paragraphs": [
+                "UC childcare support reimburses up to 85% of registered childcare costs, capped at £1,071.09 a month for one child or £1,836.16 for two or more. This can make a substantial difference to the net cost of working. The childcare element must be claimed within 3 months of paying the costs.",
+                "Free childcare hours (15 or 30 depending on the child's age and eligibility) run alongside the UC childcare element and can reduce the total childcare bill further. Working families who are not on UC may prefer Tax-Free Childcare instead, which adds 20p for every 80p spent, up to £2,000 a year per child.",
+            ]},
+            {"heading": "Free School Meals, council tax help and what else to check", "paragraphs": [
+                "Working families on UC can qualify for Free School Meals if annual take-home pay is below £7,400, which is the earnings threshold for the UC household. Families should also check Council Tax Reduction — a working family on a modest income can still receive a substantial council tax reduction from their local council, applied separately from Universal Credit.",
+                "Sure Start Maternity Grant (£500 one-off payment for a first child) is available to working families on UC. Healthy Start food and vitamin support is available for pregnant people and those with children under 4 who receive qualifying benefits, including UC.",
+            ]},
+        ],
+        "related": ["universal-credit-calculator", "child-benefit-calculator", "tax-free-childcare-calculator", "free-school-meals-checker"],
+        "faq": [
+            {"q": "Can a working family still get Universal Credit in 2026?", "a": "Yes. A working family with children receives a work allowance, meaning the first £404 or £673 of monthly earnings are ignored before any taper applies. Many working families continue to receive meaningful UC top-ups."},
+            {"q": "What is the work allowance for a working family with children in 2026/27?", "a": "£673 a month if no housing costs are included in the UC award, or £404 a month if the housing element is also in payment."},
+            {"q": "Does working affect Child Benefit?", "a": "Working itself does not affect Child Benefit. Only income above £60,000 triggers the High Income Child Benefit Charge, which gradually reduces the benefit between £60,000 and £80,000."},
+            {"q": "What childcare support is available for working families in 2026?", "a": "UC childcare support covers up to 85% of registered childcare costs (capped at £1,071.09/month for one child). Free childcare hours can reduce costs further. Tax-Free Childcare is an alternative for those not on UC."},
+            {"q": "What benefits do working families miss most?", "a": "Council Tax Reduction, Free School Meals and the UC childcare element are commonly missed by working families who assume they earn too much to qualify. The earnings thresholds are often higher than people expect."},
+        ],
+        "related_guides": ["benefits-for-low-income-families", "universal-credit-explained", "tax-free-childcare-guide"],
+    },
+}
+
+SITUATION_PAGES: Dict[str, Dict[str, Any]] = {
+    "benefits-for-single-parents": {
+        "slug": "benefits-for-single-parents",
+        "title": "Benefits for single parents",
+        "description": "Single parent benefits 2026/27: Universal Credit work allowance, Child Benefit, childcare support and council tax help — calculator and guide.",
+        "intro": "Single parents have access to a number of specific support routes in the UK benefits system. Some are the same as for any low-income household, but the way entitlement is calculated often works differently when there is only one adult. This guide covers the main routes and explains where single parents tend to get the most meaningful support.",
+        "sections": [
+            {
+                "heading": "Universal Credit for single parents",
+                "content": "Universal Credit is usually the most important means-tested benefit for a working single parent. Single parents receive a higher standard allowance than a single adult without children, plus a child element for each eligible child (£303.94 per child per month in 2026/27). The work allowance — the amount you can earn before the 55% taper kicks in — is also available to single parents because of the child element. In 2026/27 the work allowance is £673 a month where no housing element is in payment, or £404 where housing support is included. That means a working single parent keeps more of each pound they earn than a childless adult on UC.",
+            },
+            {
+                "heading": "Child Benefit — claim even if income is higher",
+                "content": "Child Benefit is not means tested at the point of claim. In 2026/27 it pays £27.05 a week for the first child and £17.90 for each additional child. For a single parent with two children, that is £44.95 a week or around £2,337 a year. Single parents earning above £60,000 may face the High Income Child Benefit Charge, but most single-parent households are well below that threshold. Claiming Child Benefit also protects National Insurance credits during periods when work is limited, which matters for the long-term State Pension position.",
+            },
+            {
+                "heading": "Help with childcare costs",
+                "content": "Childcare is often the biggest financial pressure for single parents. Universal Credit can reimburse up to 85% of eligible registered childcare costs, capped at £1,071.09 a month for one child or £1,836.16 for two or more. Tax-Free Childcare is an alternative for those not claiming UC, adding £2 for every £8 spent, up to £2,000 per child per year. Free childcare hours (15 or 30 hours depending on age and eligibility) apply on top of either scheme. Single parents cannot usually use both UC childcare support and Tax-Free Childcare at the same time.",
+            },
+            {
+                "heading": "Council tax, rent and the benefit cap",
+                "content": "Single parents should check Council Tax Reduction because the scheme can reduce the bill significantly, especially where income is low. The 25% single-person discount also applies to single-adult households, stacking with means-tested reduction in many local schemes. On rent support, single parents on UC can include a housing costs element, and local housing allowance covers an appropriate bedroom entitlement for the children. The Benefit Cap applies to single parents — the outside-London cap is £1,835 a month for families, which can limit support for households with higher rent or multiple children.",
+            },
+        ],
+        "related_calculators": ["universal-credit-calculator", "child-benefit-calculator", "tax-free-childcare-calculator", "council-tax-reduction-calculator", "benefit-cap-calculator"],
+        "related_guides": ["what-benefits-can-i-claim", "benefits-for-low-income-families", "universal-credit-explained", "tax-free-childcare-guide"],
+    },
+    "benefits-if-you-cannot-work": {
+        "slug": "benefits-if-you-cannot-work",
+        "title": "Benefits if you cannot work",
+        "description": "A guide to UK benefits and support routes for people who are unable to work due to illness, disability or a health condition.",
+        "intro": "If a health condition or disability prevents you from working, several separate UK support systems may apply at the same time. Understanding which ones to check — and in what order — is the most practical starting point. This guide covers the main routes for people who are off sick, living with a long-term condition or managing a disability.",
+        "sections": [
+            {
+                "heading": "Statutory Sick Pay and the transition to ESA",
+                "content": "If you are an employee, Statutory Sick Pay is normally the first support in the chain. In 2026/27 SSP pays the lower of £123.25 a week or 80% of average weekly earnings, for up to 28 weeks. When SSP ends or is too low, New Style ESA becomes relevant if you have a strong National Insurance record. ESA pays up to £95.55 a week for the work-related activity group or £145.90 for the support group. Private pension income above £85 a week reduces the ESA amount. Universal Credit can also be claimed alongside or instead of ESA for broader household support.",
+            },
+            {
+                "heading": "PIP — the main non-means-tested disability support",
+                "content": "Personal Independence Payment (PIP) is the most significant disability benefit for working-age adults. It is entirely non-means-tested — income, savings and employment status have no effect on entitlement. PIP has two components: daily living (up to £114.60 a week at the enhanced rate in 2026/27) and mobility (up to £80.00 a week). The two components can be paid together, giving a maximum of £194.60 a week. PIP is assessed through descriptors and evidence rather than a simple yes/no eligibility test, and many claims benefit significantly from strong supporting evidence such as GP letters, care plans and symptom diaries.",
+            },
+            {
+                "heading": "Universal Credit health element (LCWRA)",
+                "content": "Universal Credit includes a Limited Capability for Work-Related Activity (LCWRA) element for people with a health condition that significantly affects their ability to work. In 2026/27 this adds £429.80 a month to the UC award — on top of the standard allowance and any other elements. Receiving PIP does not automatically trigger the LCWRA element, and the work capability assessment is separate. However, PIP exempts a household from the Benefit Cap, which can be important when overall benefit levels are high.",
+            },
+            {
+                "heading": "Council tax, passported support and what to check next",
+                "content": "People who cannot work often face wider financial pressure beyond the headline disability payments. Council Tax Reduction may significantly reduce a council tax bill, especially where income is UC-based. Cold Weather Payments are automatic for those on qualifying benefits. Pension Credit recipients who are also disabled may qualify for the Severe Disability Addition. The Warm Home Discount and similar energy-linked support can also apply depending on benefit status. Checking the full picture — not just the disability-linked payments — usually reveals meaningful additional support.",
+            },
+        ],
+        "related_calculators": ["pip-eligibility-checker", "esa-calculator", "ssp-calculator", "universal-credit-calculator", "council-tax-reduction-calculator"],
+        "related_guides": ["pip-explained-simply", "esa-vs-universal-credit", "what-benefits-can-i-claim"],
+    },
+    "benefits-for-renters": {
+        "slug": "benefits-for-renters",
+        "title": "Benefits for renters",
+        "description": "UK rent and housing support: Universal Credit housing costs, Housing Benefit and Council Tax Reduction for private and social renters. 2026/27.",
+        "intro": "Renters can access housing support through several different routes depending on their age, employment status, landlord type and income. The main system has shifted significantly since 2013, with most new working-age housing support now going through Universal Credit rather than Housing Benefit. This guide explains how the current system works and which pages to check.",
+        "sections": [
+            {
+                "heading": "Universal Credit housing costs element",
+                "content": "For most working-age renters, help with rent now comes through the housing costs element of Universal Credit. For private renters, the amount is capped at the Local Housing Allowance rate for your area — the 30th percentile of local rents for the relevant bedroom size. That can leave a gap between LHA and actual rent, which the claimant must cover from other income. Social renters receive a notional rent figure subject to bedroom rules. If you have more bedrooms than the social size criteria allow, a deduction of 14% (one spare bedroom) or 25% (two or more spare bedrooms) typically applies.",
+            },
+            {
+                "heading": "Housing Benefit — mainly for pension-age cases now",
+                "content": "Housing Benefit is still payable in several situations: for pension-age claimants, some supported accommodation cases, and some temporary accommodation situations. For working-age households making a new claim, Universal Credit is the expected route. Housing Benefit and Universal Credit housing costs are not the same system, and you cannot normally claim both. If you are already on Housing Benefit and have not been migrated to UC, you may still be on the legacy route — check whether a managed migration notice has been issued.",
+            },
+            {
+                "heading": "Council Tax Reduction alongside rent support",
+                "content": "Rent support and council tax support are separate. Many renters apply for Universal Credit housing costs and do not realise they also need to apply separately for Council Tax Reduction. CTR is run locally, and rules vary by council. On a low income, the reduction can be substantial — sometimes covering the full bill. A single adult also qualifies for the 25% single-person discount, which stacks with CTR rather than replacing it. If you are on a means-tested benefit, CTR can often be awarded at a higher rate.",
+            },
+            {
+                "heading": "Where renters often lose out and what to check",
+                "content": "The most common gap for renters is the difference between LHA and actual market rent. Discretionary Housing Payments from the local council can sometimes bridge that gap temporarily. The Benefit Cap can also reduce the effective housing support for households with high rent and multiple other benefits — particularly for larger families in high-rent areas. It is worth checking whether the cap applies before assuming the UC housing figure covers the full rent shortfall.",
+            },
+        ],
+        "related_calculators": ["universal-credit-calculator", "housing-benefit-calculator", "council-tax-reduction-calculator", "benefit-cap-calculator"],
+        "related_guides": ["help-with-rent-and-council-tax", "universal-credit-explained", "how-savings-affect-benefits"],
+    },
+    "benefits-for-pensioners": {
+        "slug": "benefits-for-pensioners",
+        "title": "Benefits for pensioners",
+        "description": "Pensioner benefits 2026/27: Pension Credit, housing benefit, council tax help, Attendance Allowance and winter payments — calculator and guide.",
+        "intro": "The UK benefits system works differently once you reach State Pension age. Pension Credit replaces Universal Credit as the main means-tested top-up, and a range of additional support — from council tax reduction to heating help — can be triggered by a Pension Credit award. This guide covers the main pension-age support routes and explains why they are often under-claimed.",
+        "sections": [
+            {
+                "heading": "Pension Credit — the main means-tested top-up",
+                "content": "Pension Credit tops up weekly income to a guaranteed minimum — £238.00 a week for a single person and £363.25 for a couple in 2026/27. It has two parts: Guarantee Credit (the main top-up) and Savings Credit (a legacy element for those who reached pension age before April 2016). Around 880,000 eligible households are not claiming it, often because of incorrect assumptions about savings or home ownership. Savings under £10,000 are fully disregarded, and there is no hard upper savings limit equivalent to Universal Credit's £16,000 stop-point.",
+            },
+            {
+                "heading": "What Pension Credit unlocks — the passported support",
+                "content": "Even a small Pension Credit award can trigger a wider package of support. This includes maximum Council Tax Reduction, full Housing Benefit where still applicable, Cold Weather Payments, NHS cost help (free prescriptions, dental treatment and sight tests), and the Warm Home Discount. In England and Wales, Pension Credit receipt is also one of the qualifying routes for the Winter Fuel Payment under the current income-based eligibility rules. Together, the passported support can be worth significantly more than the weekly cash top-up alone.",
+            },
+            {
+                "heading": "Winter and heating support",
+                "content": "Winter Fuel Payment in England and Wales is now income-related. In 2026/27, the payment is generally £200 or £300 depending on age and circumstances, but it is subject to a £35,000 personal income threshold. Pension Credit is one of the key qualifying routes. Cold Weather Payments of £25 are automatic for each triggered 7-day cold spell during winter. Scotland uses Pension Age Winter Heating Payment instead. The Warm Home Discount — a rebate on electricity bills — is available to some pension-age households through energy suppliers.",
+            },
+            {
+                "heading": "Disability support and council tax at pension age",
+                "content": "PIP is for people of working age up to State Pension age. Once you reach State Pension age, you cannot make a new PIP claim — but existing awards can continue. Attendance Allowance is the disability benefit for people over State Pension age. It pays £73.90 (lower rate) or £110.40 (higher rate) a week and is non-means-tested. Council Tax Reduction for pension-age households is often on more generous terms than working-age schemes, and some councils still use the pre-2013 system for pensioners, which can provide fuller protection.",
+            },
+        ],
+        "related_calculators": ["pension-credit-calculator", "winter-fuel-payment-checker", "cold-weather-payment-checker", "council-tax-reduction-calculator"],
+        "related_guides": ["pension-credit-explained", "what-benefits-can-i-claim", "how-savings-affect-benefits"],
+    },
+    "benefits-in-northern-ireland": {
+        "slug": "benefits-in-northern-ireland",
+        "title": "Benefits calculator for Northern Ireland",
+        "description": "Benefits calculator for Northern Ireland 2026/27 — Universal Credit, Child Benefit, PIP and housing support. Managed by DfC, same rates as Great Britain.",
+        "intro": "The UK benefits system in Northern Ireland largely mirrors Great Britain, with Universal Credit using the same rates and rules. The key difference is administration: Universal Credit in Northern Ireland is managed by the Department for Communities (DfC) rather than DWP. The calculators on this site use rates that apply equally to Northern Ireland claimants.",
+        "sections": [
+            {
+                "heading": "Universal Credit in Northern Ireland",
+                "content": "Universal Credit applies in Northern Ireland and uses the same rates as the rest of the UK. For 2026/27, the standard allowance is £424.90 a month for a single person aged 25 or over, or £666.97 for a couple. Child elements, housing costs, work allowances and the 55% earnings taper all work on identical rules. Claims in Northern Ireland go through the DfC (Department for Communities) rather than DWP, but the rates and calculation method are the same.",
+            },
+            {
+                "heading": "Child Benefit and other non-means-tested support",
+                "content": "Child Benefit rates are identical across the UK including Northern Ireland: £27.05 a week for the first child and £17.90 for each subsequent child in 2026/27. PIP rates also apply in Northern Ireland for working-age adults — the daily living and mobility components use the same weekly rates as Great Britain. Attendance Allowance for pension-age adults likewise uses the same rates.",
+            },
+            {
+                "heading": "Housing support and council tax equivalent",
+                "content": "Northern Ireland does not have council tax — it uses domestic rates instead. There is no direct equivalent to Council Tax Reduction, though Housing Benefit and UC housing costs elements apply. Rate rebates are available through Housing Benefit for eligible households. For private renters, Local Housing Allowance rules apply in the same way as Great Britain.",
+            },
+            {
+                "heading": "Benefits that differ or do not apply in Northern Ireland",
+                "content": "Some England-specific schemes do not apply in Northern Ireland, including some free childcare hour entitlements (NI has a separate scheme) and some devolved top-up payments. The Warm Home Discount operates differently. Winter Fuel Payment for pensioners uses Great Britain eligibility criteria, but Cold Weather Payments operate under the same trigger mechanism. For detailed NI-specific information, the NI Direct website is the official resource alongside DfC.",
+            },
+        ],
+        "related_calculators": ["universal-credit-calculator", "child-benefit-calculator", "pip-eligibility-checker", "housing-benefit-calculator", "pension-credit-calculator"],
+        "related_guides": ["universal-credit-explained", "what-benefits-can-i-claim", "benefits-for-single-parents", "benefits-for-pensioners"],
+    },
+    "benefits-for-low-income-families": {
+        "slug": "benefits-for-low-income-families",
+        "title": "Benefits for low-income families",
+        "description": "A guide to UK support for families on a low income — Universal Credit, Child Benefit, childcare help, Free School Meals, Healthy Start and more.",
+        "intro": "Low-income families can access several layers of UK support at the same time. The biggest is usually Universal Credit, but Child Benefit, school support, childcare help and local authority support all sit alongside it. Understanding which pieces stack together — and which are mutually exclusive — gives the clearest picture of what a household can actually receive.",
+        "sections": [
+            {
+                "heading": "Universal Credit for families — what drives the amount",
+                "content": "Universal Credit for a family is built from several parts: the standard allowance, a child element of £303.94 per month for each eligible child (from April 2026 with no two-child limit), a housing costs element based on rent, and childcare support for registered childcare costs. The 55% earnings taper reduces the award as income rises, but a work allowance means working families keep a meaningful share of what they earn. The benefit cap can limit the total where rent is high and the family is large.",
+            },
+            {
+                "heading": "Child Benefit — always claim it",
+                "content": "Child Benefit sits entirely outside Universal Credit and should be claimed separately. In 2026/27 it pays £27.05 a week for the first child and £17.90 for each subsequent child. For a family with three children, that is £62.85 a week. Child Benefit is not means tested at the point of claim — it is available to all families regardless of income — though the High Income Child Benefit Charge applies where either parent has adjusted net income above £60,000. For most low-income families, there is no charge and the full amount is kept.",
+            },
+            {
+                "heading": "Childcare, school meals and food support",
+                "content": "Free School Meals are available in England for children whose parent is on Universal Credit with take-home income below £7,400 a year, or through other qualifying benefits, and universally for reception to year 2 pupils. Healthy Start provides a prepaid card for food and vitamins for eligible pregnant people and those with children under 4. Tax-Free Childcare adds a government top-up of up to £2,000 per child per year on registered childcare costs — but cannot be used at the same time as the UC childcare element.",
+            },
+            {
+                "heading": "Council tax, maternity support and what to check next",
+                "content": "Council Tax Reduction can reduce or eliminate a council tax bill for low-income families, and the application is separate from Universal Credit. Families expecting a baby should also check Sure Start Maternity Grant (a one-off £500 payment for eligible households with a first child) and whether Statutory Maternity Pay or Maternity Allowance applies. The maternity pay calculator and the Sure Start checker are designed to make those questions quick to answer.",
+            },
+        ],
+        "related_calculators": ["universal-credit-calculator", "child-benefit-calculator", "free-school-meals-checker", "tax-free-childcare-calculator", "council-tax-reduction-calculator"],
+        "related_guides": ["benefits-for-low-income-families", "universal-credit-explained", "tax-free-childcare-guide"],
+    },
+    "benefits-for-working-families": {
+        "slug": "benefits-for-working-families",
+        "title": "Benefits for working families 2026",
+        "description": "Benefits for working families 2026/27: UC work allowance, Child Benefit, childcare support, Free School Meals and council tax help.",
+        "intro": "Working does not end benefit entitlement for families. Universal Credit tapers gradually as earnings rise, and several other schemes — Child Benefit, Free School Meals, childcare support and Council Tax Reduction — remain available well into moderate incomes. This guide explains what working families can still claim in 2026/27 and where the biggest gaps are.",
+        "sections": [
+            {
+                "heading": "The work allowance: earnings a working family keeps in full",
+                "content": "If a UC household includes a child or a Limited Capability for Work element, it receives a work allowance — a band of earnings ignored completely before the 55p-in-the-pound taper applies. In 2026/27 the work allowance is £673 a month where no housing element is in payment, or £404 a month where rent support is also included. A working single parent earning £800 a month with no housing element keeps that income fully — UC is only tapered on the £127 above the work allowance, reducing the award by around £70. Meaningful UC income continues on top of their wages.",
+            },
+            {
+                "heading": "Child Benefit — claim regardless of income",
+                "content": "Child Benefit is entirely separate from UC and not means tested at the point of claim. In 2026/27 it pays £27.05 a week for the first child and £17.90 for each subsequent child — around £2,596 a year for a family with two children. From April 2026, the two-child limit on UC child elements was removed: all eligible dependent children now generate a child element (£303.94 per month each). The High Income Child Benefit Charge only starts at £60,000 adjusted net income, so most working families keep the full award.",
+            },
+            {
+                "heading": "Childcare and Free School Meals",
+                "content": "UC childcare support reimburses up to 85% of registered childcare costs, capped at £1,071.09 a month for one child or £1,836.16 for two or more. Free School Meals are available if annual UC take-home income is below £7,400 — a threshold many part-time or lower-earning working families fall inside. Tax-Free Childcare (20p per 80p spent, up to £2,000 per child per year) is an alternative for families not on UC who work at least 16 hours per week at minimum wage.",
+            },
+            {
+                "heading": "Council Tax Reduction and what else to check",
+                "content": "Council Tax Reduction is applied separately from Universal Credit and is commonly missed by working families who assume they earn too much. Local authority CTR schemes can cover a substantial proportion of the bill for households with moderate incomes. Working families should also check Sure Start Maternity Grant (£500 one-off for eligible households expecting a first child) and whether the Benefit Cap applies — the £1,835/month outside-London cap affects larger families with high rent even while working.",
+            },
+        ],
+        "related_calculators": ["universal-credit-calculator", "child-benefit-calculator", "tax-free-childcare-calculator", "free-school-meals-checker", "council-tax-reduction-calculator", "benefit-cap-calculator"],
+        "related_guides": ["benefits-for-working-families", "universal-credit-explained", "tax-free-childcare-guide"],
+    },
+}
+
+SCENARIO_PAGES: Dict[str, Dict[str, Any]] = {
+    "what-happens-if-my-savings-increase": {
+        "slug": "what-happens-if-my-savings-increase",
+        "title": "What happens to Universal Credit if my savings increase?",
+        "description": "Understand the £6,000 and £16,000 UC savings thresholds, how tariff income reduces your award, and what happens at the upper limit.",
+        "intro": "Savings have two distinct effects on Universal Credit depending on how much you have. Below £6,000 they have no effect at all. Between £6,000 and £16,000 they generate assumed monthly income that reduces your award. At £16,000 or above, you normally cannot claim UC at all. This page explains the mechanism and gives practical examples.",
+        "sections": [
+            {
+                "heading": "Below £6,000 — nothing changes",
+                "content": "If your total savings and capital are below £6,000, Universal Credit ignores them entirely. It does not matter whether those savings are in a current account, a savings account, Premium Bonds or an ISA — as long as the total is under £6,000, they do not reduce your award. Your main home is also disregarded and does not count as capital.",
+            },
+            {
+                "heading": "£6,000 to £16,000 — the tariff income rule",
+                "content": "Once total capital exceeds £6,000, DWP applies a tariff income calculation. For every complete £250 above £6,000, the system adds £4.35 to your assumed monthly income. So savings of £8,000 generate £8,000 minus £6,000 = £2,000 excess. That is eight complete £250 bands, producing £34.80 a month of assumed income. Your UC award is then reduced by £34.80 — regardless of what the savings actually earn. Savings of £10,000 would produce £16,000 excess, which is sixteen bands at £4.35 = £69.60 a month of reduction.",
+            },
+            {
+                "heading": "At £16,000 — eligibility stops",
+                "content": "Once capital reaches £16,000 (or more), you are not normally eligible for a standard Universal Credit award. This applies to combined savings for couples. If savings fluctuate around the threshold — for example if you receive a redundancy payment — it is worth checking the exact position before making or renewing a claim. Some types of capital are disregarded, including certain compensation payments and money set aside for specific care needs.",
+            },
+            {
+                "heading": "Deliberate deprivation — what not to do",
+                "content": "DWP can treat you as still holding savings you have deliberately spent or transferred to get below a threshold. Called deprivation of capital, this rule means that spending down savings just before a claim can lead to a notional capital figure being used even after the money is gone. Normal spending on living costs, rent and bills is unlikely to trigger this, but large cash gifts to family members or unusual spending just before a claim can be questioned.",
+            },
+        ],
+        "related_calculators": ["savings-impact-calculator", "universal-credit-calculator"],
+        "related_guides": ["how-savings-affect-benefits", "universal-credit-explained"],
+    },
+    "what-happens-if-i-work-more-hours": {
+        "slug": "what-happens-if-i-work-more-hours",
+        "title": "What happens to Universal Credit if I work more hours?",
+        "description": "Understand the work allowance and 55% earnings taper — and see a real example of how earnings of £1,200 versus £1,400 affect the UC award.",
+        "intro": "One of the most common questions about Universal Credit is whether it is worth earning more, given that UC reduces as income rises. The answer is almost always yes — but the mechanics are worth understanding. The 55% taper means you keep 45p from every extra pound earned above your work allowance. This page explains how it works and shows a practical example.",
+        "sections": [
+            {
+                "heading": "The work allowance — earnings that are fully disregarded",
+                "content": "If your household includes children or a limited capability for work or work-related activity element, you have a work allowance. In 2026/27 this is £673 a month if no housing costs element is in payment, or £404 a month where housing support is included. Earnings up to the work allowance are fully disregarded — they do not reduce your UC at all. The taper only applies above that threshold.",
+            },
+            {
+                "heading": "The 55% taper — what happens above the work allowance",
+                "content": "For every £1 of net earnings above the work allowance, UC is reduced by 55p. This means you keep 45p from each additional pound earned. For households without a work allowance (typically couples without children or a qualifying health condition), the taper starts from the first pound of net earnings. There is no earnings limit at which UC cuts off entirely — the award simply reduces until it reaches zero.",
+            },
+            {
+                "heading": "Example: earnings of £1,200 versus £1,400 a month",
+                "content": "Suppose a single parent with a housing element has a work allowance of £404. At £1,200 earnings, the taxable amount is £796. The UC reduction is 55% of £796 = £437.80. At £1,400 earnings, the taxable amount is £996, giving a UC reduction of £547.80 — £110 more. But gross earnings increased by £200, so the net position is £200 earned minus £110 UC reduction = £90 better off in total. Working more always improves the overall financial position — the taper slows the gain but does not eliminate it.",
+            },
+            {
+                "heading": "Reporting changes and the assessment period",
+                "content": "Universal Credit is assessed monthly based on your earnings in the preceding assessment period. HMRC payroll data feeds directly into most UC claims for employed workers, so earnings changes are usually picked up automatically. If you are self-employed, you report monthly through your UC journal. Either way, changes in earnings affect the following month's payment rather than the current one.",
+            },
+        ],
+        "related_calculators": ["earnings-impact-calculator", "universal-credit-calculator"],
+        "related_guides": ["universal-credit-explained", "what-counts-as-income-for-benefits"],
+    },
+    "what-happens-if-my-partner-moves-in": {
+        "slug": "what-happens-if-my-partner-moves-in",
+        "title": "What happens to my benefits if my partner moves in?",
+        "description": "Understand how a partner moving in changes Universal Credit, Child Benefit, council tax and other means-tested support — and what to report and when.",
+        "intro": "When a partner moves in, you are required to report the change to DWP within one month. The household type change affects Universal Credit significantly — both the standard allowance and the way income is assessed will change. This page explains what happens in practice.",
+        "sections": [
+            {
+                "heading": "Universal Credit moves to a joint claim",
+                "content": "When you form a couple, Universal Credit must be claimed jointly. The joint standard allowance for a couple where both are 25 or over is £666.97 a month in 2026/27 — compared to £424.90 for a single person. However, both partners' income and capital are now assessed together. If your partner earns or has significant savings, the combined assessment may reduce or remove the UC award even though the couple allowance is higher. You must report the change within one month of cohabiting.",
+            },
+            {
+                "heading": "Capital and savings become joint",
+                "content": "Once in a joint UC claim, savings are assessed jointly. If your partner has £8,000 in savings and you have £3,000, the combined £11,000 puts the household in the tariff income band. The tariff income rule adds £4.35 a month in assumed income for every complete £250 above £6,000 — so £5,000 excess generates around £86.50 a month in assumed income, reducing UC accordingly.",
+            },
+            {
+                "heading": "Council tax — the single person discount ends",
+                "content": "If you have been claiming the 25% single person council tax discount, that stops when a second adult moves in. Depending on your income and your council's local scheme, you may still qualify for means-tested Council Tax Reduction — but the 25% discount alone ends on the first day both adults live there. It is worth applying for CTR promptly to avoid a gap.",
+            },
+            {
+                "heading": "Child Benefit and other payments",
+                "content": "Child Benefit is paid to the person who claims it and is not affected by a partner moving in directly. However, if your partner has adjusted net income above £60,000, the High Income Child Benefit Charge may start to apply. Check the HICBC calculator if the new partner earns above that threshold. Benefits that are in your name only, like PIP or Carer's Allowance, are also not directly affected by a partner moving in, though they can affect how joint UC is calculated.",
+            },
+        ],
+        "related_calculators": ["universal-credit-calculator", "council-tax-reduction-calculator", "hicbc-calculator", "savings-impact-calculator"],
+        "related_guides": ["universal-credit-explained", "child-benefit-and-hicbc"],
+    },
+    "what-happens-if-my-rent-increases": {
+        "slug": "what-happens-if-my-rent-increases",
+        "title": "What happens to my benefits if my rent increases?",
+        "description": "Understand how a rent increase affects UC housing costs, the LHA cap, and when the benefit cap becomes relevant.",
+        "intro": "A rent increase does not automatically mean more Universal Credit housing support. The amount UC pays towards rent is capped in several ways — by the Local Housing Allowance for private renters, by bedroom entitlement rules for social tenants, and by the overall Benefit Cap. This page explains how the caps work and what options exist if the increase leaves a gap.",
+        "sections": [
+            {
+                "heading": "The Local Housing Allowance cap for private renters",
+                "content": "If you rent privately and claim Universal Credit, the housing costs element is capped at the Local Housing Allowance for your area and bedroom entitlement. LHA is set at the 30th percentile of private rents in a Broad Rental Market Area and is reviewed periodically. If your rent increases beyond the LHA cap, the extra cost falls on you — UC does not automatically adjust above it. You can appeal LHA decisions or check whether a different bedroom entitlement applies.",
+            },
+            {
+                "heading": "Social housing and bedroom rules",
+                "content": "For social renters, the UC housing element is based on the eligible rent for your property, subject to bedroom size criteria. If you have more bedrooms than the criteria allow — typically one per person or couple, with additional rooms for children over certain ages — a deduction of 14% (one spare room) or 25% (two or more spare rooms) applies regardless of the actual rent increase. If your landlord raises the rent, UC will cover the increase up to the eligible rent but the size criteria deduction still applies.",
+            },
+            {
+                "heading": "The Benefit Cap — when total benefits are already high",
+                "content": "If your total household benefits are near or above the Benefit Cap, a rent increase may not produce any extra housing support because the cap is applied to the whole award. The cap is £1,835 a month outside London and £2,110 inside London for families. Higher rent means the housing element needs to be higher, but if the cap is already limiting the total, the increase simply reshuffles how the award is divided internally rather than adding to it.",
+            },
+            {
+                "heading": "What to do if there is a shortfall",
+                "content": "If a rent increase creates a shortfall that UC cannot cover, there are a few options. Discretionary Housing Payments (DHP) can be applied for at the local council — these are short-term top-ups designed for exactly this type of situation. If the gap is long-term, it may be worth checking whether the property is appropriately sized for your entitlement and whether there are more affordable alternatives. Local welfare assistance schemes can also provide short-term support in some areas.",
+            },
+        ],
+        "related_calculators": ["universal-credit-calculator", "housing-benefit-calculator", "benefit-cap-calculator"],
+        "related_guides": ["help-with-rent-and-council-tax", "universal-credit-explained"],
+    },
+    "carers-allowance-explained": {
+        "slug": "carers-allowance-explained",
+        "title": "Carer's Allowance explained 2026/27 — rates, eligibility and how it affects other benefits",
+        "description": "Carer's Allowance 2026/27: £81.90/week for 35+ hours care. Who qualifies, £151/week earnings limit and how it interacts with Universal Credit.",
+        "topic": "Carer support",
+        "intro": "Carer's Allowance is the main benefit for people providing substantial unpaid care. In 2026/27 it pays £81.90 a week — but the earnings limit, the interaction with other benefits and the 'underlying entitlement' rule mean it works differently from most other payments. This page explains who qualifies, what the earnings limit means in practice, and how claiming affects your Universal Credit and State Pension.",
+        "sections": [
+            {
+                "heading": "Who qualifies for Carer's Allowance",
+                "content": "You can claim Carer's Allowance if you spend at least 35 hours a week caring for someone who receives a qualifying disability benefit — specifically the daily living component of PIP (standard or enhanced), the middle or highest care component of DLA, Attendance Allowance, the daily living component of ADP (Scotland), or Armed Forces Independence Payment. The person you care for does not have to live with you. You must be 16 or over, not in full-time education, and your net earnings after allowable deductions must not exceed £151 a week in 2026/27.",
+            },
+            {
+                "heading": "The £151 weekly earnings limit",
+                "content": "The earnings threshold for Carer's Allowance is £151 a week net in 2026/27 — up from £139 in 2025/26. Net earnings means after tax, National Insurance and half of any pension contributions. Certain work expenses for care or disability can also be deducted. If your net earnings go above £151 in any week, you lose the full Carer's Allowance for that week — there is no taper. This makes managing earnings around part-time work particularly important, and it is worth calculating your net figure carefully before assuming you are over or under the limit.",
+            },
+            {
+                "heading": "Carer's Allowance and Universal Credit — the 'underlying entitlement' rule",
+                "content": "If you receive Universal Credit, receiving Carer's Allowance at the same time can feel counterintuitive. UC is reduced by £1 for every £1 of Carer's Allowance you receive — so the two payments largely cancel out for the Carer's Allowance element. However, having an 'underlying entitlement' to Carer's Allowance (meaning you meet the criteria even if UC offsets the payment) adds a carer element to your Universal Credit of £198.31 a month in 2026/27. This extra element is worth significantly more than the Carer's Allowance itself, making the interaction work in your favour overall.",
+            },
+            {
+                "heading": "Effect on State Pension and National Insurance credits",
+                "content": "Carer's Allowance comes with Carer's Credits if you are not already paying National Insurance. These protect your State Pension record during periods when caring prevents paid work. If you have reached State Pension age, you cannot receive Carer's Allowance — but you may still qualify for a carer addition within Pension Credit (worth £48.15 a week in 2026/27 if you qualify). Importantly, Carer's Allowance is taxable, which can affect your income tax position if you also have part-time earnings or a private pension.",
+            },
+            {
+                "heading": "What happens if the person you care for loses their benefit",
+                "content": "Carer's Allowance is tied to the disability benefit of the person you care for. If their PIP, DLA or Attendance Allowance is reduced or stopped — for example after a reassessment — and they no longer receive a qualifying benefit, your Carer's Allowance must stop too. You must report changes to DWP promptly. Continuing to claim after eligibility ends creates an overpayment, which DWP will seek to recover. If you believe the decision on the person you care for is wrong, supporting their appeal is worth doing — it could restore both benefits.",
+            },
+        ],
+        "faq": [
+            {"q": "How much is Carer's Allowance in 2026/27?", "a": "Carer's Allowance is £81.90 per week in 2026/27, paid every four weeks. This is subject to income tax if your total income exceeds the personal allowance."},
+            {"q": "Can I claim Carer's Allowance and Universal Credit at the same time?", "a": "Yes. Carer's Allowance reduces UC pound for pound, but having underlying entitlement to Carer's Allowance adds a carer element of £198.31 a month to your UC award — more than Carer's Allowance itself."},
+            {"q": "What is the earnings limit for Carer's Allowance?", "a": "In 2026/27 the limit is £151 per week net earnings (after tax, NI and half of pension contributions). Exceeding this even by £1 means you lose Carer's Allowance for that week entirely."},
+            {"q": "Does the person I care for have to receive PIP?", "a": "They must receive a qualifying disability benefit: the daily living component of PIP (standard or enhanced), middle or highest rate DLA care component, Attendance Allowance, or equivalent Scottish benefits."},
+        ],
+        "related_calculators": ["universal-credit-calculator", "pension-credit-calculator"],
+        "related_guides": ["what-benefits-can-i-claim", "benefits-if-you-cannot-work", "universal-credit-explained"],
+    },
+    "pip-explained": {
+        "slug": "pip-explained",
+        "title": "PIP explained 2026/27 — rates, points, eligibility and how the assessment works",
+        "description": "PIP 2026/27: daily living up to £114.60/week, mobility up to £80.00/week, max £194.60/week. How the points system works and how PIP interacts with Universal Credit.",
+        "topic": "Disability support",
+        "intro": "Personal Independence Payment (PIP) is the main disability benefit for working-age adults in England, Wales and Northern Ireland. It is based on how your condition affects you — not on your diagnosis or whether you are in work. In 2026/27 it pays up to £194.60 a week if you qualify for both components at the enhanced rate. This guide explains how the points system works, what each activity and descriptor means in practice, and how PIP interacts with Universal Credit and other benefits.",
+        "sections": [
+            {
+                "heading": "PIP rates for 2026/27",
+                "content": "PIP has two components: daily living and mobility. Each is awarded at either standard or enhanced rate depending on the points scored in the assessment. Daily living standard rate: £76.70 a week. Daily living enhanced rate: £114.60 a week. Mobility standard rate: £30.30 a week. Mobility enhanced rate: £80.00 a week. If you qualify for both components at the enhanced rate, the combined weekly amount is £194.60 — over £10,000 a year. PIP is not means-tested, is not taxable and is not affected by savings. You can receive it whether you are working or not.",
+            },
+            {
+                "heading": "How the PIP points system works",
+                "content": "PIP is assessed against ten daily living activities and two mobility activities. For each activity, descriptors describe different levels of ability. The descriptor that best matches what you can do — safely, repeatedly, to an acceptable standard, and in a reasonable time — determines your points score. You need at least 8 points in the daily living component to receive the standard daily living rate, and at least 12 points for the enhanced rate. The same thresholds (8 points for standard, 12 for enhanced) apply to the mobility component separately. Points from different activities in the same component are added together — you do not need to score heavily on a single activity.",
+            },
+            {
+                "heading": "The PIP assessment: what DWP considers",
+                "content": "A healthcare professional commissioned by DWP will assess how your condition affects you across the activities. The assessment is based on your application form (PIP2), any supporting evidence you provide, and the face-to-face or telephone consultation. Key evidence sources include GP letters, specialist reports, care plans, occupational therapy assessments, prescription histories and personal diaries documenting good and bad days. DWP considers your typical day, not your best day. Many people under-report their difficulties — be specific about how often symptoms affect you and whether you can complete activities reliably and safely.",
+            },
+            {
+                "heading": "PIP and Universal Credit — how they interact",
+                "content": "PIP and Universal Credit are separate benefits paid by different parts of the DWP and assessed independently. Receiving PIP does not reduce your Universal Credit. In fact, it can increase UC in two ways. First, the standard daily living or enhanced daily living rate of PIP triggers the UC limited capability for work-related activity element (£416.19 a month in 2026/27 if you also have a UC health element). Second, if someone in your household receives PIP daily living, a carer who spends 35 hours a week caring for them may qualify for Carer's Allowance — which carries an underlying entitlement that adds the UC carer element of £198.31 a month.",
+            },
+            {
+                "heading": "If your PIP claim is refused or reduced",
+                "content": "A significant proportion of PIP claims are overturned on appeal. If your initial claim is refused or you receive a lower rate than expected, request mandatory reconsideration within one month of the decision. If the reconsideration does not change the outcome, you have the right to appeal to an independent tribunal. Success rates at tribunal are substantially higher than at mandatory reconsideration. Gathering additional evidence — particularly from consultants, care professionals or a detailed diary — strengthens the case. Citizens Advice and welfare rights organisations can help with the appeal process.",
+            },
+        ],
+        "faq": [
+            {"q": "How much is PIP in 2026/27?", "a": "PIP pays £76.70 (standard) or £114.60 (enhanced) a week for daily living, and £30.30 (standard) or £80.00 (enhanced) a week for mobility. The maximum combined weekly amount is £194.60."},
+            {"q": "Does working affect PIP?", "a": "No. PIP is not means-tested and is not affected by earnings, savings or whether you are working. You can receive PIP in or out of work."},
+            {"q": "How many points do you need for PIP?", "a": "You need at least 8 points in a component for the standard rate and at least 12 points for the enhanced rate. Daily living and mobility are scored separately."},
+            {"q": "Does PIP affect Universal Credit?", "a": "PIP does not reduce UC. Receiving the daily living component of PIP can trigger the limited capability for work-related activity addition (£416.19/month) to your UC award if you also meet health criteria."},
+        ],
+        "related_calculators": ["universal-credit-calculator", "pip-checker"],
+        "related_guides": ["benefits-if-you-cannot-work", "disability-support", "carers-allowance-explained"],
+    },
+    "child-benefit-guide": {
+        "slug": "child-benefit-guide",
+        "title": "Child Benefit 2026/27 — rates, High Income Charge and how to claim",
+        "description": "Child Benefit 2026/27: £27.05/week first child, £17.90 each additional. High Income Child Benefit Charge starts at £60,000 and withdraws fully at £80,000.",
+        "topic": "Family support",
+        "intro": "Child Benefit is a universal payment for families with children under 16 (or under 20 in approved education or training). In 2026/27 it pays £27.05 a week for the first child and £17.90 for each additional child. It is not means-tested at point of claim — but households where one person earns above £60,000 face the High Income Child Benefit Charge, which withdraws the benefit between £60,000 and £80,000 adjusted net income. This guide explains the rates, the HICBC calculation, and what to do if you are near the threshold.",
+        "sections": [
+            {
+                "heading": "Child Benefit rates for 2026/27",
+                "content": "Child Benefit rates from April 2026 are: £27.05 per week for the eldest or only child (£1,406.60 per year), and £17.90 per week for each additional child (£930.80 per year each). A family with two children receives £44.95 a week (£2,337.40 per year). The benefit is paid every four weeks. Child Benefit is not taxable and is not means-tested at the point of claim — but the High Income Child Benefit Charge claws it back through self-assessment for higher earners.",
+            },
+            {
+                "heading": "The High Income Child Benefit Charge explained",
+                "content": "If either you or your partner has adjusted net income above £60,000 in a tax year, the higher earner must pay the High Income Child Benefit Charge (HICBC) via self-assessment. The charge is 1% of the Child Benefit received for every £200 of income above £60,000. At £70,000 — £10,000 over the threshold — 50% of Child Benefit is clawed back. At £80,000 the charge equals 100% of Child Benefit and you are no better off claiming. Above £80,000, you lose more than you gain unless you have a particular reason to continue (such as maintaining NI credits). The key point is that adjusted net income — not gross salary — is what matters. Pension contributions reduce adjusted net income, which can bring the charge down or eliminate it.",
+            },
+            {
+                "heading": "Using pension contributions to reduce the HICBC",
+                "content": "Adjusted net income for HICBC purposes is gross income minus pension contributions (including salary sacrifice), trading losses and Gift Aid payments. If your gross income is £70,000 and you make £10,001 in pension contributions, your adjusted net income falls to £59,999 — just below the threshold — and the HICBC disappears entirely. This makes pension contributions particularly valuable at incomes between £60,000 and £80,000, especially for families with multiple children. For a family with two children where the higher earner is at £70,000, a pension contribution of £10,001 saves approximately £1,169 in Child Benefit (50% of £2,337.40) while also saving 42% income tax and NI on the contribution.",
+            },
+            {
+                "heading": "Claiming Child Benefit even if you face the charge",
+                "content": "Many families with income above £80,000 still choose to claim Child Benefit and pay back the full amount via the HICBC. There are two reasons. First, the claim protects the main carer's National Insurance record — non-claiming parents can miss NI credits that count toward State Pension. Second, claiming gives the child an automatic National Insurance number at age 16. If you choose not to claim, you can still register via HMRC to receive the NI credits without receiving the payment itself. Check this option carefully with HMRC if the higher earner is above £80,000.",
+            },
+            {
+                "heading": "Child Benefit and Universal Credit",
+                "content": "Child Benefit does not count as income for Universal Credit. It is paid on top of any UC child elements. If you are on Universal Credit, you should still claim Child Benefit separately — they do not offset each other. However, if you are receiving Tax Credits (not UC), Child Benefit is included in the income assessment for some older Tax Credit calculations. Families on UC should focus on the UC child element (£303.94 per child per month in 2026/27 from April 2026) and Child Benefit separately.",
+            },
+        ],
+        "faq": [
+            {"q": "How much is Child Benefit in 2026/27?", "a": "£27.05 per week for the first child (£1,406.60/year) and £17.90 per week for each additional child (£930.80/year). Two children: £44.95/week (£2,337.40/year)."},
+            {"q": "When does the High Income Child Benefit Charge start?", "a": "The HICBC applies when either partner's adjusted net income exceeds £60,000. It withdraws Child Benefit at 1% per £200 over this threshold, reaching 100% at £80,000."},
+            {"q": "Can pension contributions reduce the HICBC?", "a": "Yes. Pension contributions reduce adjusted net income for HICBC purposes. If contributions bring adjusted net income below £60,000, the charge disappears entirely."},
+            {"q": "Should I claim Child Benefit if I earn over £80,000?", "a": "Consider claiming to protect NI credits for the main carer and secure the child's NI number. You can elect not to receive the payment but still register to receive NI credits."},
+        ],
+        "related_calculators": ["child-benefit-calculator", "hicbc-calculator"],
+        "related_guides": ["benefits-for-low-income-families", "family-support", "what-counts-as-income-for-benefits"],
+    },
+}
+
+TOPIC_HUBS: Dict[str, Dict[str, Any]] = {
+    "universal-credit": {
+        "slug": "universal-credit",
+        "title": "Universal Credit hub",
+        "description": "Universal Credit hub 2026/27: how it works, what drives the award, how earnings and savings affect it, and which calculators and guides to use.",
+        "intro": "Universal Credit is the main working-age means-tested benefit in the UK, combining housing support, child elements, childcare support, health elements and basic living costs into a single monthly payment. This hub brings together the main calculators and guides so you can move from a quick estimate to a detailed understanding.",
+        "key_facts": [
+            "Standard allowance: £424.90/month (single, 25+) or £666.97/month (couple, both 25+)",
+            "Child element: £303.94 per child per month from April 2026 (no two-child limit)",
+            "Earnings taper: 55% — you keep 45p of every £1 earned above the work allowance",
+            "Work allowance: £404 or £673/month where children or a health element apply",
+            "Savings threshold: £6,000 lower (tariff income applies above this), £16,000 upper (UC stops)",
+            "Benefit Cap: £1,835/month outside London, £2,110 inside London (families)",
+        ],
+        "related_calculators": ["universal-credit-calculator", "benefit-cap-calculator", "savings-impact-calculator", "earnings-impact-calculator", "council-tax-reduction-calculator"],
+        "related_guides": ["universal-credit-explained", "how-savings-affect-benefits", "what-counts-as-income-for-benefits"],
+        "related_situations": ["benefits-for-single-parents", "benefits-for-low-income-families", "benefits-for-renters"],
+        "related_scenarios": ["what-happens-if-my-savings-increase", "what-happens-if-i-work-more-hours", "what-happens-if-my-partner-moves-in", "what-happens-if-my-rent-increases"],
+    },
+    "family-support": {
+        "slug": "family-support",
+        "title": "Family and childcare support hub",
+        "description": "Child Benefit, Tax-Free Childcare, Free School Meals, Healthy Start, Sure Start and maternity support — all the UK family benefit tools in one place.",
+        "intro": "UK family support comes through several separate schemes that do not always talk to each other. This hub brings together the most useful calculators and guides so families can check Child Benefit, childcare top-ups, school meal eligibility and maternity support in a single session.",
+        "key_facts": [
+            "Child Benefit: £27.05/week (first child), £17.90 (additional children) — 2026/27 rates",
+            "HICBC taper: 1% per £200 over £60,000 adjusted net income, 100% at £80,000",
+            "Tax-Free Childcare: £2 top-up per £8 spent, max £2,000/child/year",
+            "UC childcare support: up to 85% of registered childcare costs, capped monthly",
+            "Free School Meals income test: UC household earnings below £7,400/year (England)",
+            "SMP: 90% of weekly pay for 6 weeks, then £184.03/week for up to 33 more weeks",
+        ],
+        "related_calculators": ["child-benefit-calculator", "hicbc-calculator", "tax-free-childcare-calculator", "tax-free-childcare-monthly-calculator", "free-school-meals-checker", "maternity-pay-calculator", "sure-start-maternity-grant-checker", "healthy-start-checker"],
+        "related_guides": ["benefits-for-low-income-families", "child-benefit-and-hicbc", "tax-free-childcare-guide", "tax-free-childcare-top-up-examples", "how-much-child-benefit-for-1-2-3-children"],
+        "related_situations": ["benefits-for-single-parents", "benefits-for-low-income-families"],
+        "related_scenarios": [],
+    },
+    "rent-and-council-tax": {
+        "slug": "rent-and-council-tax",
+        "title": "Rent and council tax support hub",
+        "description": "UC housing costs, Housing Benefit, Council Tax Reduction and the Benefit Cap — all the tools for understanding housing support in one place.",
+        "intro": "Help with rent and council tax comes from different parts of the UK system and often requires separate applications. This hub covers the main housing support routes, from Universal Credit housing costs and Housing Benefit through to Council Tax Reduction and the Benefit Cap.",
+        "key_facts": [
+            "UC housing element: capped at Local Housing Allowance for private renters",
+            "Social housing: bedroom rule deductions of 14% (one spare) or 25% (two or more spare)",
+            "Housing Benefit: mainly for pension-age claimants and specialist accommodation",
+            "Council Tax Reduction: run locally — rules vary by council",
+            "Single person discount: 25% off council tax for single-adult households",
+            "Benefit Cap: £1,835/month outside London, £2,110 inside London (families)",
+        ],
+        "related_calculators": ["universal-credit-calculator", "housing-benefit-calculator", "council-tax-reduction-calculator", "benefit-cap-calculator"],
+        "related_guides": ["help-with-rent-and-council-tax", "universal-credit-explained"],
+        "related_situations": ["benefits-for-renters", "benefits-for-single-parents"],
+        "related_scenarios": ["what-happens-if-my-rent-increases", "what-happens-if-my-partner-moves-in"],
+    },
+    "disability-support": {
+        "slug": "disability-support",
+        "title": "Disability and health support hub",
+        "description": "PIP, ESA, SSP, the UC health element and the Benefit Cap disability exemption — all the disability-related benefit tools in one place.",
+        "intro": "Disability and health-related support in the UK comes through several different systems. PIP, ESA, SSP and the Universal Credit health element each work differently and can sometimes be claimed at the same time. This hub brings together the main tools and explains how they connect.",
+        "key_facts": [
+            "PIP: not means tested — income and savings have no effect on eligibility",
+            "PIP daily living: £76.70/week (standard) or £114.60/week (enhanced) — 2026/27",
+            "PIP mobility: £30.30/week (standard) or £80.00/week (enhanced) — 2026/27",
+            "ESA support group: up to £145.90/week; work-related activity: up to £95.55/week",
+            "UC LCWRA element: £429.80/month added to UC award",
+            "SSP: lower of £123.25/week or 80% of average weekly earnings, for up to 28 weeks",
+        ],
+        "related_calculators": ["pip-eligibility-checker", "esa-calculator", "ssp-calculator", "universal-credit-calculator"],
+        "related_guides": ["pip-explained-simply", "pip-points-explained", "pip-daily-living-explained", "pip-mobility-explained", "esa-vs-universal-credit"],
+        "related_situations": ["benefits-if-you-cannot-work"],
+        "related_scenarios": [],
+    },
+    "pension-age-support": {
+        "slug": "pension-age-support",
+        "title": "Pension-age support hub",
+        "description": "Pension Credit, council tax help, winter payments and worked examples for pension-age households in one place.",
+        "intro": "Pension-age support works differently from working-age benefits. Pension Credit, winter support, council tax help and pension-age examples are closely linked, so this hub is designed to help older households move through them as one joined-up journey.",
+        "key_facts": [
+            "Guarantee Credit standard minimum: £238.00/week single, £363.25/week couple",
+            "Savings under £10,000 are ignored for Pension Credit",
+            "Savings above £10,000 create £1/week assumed income for each £500",
+            "Even a small Pension Credit award can unlock wider support",
+            "Winter support and council tax help often matter as much as the weekly top-up",
+            "Home ownership does not automatically rule out Pension Credit",
+        ],
+        "related_calculators": ["pension-credit-calculator", "winter-fuel-payment-checker", "cold-weather-payment-checker", "council-tax-reduction-calculator", "housing-benefit-calculator"],
+        "related_guides": ["pension-credit-explained", "what-pension-credit-unlocks", "pension-credit-examples-for-single-pensioner", "pension-credit-examples-for-couple", "how-savings-affect-benefits"],
+        "related_situations": ["benefits-for-pensioners"],
+        "related_scenarios": [],
+    },
+}
+
+STATIC_PAGES = {
+    "methodology": {
+        "title": "Methodology",
+        "content": [
+            "UK Benefits Calculator is an independent estimator site. We use published GOV.UK rates and guidance where practical, then apply simplified logic for public-facing calculators where the official rules are too detailed for a short tool.",
+            "Our calculators are designed to help users estimate entitlement, compare support routes and identify what to check next. They are not official decisions and should not be treated as guaranteed awards.",
+            "We review assumptions regularly and update the site when key published rates or eligibility rules change.",
+        ],
+        "links": [("Universal Credit", "https://www.gov.uk/universal-credit"), ("Pension Credit", "https://www.gov.uk/pensioncredit"), ("Child Benefit and tax credits rates", "https://www.gov.uk/government/publications/rates-and-allowances-tax-credits-child-benefit-and-guardians-allowance/tax-credits-child-benefit-and-guardians-allowance")],
+    },
+    "sources": {
+        "title": "Sources",
+        "content": [
+            "Core assumptions on this site are reviewed against GOV.UK and other official UK public-sector guidance.",
+            "For the current build we reviewed official pages covering Universal Credit, Child Benefit, the High Income Child Benefit Charge, Pension Credit, PIP, Housing Benefit, Council Tax Reduction, SSP, maternity payments, ESA, JSA, Tax-Free Childcare, Sure Start Maternity Grant, Healthy Start, Free School Meals, Winter Fuel Payment and Cold Weather Payments.",
+            "Where a calculation is simplified, that is stated on the page itself.",
+        ],
+        "links": [("Universal Credit", "https://www.gov.uk/universal-credit/what-youll-get"), ("PIP", "https://www.gov.uk/pip/how-much-youll-get"), ("Winter Fuel Payment", "https://www.gov.uk/winter-fuel-payment")],
+    },
+    "privacy": {
+        "title": "Privacy",
+        "content": [
+            "We do not ask users to create an account to use UK Benefits Calculator. If analytics or advertising are enabled, third-party services may process limited technical data such as page views, approximate device information or ad interactions.",
+            "Calculator inputs stay in your browser unless they form part of the page URL as query parameters. We do not ask for National Insurance numbers, DWP credentials or claim logins through the public calculator pages.",
+            "If you contact us directly, we use your message only to reply, manage editorial corrections and operate the site responsibly.",
+        ],
+        "links": [],
+    },
+    "cookie-policy": {
+        "title": "Cookie policy",
+        "content": [
+            "UK Benefits Calculator uses only a small number of technical cookies and browser storage features needed for normal site operation, analytics configuration and ad loading where enabled.",
+            "If analytics is enabled through a GA measurement ID, Google Analytics may set cookies or similar identifiers to help us understand page usage. If advertising is enabled, Google AdSense or related ad technology may also use cookies in line with their own policies.",
+            "You can block or delete cookies through your browser settings, although some site features or ad behaviour may then work differently.",
+        ],
+        "links": [("Google Privacy & Terms", "https://policies.google.com/privacy"), ("Google AdSense policies", "https://support.google.com/adsense/answer/48182")],
+    },
+    "terms": {
+        "title": "Terms",
+        "content": [
+            "UK Benefits Calculator provides independent information and estimation tools for UK benefits and support. Content is for general guidance only and does not replace official advice, regulated financial advice or welfare-rights casework.",
+            "No calculator on this site creates a claim, guarantees entitlement or confirms a final award. Use official services and professional advice where decisions are important.",
+            "We may update or remove pages as rules and rates change.",
+        ],
+        "links": [],
+    },
+    "about": {
+        "title": "About UK Benefits Calculator",
+        "content": [
+            "UK Benefits Calculator is a UK-focused support and entitlement estimation site built to help people understand what help they may qualify for across benefits, childcare support, disability support and pension-age help.",
+            "The site is intentionally independent and non-governmental. Our aim is to explain complicated support routes in plain English while keeping calculators fast, readable and search-friendly.",
+            "We publish practical estimator pages, support guides and connected topical clusters so users can move from one question to the next without starting from scratch each time.",
+            "Content is produced by UK Benefits Calculator Editorial, an in-house publishing team focused on UK household finance, benefits, low-income support and plain-English search-first guidance.",
+        ],
+        "links": [],
+    },
+    "editorial-standards": {
+        "title": "Editorial standards",
+        "content": [
+            "UK Benefits Calculator Editorial aims to publish pages that are clear, useful and honest about assumptions. We avoid presenting simplified estimates as official decisions or government-endorsed outcomes.",
+            "Pages are written in plain British English, structured for search intent and reviewed when official rates, qualifying rules or core policy changes materially affect a page.",
+            "When a topic is too complex for a definitive public calculator, we frame the page as a checker or guide, explain the limitation directly and link users to the most relevant official sources.",
+        ],
+        "links": [],
+    },
+    "contact": {
+        "title": "Contact",
+        "content": [
+            "For editorial corrections or general site queries, contact hello@ukbenefitscalculator.co.uk.",
+            "We cannot manage benefit claims or provide case-specific welfare rights advice, but we can review factual issues on the site.",
+            "If you need urgent claim help, use the relevant GOV.UK service or a specialist adviser such as Citizens Advice.",
+        ],
+        "links": [("Citizens Advice", "https://www.citizensadvice.org.uk/"), ("Find your local council", "https://www.gov.uk/find-local-council")],
+    },
+}
+
+CALCULATOR_ORDER = list(CALCULATORS.keys())
+GUIDE_ORDER = list(GUIDES.keys())
+CALCULATOR_ALIASES = {alias: slug for slug, page in CALCULATORS.items() for alias in page["aliases"]}
+STATIC_ROUTES = set(STATIC_PAGES.keys())
+
+
+def related_calculators(slugs: List[str]) -> List[Dict[str, Any]]:
+    return [CALCULATORS[slug] for slug in slugs if slug in CALCULATORS]
+
+
+def related_guides_for_calculator(slug: str) -> List[Dict[str, Any]]:
+    matches = []
+    for guide_slug, guide in GUIDES.items():
+        if slug in guide.get("related", []):
+            item = dict(guide)
+            item["slug"] = guide_slug
+            matches.append(item)
+    return matches[:4]
+
+
+def breadcrumbs(*items: Dict[str, str]) -> List[Dict[str, str]]:
+    return [{"name": "Home", "url": SITE_URL + "/"}] + list(items)
+
+
+OFFICIAL_SOURCE_SETS: Dict[str, List[Dict[str, str]]] = {
+    "universal-credit": [
+        {"label": "Universal Credit: what you'll get", "url": "https://www.gov.uk/universal-credit/what-youll-get"},
+        {"label": "Universal Credit and childcare costs", "url": "https://www.gov.uk/universal-credit/what-youll-get"},
+        {"label": "Benefit Cap overview", "url": "https://www.gov.uk/benefit-cap"},
+    ],
+    "child-benefit": [
+        {"label": "Child Benefit rates and allowances", "url": "https://www.gov.uk/government/publications/rates-and-allowances-tax-credits-child-benefit-and-guardians-allowance/tax-credits-child-benefit-and-guardians-allowance"},
+        {"label": "High Income Child Benefit Charge", "url": "https://www.gov.uk/child-benefit-tax-charge"},
+        {"label": "Tax-Free Childcare", "url": "https://www.gov.uk/tax-free-childcare"},
+    ],
+    "pension-support": [
+        {"label": "Pension Credit", "url": "https://www.gov.uk/pension-credit"},
+        {"label": "Winter Fuel Payment", "url": "https://www.gov.uk/winter-fuel-payment"},
+        {"label": "Cold Weather Payment", "url": "https://www.gov.uk/cold-weather-payment"},
+    ],
+    "disability-health": [
+        {"label": "Personal Independence Payment (PIP)", "url": "https://www.gov.uk/pip"},
+        {"label": "Employment and Support Allowance (ESA)", "url": "https://www.gov.uk/employment-support-allowance"},
+        {"label": "Statutory Sick Pay", "url": "https://www.gov.uk/statutory-sick-pay"},
+    ],
+    "housing-council-tax": [
+        {"label": "Housing Benefit", "url": "https://www.gov.uk/housing-benefit"},
+        {"label": "Local Housing Allowance", "url": "https://www.gov.uk/government/collections/local-housing-allowance-lha-rates-applicable-from-april-2025-to-march-2026"},
+        {"label": "Find your local council", "url": "https://www.gov.uk/find-local-council"},
+    ],
+}
+
+
+def cluster_for_slug(slug: str) -> str:
+    if slug.startswith("universal-credit") or slug in {"savings-impact-calculator", "earnings-impact-calculator", "benefit-cap-calculator"}:
+        return "universal-credit"
+    if any(token in slug for token in ("child-benefit", "hicbc", "childcare", "free-school-meals", "healthy-start", "sure-start", "maternity")):
+        return "child-benefit"
+    if any(token in slug for token in ("pension-credit", "winter-fuel", "cold-weather")):
+        return "pension-support"
+    if any(token in slug for token in ("pip", "esa", "ssp", "jsa")):
+        return "disability-health"
+    if any(token in slug for token in ("housing-benefit", "council-tax")):
+        return "housing-council-tax"
+    return "universal-credit"
+
+
+def page_sources(slug: str) -> List[Dict[str, str]]:
+    return OFFICIAL_SOURCE_SETS.get(cluster_for_slug(slug), OFFICIAL_SOURCE_SETS["universal-credit"])
+
+
+def build_estimate_visual(estimate: Dict[str, Any]) -> Dict[str, Any]:
+    palette = ["var(--c-uc)", "var(--c-child)", "var(--c-housing)", "var(--c-other)"]
+    positive_rows = []
+    for label, value in estimate.get("breakdown", []):
+        if "percentage" in label.lower():
+            continue
+        if isinstance(value, (int, float)) and value > 0:
+            positive_rows.append((label, float(value)))
+    if not positive_rows:
+        amount = max(estimate.get("primary_amount", 0.0), 0.0)
+        positive_rows = [(estimate.get("primary_label", "Estimated amount"), amount or 1.0)]
+
+    total = sum(value for _, value in positive_rows) or 1.0
+    top_rows = positive_rows[:3]
+    if len(positive_rows) > 3:
+        other_total = sum(value for _, value in positive_rows[3:])
+        top_rows.append(("Other included support", other_total))
+
+    legend = []
+    segments = []
+    current = 0.0
+    for idx, (label, value) in enumerate(top_rows):
+        share = max(3.0, round((value / total) * 100, 1))
+        color = palette[idx % len(palette)]
+        legend.append({"label": label, "value": round_money(value), "share": share, "color": color})
+        next_stop = min(100.0, current + share)
+        segments.append(f"{color} {current:.1f}% {next_stop:.1f}%")
+        current = next_stop
+    if current < 100:
+        segments.append(f"var(--surface-alt) {current:.1f}% 100%")
+
+    return {
+        "legend": legend,
+        "conic": ", ".join(segments),
+        "explainer": "Visual split of the main amounts included in this estimate.",
+    }
+
+
+def _breakdown_value(estimate: Dict[str, Any], label: str) -> float:
+    for row_label, value in estimate.get("breakdown", []):
+        if row_label == label and isinstance(value, (int, float)):
+            return float(value)
+    return 0.0
+
+
+def _fmt_money(amount: float) -> str:
+    return f"£{amount:,.2f}"
+
+
+def _fmt_integer(amount: float) -> str:
+    return f"{int(round(amount)):,}"
+
+
+def calculator_ui_config(slug: str, page: Dict[str, Any]) -> Dict[str, Any]:
+    cluster = cluster_for_slug(slug)
+    base = {
+        "cluster": cluster,
+        "calculator_title": page["title"],
+        "calculator_subcopy": "Adjust the inputs and review the answer cards, chart and breakdown together.",
+        "hero_notes": [
+            "Fast answer first",
+            "Designed for mobile and desktop",
+            "Updated to current published rates",
+        ],
+        "geo_note": "UK-wide estimator using current published rules, with local or case-specific limitations explained below.",
+        "priority_fields": [],
+        "result_mode": page["formula"],
+        "related_intro": "Use the linked calculators and guides below to test the next question people usually have after this estimate.",
+    }
+    per_slug = {
+        "universal-credit-calculator": {
+            "calculator_subcopy": "Check the monthly Universal Credit estimate first, with savings, capital limits and tariff income effects visible early.",
+            "hero_notes": [
+                "Capital over £6,000 changes the award",
+                "£16,000 usually stops entitlement",
+                "Rent, earnings and childcare included",
+            ],
+            "geo_note": "UK-wide Universal Credit rules with simplified housing-cost treatment. Local rent limits, service charges and special-case rules can still change the final award.",
+            "priority_fields": ["household", "earnings", "savings", "housing_cost", "children", "age_band", "childcare_cost", "health"],
+            "related_intro": "These next pages are the usual follow-up checks for people comparing UC, capital limits, childcare help and capped awards.",
+        },
+        "child-benefit-calculator": {
+            "calculator_subcopy": "Get the weekly Child Benefit figure first, then the monthly equivalent and annual amount for your child count.",
+            "hero_notes": [
+                "Weekly rate first",
+                "Monthly and annual equivalents included",
+                "Built for current child-count queries",
+            ],
+            "geo_note": "UK-wide Child Benefit rates are fixed nationally. The follow-up issue for many families is the High Income Child Benefit Charge.",
+            "priority_fields": ["children"],
+            "related_intro": "These are the pages most families need next when checking Child Benefit, HICBC and childcare support together.",
+        },
+        "pension-credit-calculator": {
+            "calculator_subcopy": "See the likely weekly Pension Credit top-up first, with savings treatment and key additions kept visible.",
+            "hero_notes": [
+                "Savings do not automatically rule it out",
+                "Weekly top-up first",
+                "Passported help matters too",
+            ],
+            "geo_note": "Pension Credit uses UK-wide core rates, but housing costs, Savings Credit and mixed-age couple rules can still change the final position.",
+            "priority_fields": ["household", "weekly_income", "savings"],
+            "related_intro": "Most Pension Credit searches lead into council tax, winter support and worked examples rather than ending at the weekly cash figure alone.",
+        },
+        "pip-eligibility-checker": {
+            "calculator_subcopy": "Turn likely daily living and mobility points into the PIP rate bands and weekly, monthly and annual amounts people actually search for.",
+            "hero_notes": [
+                "Daily living and mobility shown separately",
+                "Weekly, monthly and annual equivalents",
+                "Not means tested",
+            ],
+            "geo_note": "PIP rules are UK-wide in core structure, but this remains an indicative points checker rather than a DWP decision tool.",
+            "priority_fields": ["daily_living_points", "mobility_points"],
+            "related_intro": "People usually use these follow-up pages when they are comparing PIP with ESA, UC health routes or other disability-related support.",
+        },
+        "council-tax-reduction-calculator": {
+            "calculator_subcopy": "Check likely monthly council tax help quickly, with income, savings and single-adult effects visible near the top.",
+            "hero_notes": [
+                "Savings can stop entitlement",
+                "Monthly bill and help shown together",
+                "Local scheme warning kept visible",
+            ],
+            "geo_note": "Council Tax Reduction is local, not one national scheme. This page is built as a UK directional estimator, not a council-specific decision tool.",
+            "priority_fields": ["monthly_council_tax", "monthly_income", "savings"],
+            "related_intro": "Council tax support searches usually connect to rent help, Pension Credit and wider affordability support, so the follow-up links stay tightly focused.",
+        },
+        "housing-benefit-calculator": {
+            "calculator_subcopy": "Useful for legacy and pension-age Housing Benefit cases where weekly rent, weekly income and savings are the key starting checks.",
+            "hero_notes": [
+                "Legacy and pension-age focus",
+                "Weekly support first",
+                "Savings kept visible early",
+            ],
+            "geo_note": "Housing Benefit is mainly a legacy or specialist route now. This page is meant to answer that search intent while steering most new cases back to Universal Credit housing costs.",
+            "priority_fields": ["weekly_rent", "weekly_income", "savings"],
+            "related_intro": "Housing Benefit searches usually need a second check on Universal Credit, council tax help or the Benefit Cap once the legacy-versus-new-claim question is clear.",
+        },
+        "benefit-cap-calculator": {
+            "calculator_subcopy": "Check the cap amount for your household first, then see whether your entered monthly total looks above it.",
+            "hero_notes": [
+                "London versus outside London made explicit",
+                "Monthly cap amount shown clearly",
+                "Useful after UC or Child Benefit checks",
+            ],
+            "geo_note": "The Benefit Cap uses national cap levels, but exemptions and earnings rules still matter. This page is designed as a quick first cap check rather than a full exemption checker.",
+            "priority_fields": ["monthly_benefits", "household", "inside_london"],
+            "related_intro": "Benefit Cap searches often come after a lower-than-expected UC result, so the related links stay centred on rent, family support and cap exemptions.",
+        },
+    }
+    merged = dict(base)
+    merged.update(per_slug.get(slug, {}))
+    return merged
+
+
+def ordered_fields_for_page(slug: str, page: Dict[str, Any]) -> List[Dict[str, Any]]:
+    priority = calculator_ui_config(slug, page).get("priority_fields", [])
+    order_index = {name: idx for idx, name in enumerate(priority)}
+    return sorted(
+        page["fields"],
+        key=lambda field: (order_index.get(field["name"], len(priority) + page["fields"].index(field)), page["fields"].index(field)),
     )
-    return context
 
 
-def default_faq() -> List[Dict[str, str]]:
+def calculator_result_highlights(slug: str, page: Dict[str, Any], estimate: Dict[str, Any], inputs: Dict[str, Any]) -> List[Dict[str, str]]:
+    formula = page["formula"]
+    if formula == "universal_credit":
+        savings_deduction = abs(_breakdown_value(estimate, "Savings deduction"))
+        capital_status = "Over £16,000 entered" if inputs.get("savings", 0) >= 16000 else "Below £16,000 limit"
+        return [
+            {"label": "Monthly award", "value": _fmt_money(estimate["primary_amount"]), "tone": "primary"},
+            {"label": "Annual view", "value": _fmt_money(estimate["secondary_amount"]), "tone": "standard"},
+            {"label": "Savings entered", "value": _fmt_money(float(inputs.get("savings", 0))), "tone": "standard"},
+            {"label": "Tariff income/month", "value": _fmt_money(savings_deduction), "tone": "standard"},
+            {"label": "Capital status", "value": capital_status, "tone": "muted"},
+        ]
+    if formula == "child_benefit":
+        weekly = float(estimate["primary_amount"])
+        monthly = round_money(weekly * 52 / 12)
+        annual = float(estimate["secondary_amount"])
+        return [
+            {"label": "Weekly amount", "value": _fmt_money(weekly), "tone": "primary"},
+            {"label": "Monthly equivalent", "value": _fmt_money(monthly), "tone": "standard"},
+            {"label": "Annual amount", "value": _fmt_money(annual), "tone": "standard"},
+            {"label": "Children used", "value": _fmt_integer(float(inputs.get("children", 0))), "tone": "muted"},
+        ]
+    if formula == "pip":
+        weekly = float(estimate["primary_amount"])
+        monthly = round_money(weekly * 52 / 12)
+        daily = _breakdown_value(estimate, "Daily living component")
+        mobility = _breakdown_value(estimate, "Mobility component")
+        daily_label = "No daily living award" if daily <= 0 else f"Daily living {_fmt_money(daily)}/wk"
+        mobility_label = "No mobility award" if mobility <= 0 else f"Mobility {_fmt_money(mobility)}/wk"
+        return [
+            {"label": "Daily living award", "value": daily_label, "tone": "standard"},
+            {"label": "Mobility award", "value": mobility_label, "tone": "standard"},
+            {"label": "Weekly amount", "value": _fmt_money(weekly), "tone": "primary"},
+            {"label": "Monthly equivalent", "value": _fmt_money(monthly), "tone": "standard"},
+            {"label": "Annual equivalent", "value": _fmt_money(float(estimate["secondary_amount"])), "tone": "standard"},
+        ]
+    if formula == "benefit_cap":
+        cap_used = _breakdown_value(estimate, "Monthly cap used")
+        household_options = {option["value"]: option["label"] for option in next((field["options"] for field in page["fields"] if field["name"] == "household"), [])}
+        return [
+            {"label": "Amount over cap", "value": _fmt_money(float(estimate["primary_amount"])), "tone": "primary"},
+            {"label": "Capped total", "value": _fmt_money(float(estimate["secondary_amount"])), "tone": "standard"},
+            {"label": "Cap used", "value": _fmt_money(cap_used), "tone": "standard"},
+            {"label": "Household used", "value": household_options.get(inputs.get("household", ""), str(inputs.get("household", ""))), "tone": "muted"},
+        ]
+    if formula == "council_tax_reduction":
+        reduction_pct = _breakdown_value(estimate, "Reduction percentage used")
+        return [
+            {"label": "Monthly help", "value": _fmt_money(float(estimate["primary_amount"])), "tone": "primary"},
+            {"label": "Annual help", "value": _fmt_money(float(estimate["secondary_amount"])), "tone": "standard"},
+            {"label": "Monthly bill used", "value": _fmt_money(float(inputs.get("monthly_council_tax", 0))), "tone": "standard"},
+            {"label": "Reduction rate", "value": f"{reduction_pct:,.0f}%", "tone": "standard"},
+            {"label": "Savings entered", "value": _fmt_money(float(inputs.get("savings", 0))), "tone": "muted"},
+        ]
+    if formula == "housing_benefit":
+        weekly = float(estimate["primary_amount"])
+        monthly = round_money(weekly * 52 / 12)
+        return [
+            {"label": "Weekly support", "value": _fmt_money(weekly), "tone": "primary"},
+            {"label": "Monthly equivalent", "value": _fmt_money(monthly), "tone": "standard"},
+            {"label": "Annual equivalent", "value": _fmt_money(float(estimate["secondary_amount"])), "tone": "standard"},
+            {"label": "Weekly rent used", "value": _fmt_money(float(inputs.get("weekly_rent", 0))), "tone": "standard"},
+            {"label": "Savings entered", "value": _fmt_money(float(inputs.get("savings", 0))), "tone": "muted"},
+        ]
+    if formula == "pension_credit":
+        weekly = float(estimate["primary_amount"])
+        monthly = round_money(weekly * 52 / 12)
+        household_options = {option["value"]: option["label"] for option in next((field["options"] for field in page["fields"] if field["name"] == "household"), [])}
+        return [
+            {"label": "Weekly amount", "value": _fmt_money(weekly), "tone": "primary"},
+            {"label": "Monthly equivalent", "value": _fmt_money(monthly), "tone": "standard"},
+            {"label": "Annual amount", "value": _fmt_money(float(estimate["secondary_amount"])), "tone": "standard"},
+            {"label": "Savings entered", "value": _fmt_money(float(inputs.get("savings", 0))), "tone": "standard"},
+            {"label": "Household used", "value": household_options.get(inputs.get("household", ""), str(inputs.get("household", ""))), "tone": "muted"},
+        ]
     return [
-        {
-            "q": "How much does it cost to employ someone in the UK?",
-            "a": "The true cost to employ someone in the UK is typically 15–20% above gross salary. At £30,000: employer NI £3,750 + pension £713 = approximately £34,463 per year. At £50,000: employer NI £6,750 + pension £1,313 = approximately £58,063 per year. Adding workplace overheads of £2,000–£5,000 can bring the total to 20–25% above the headline salary.",
-        },
-        {
-            "q": "What is the employer NI rate for 2025/26?",
-            "a": "For 2025/26, employer Class 1 National Insurance is charged at 15% on employee earnings above the secondary threshold of £5,000 per year (£96 per week, £416 per month). This rate increased from 13.8% in April 2025, when the threshold was simultaneously cut from £9,100 to £5,000. Both changes apply from 6 April 2025.",
-        },
-        {
-            "q": "How much employer NI do I pay on a £35,000 salary?",
-            "a": "At £35,000 salary, employer NI for 2025/26 is £4,500 per year — 15% on £30,000 of earnings above the £5,000 threshold. That is £375 per month. In 2024/25, the same salary produced £3,585 in employer NI. The April 2025 changes therefore add £915 per year on this salary alone.",
-        },
-        {
-            "q": "What is Employment Allowance and who can claim it?",
-            "a": "Employment Allowance lets eligible employers reduce their annual employer NI bill by up to £10,500 in 2025/26, increased from £5,000 in 2024/25. The previous £100,000 NI bill eligibility cap has been removed, so more businesses qualify. Companies where the only paid employee is also a director cannot claim. Apply through payroll software via the Employer Payment Summary indicator.",
-        },
-        {
-            "q": "What is the total employer cost above salary?",
-            "a": "Beyond salary, employer cost includes: employer NI (15% on earnings above £5,000), employer pension (minimum 3% of qualifying earnings between £6,240 and £50,270), and overheads such as equipment, software and workspace. For most UK salaries this adds 12–20% above headline pay. Use the inputs above to set your exact pension rate and overhead figure.",
-        },
-        {
-            "q": "What changed for employers in April 2025?",
-            "a": "Three changes took effect from 6 April 2025: the employer NI rate rose from 13.8% to 15%, the secondary threshold was cut from £9,100 to £5,000, and Employment Allowance increased from £5,000 to £10,500 with the eligibility cap removed. For a £30,000 salary, annual employer NI increased from approximately £2,884 to £3,750 — a rise of £866 per year.",
-        },
-        {
-            "q": "How is employer NI different from employee NI?",
-            "a": "Employer NI is a cost paid by the employer on top of gross salary — it does not reduce take-home pay. Employee NI is deducted from the employee's wages instead. For 2025/26, employees pay 8% on earnings between £12,570 and £50,270, then 2% above that. Employers pay 15% on all earnings above £5,000 with no upper cap. This calculator covers the employer side; for employee take-home pay see AfterTaxSalary.co.uk.",
-        },
-        {
-            "q": "What are employer costs in the UK?",
-            "a": "UK employer costs in 2025/26 are: gross salary, employer NI at 15% on earnings above £5,000, employer pension at minimum 3% of qualifying earnings (£6,240–£50,270), and any operational overheads such as equipment or software. For a £35,000 salary, statutory employer costs (NI + pension) add approximately £5,363/year before overheads.",
-        },
-        {
-            "q": "How much do I cost my employer in the UK?",
-            "a": "If you earn £35,000, you cost your employer roughly £40,363/year — your salary plus £4,500 employer NI and £863 minimum pension. At £50,000, the total is approximately £58,063. Your employer pays these on top of your salary; they are not deducted from your pay. Use this calculator to see the exact figure for your salary.",
-        },
-        {
-            "q": "Is this a PAYE cost calculator for employers?",
-            "a": "Yes. PAYE employer costs include employer NI — calculated at 15% above £5,000 for 2025/26 — plus the employer's auto-enrolment pension contribution. The full calculator models both alongside any overhead assumptions to give a total PAYE-basis employer spend per employee.",
-        },
-        {
-            "q": "What is a cost to company (CTC) salary in the UK?",
-            "a": "Cost to company (CTC) in the UK refers to the total annual cost of an employee to their employer — salary, employer NI, pension, and overheads combined. A £35,000 CTC salary typically means a gross salary of roughly £30,000–£32,000 once the employer's NI and pension obligations are included in the total. Use this calculator to work backwards from a CTC budget to a gross salary.",
-        },
+        {"label": estimate.get("primary_label", "Main estimate"), "value": _fmt_money(float(estimate.get("primary_amount", 0))), "tone": "primary"},
+        {"label": estimate.get("secondary_label", "Secondary estimate"), "value": _fmt_money(float(estimate.get("secondary_amount", 0))), "tone": "standard"},
     ]
 
 
-def calculator_faq() -> List[Dict[str, str]]:
-    return default_faq() + [
-        {
-            "q": "Is this an employer total cost calculator for the UK?",
-            "a": "Yes. This is an employer total cost calculator UK tool for 2025/26. It combines gross salary, employer NI, auto-enrolment pension and optional overheads into one annual and monthly employer cost output.",
-        },
-        {
-            "q": "Can I use this as a total cost to employer calculator UK page?",
-            "a": "Yes. Use this page as a total cost to employer calculator UK workflow: enter salary, choose pension rate, add overheads, and apply Employment Allowance if eligible to see net employer NI and full cost.",
-        },
-        {
-            "q": "Does this work as an NI change calculator?",
-            "a": "Yes. It works as an NI change calculator because it uses 2025/26 rules (15% above £5,000) and shows a comparison against 2024/25 assumptions so you can quantify the April 2025 employer NI change.",
-        },
-        {
-            "q": "Where can I estimate auto enrolment payroll costs?",
-            "a": "This calculator includes baseline auto enrolment payroll costs via employer pension on qualifying earnings. For pension-only scenarios, use the dedicated page at /pension-cost.",
-        },
-        {
-            "q": "Is this an employer NI calculator 2025/26?",
-            "a": "Yes. This page is an employer NI calculator 2025/26 tool and applies the current-year employer NI rate and threshold to your salary input, with monthly and annual outputs.",
-        },
-    ]
+def next_steps_for_slug(slug: str) -> List[Dict[str, str]]:
+    mapping = {
+        "universal-credit": [
+            {"label": "Check the full Universal Credit calculator", "url": "/universal-credit-calculator"},
+            {"label": "See how savings change the award", "url": "/savings-impact-calculator"},
+            {"label": "Read the earnings taper guide", "url": "/guides/universal-credit-if-my-wages-go-up"},
+        ],
+        "child-benefit": [
+            {"label": "Compare Child Benefit with HICBC", "url": "/hicbc-calculator"},
+            {"label": "Check Tax-Free Childcare", "url": "/tax-free-childcare-calculator"},
+            {"label": "See child-count examples", "url": "/guides/how-much-child-benefit-for-1-2-3-children"},
+        ],
+        "pension-support": [
+            {"label": "Run the Pension Credit calculator", "url": "/pension-credit-calculator"},
+            {"label": "Check winter support", "url": "/winter-fuel-payment-checker"},
+            {"label": "Read pensioner worked examples", "url": "/guides/pension-credit-examples-for-single-pensioner"},
+        ],
+        "disability-health": [
+            {"label": "Use the PIP checker", "url": "/pip-eligibility-checker"},
+            {"label": "Compare ESA and UC health routes", "url": "/guides/esa-vs-universal-credit"},
+            {"label": "Read the PIP points explainer", "url": "/guides/pip-points-explained"},
+        ],
+        "housing-council-tax": [
+            {"label": "Check council tax support", "url": "/council-tax-reduction-calculator"},
+            {"label": "Check Housing Benefit", "url": "/housing-benefit-calculator"},
+            {"label": "Read rent and council tax guidance", "url": "/guides/help-with-rent-and-council-tax"},
+        ],
+    }
+    return mapping.get(cluster_for_slug(slug), mapping["universal-credit"])
+
+
+def render_page(template: str, *, title: str, description: str, canonical_path: str, breadcrumbs_data: Optional[List[Dict[str, str]]] = None, **context):
+    canonical_url = f"{SITE_URL}{canonical_path}"
+    return render_template(
+        template,
+        title=title,
+        meta_description=description,
+        canonical_url=canonical_url,
+        site_url=SITE_URL,
+        now=now_utc(),
+        adsense_client=ADSENSE_CLIENT,
+        adsense_enabled=ENABLE_ADS,
+        adsense_slot_content=ADSENSE_SLOT_CONTENT,
+        adsense_slot_calculator=ADSENSE_SLOT_CALCULATOR,
+        ga_measurement_id=GA_MEASUREMENT_ID,
+        tax_year="2026/27",
+        breadcrumbs=breadcrumbs_data or [],
+        show_cross_links=False,
+        **context,
+    )
 
 
 @app.route("/")
 def home():
-    default_result = calculate_employer_cost(salary=35000, pension_rate=3, overheads=3000, allowance=0)
-    context = {
-        "calc": default_result,
-        "faq_items": default_faq(),
-        "highlight_costs": [20000, 25000, 30000, 35000, 40000, 50000, 60000, 75000, 100000, 150000],
-        "show_cross_links": True,
-        "tools_block": _TOOLS_BLOCK_DEFAULT,
-    }
-    return render_template(
+    featured = [CALCULATORS[slug] for slug in CALCULATOR_ORDER[1:7]]
+    guide_cards = []
+    for slug in GUIDE_ORDER[:6]:
+        item = dict(GUIDES[slug])
+        item["slug"] = slug
+        guide_cards.append(item)
+    home_calc_page = CALCULATORS["universal-credit-calculator"]
+    home_form_state = parse_inputs(home_calc_page)
+    home_estimate = CALCULATION_FUNCTIONS[home_calc_page["formula"]](home_form_state)
+    scenario_guides = []
+    for slug in [
+        "universal-credit-if-my-wages-go-up",
+        "universal-credit-if-partner-moves-in",
+        "how-much-child-benefit-for-1-2-3-children",
+        "pension-credit-examples-for-single-pensioner",
+        "pip-points-explained",
+        "child-benefit-tax-charge-examples",
+    ]:
+        if slug in GUIDES:
+            item = dict(GUIDES[slug])
+            item["slug"] = slug
+            scenario_guides.append(item)
+    situation_guides = []
+    for slug in [
+        "benefits-for-low-income-families",
+        "help-with-rent-and-council-tax",
+        "pension-credit-explained",
+        "pip-explained-simply",
+    ]:
+        if slug in GUIDES:
+            item = dict(GUIDES[slug])
+            item["slug"] = slug
+            situation_guides.append(item)
+    return render_page(
         "landing.html",
-        **with_meta(
-            context,
-            title="UK Cost to Employer Calculator 2025/26 | Salary + NI + Pension = True Hiring Cost",
-            description="Employer cost calculator UK for 2025/26. Calculate salary cost to employer including employer NI, pension and overheads. Check £30k, £35k and £50k examples or run the full calculator.",
-            breadcrumbs=[{"name": "Home", "url": f"{SITE_URL}/"}],
-        ),
-    )
-
-
-@app.route("/calculator")
-def calculator_page():
-    salary = max(1000, int(request.args.get("salary", 35000)))
-    pension = float(request.args.get("pension", 3))
-    overheads = max(0, int(request.args.get("overheads", 3000)))
-    allowance = float(request.args.get("allowance", 0))
-    result = calculate_employer_cost(salary=salary, pension_rate=pension, overheads=overheads, allowance=allowance)
-    context = {
-        "calc": result,
-        "faq_items": calculator_faq(),
-        "query_state": {"salary": salary, "pension": pension, "overheads": overheads, "allowance": allowance},
-        "comparison_2024": employer_ni_2024(salary),
-        "tools_block": _TOOLS_BLOCK_DEFAULT,
-    }
-    return render_template(
-        "calculator.html",
-        **with_meta(
-            context,
-            title="Employer Cost Calculator UK 2025/26 | Salary Cost to Employer, NI and Pension",
-            description="Calculate total employer cost for any UK salary. Includes employer NI at 15%, auto-enrolment pension, Employment Allowance and overheads, with monthly and annual results for hiring decisions.",
-            breadcrumbs=[
-                {"name": "Home", "url": f"{SITE_URL}/"},
-                {"name": "Calculator", "url": f"{SITE_URL}/calculator"},
-            ],
-        ),
-    )
-
-
-@app.route("/employer-ni-calculator")
-@app.route("/cost-of-hiring-calculator")
-@app.route("/employer-cost-calculator")
-@app.route("/cost-to-employer-calculator")
-@app.route("/cost-to-employer-calculator-uk")
-@app.route("/total-cost-to-employer-calculator")
-def calculator_aliases():
-    alias_target = {
-        "/employer-ni-calculator": "/employer-ni",
-        "/employer-cost-calculator": "/employer-cost-calculator-uk",
-        "/cost-to-employer-calculator": "/total-cost-to-employer-calculator-uk",
-        "/cost-to-employer-calculator-uk": "/total-cost-to-employer-calculator-uk",
-        "/total-cost-to-employer-calculator": "/total-cost-to-employer-calculator-uk",
-    }.get(request.path, "/calculator")
-    return redirect(alias_target, code=301)
-
-
-@app.route("/employer-total-cost-calculator")
-@app.route("/employer-cost-calculator-uk")
-@app.route("/total-cost-to-employer-calculator-uk")
-@app.route("/ni-change-calculator")
-@app.route("/employer-ni-calculator-2025-26")
-@app.route("/auto-enrolment-payroll-costs")
-@app.route("/employer-costs-uk")
-@app.route("/how-much-do-i-cost-my-employer")
-@app.route("/paye-cost-to-employer-calculator")
-@app.route("/employer-national-insurance-calculator")
-@app.route("/salary-calculator-for-employers")
-@app.route("/employee-cost-calculator-uk")
-@app.route("/uk-average-salary")
-@app.route("/employer-ni-historical-rates")
-@app.route("/true-cost-of-employee-calculator-uk")
-@app.route("/employer-salary-cost-calculator-uk")
-@app.route("/first-employee-cost-uk")
-@app.route("/part-time-employee-cost")
-@app.route("/minimum-wage-employer-cost")
-@app.route("/employer-cost-per-employee")
-def gsc_intent_pages():
-    page = GSC_INTENT_PAGES.get(request.path)
-    if not page:
-        abort(404)
-
-    sample_salary = 35000 if request.path != "/auto-enrolment-payroll-costs" else 30000
-    sample_calc = calculate_employer_cost(salary=sample_salary, pension_rate=3, overheads=3000, allowance=0)
-    context = {
-        "page": page,
-        "sample_calc": sample_calc,
-        "faq_items": page["faq_items"],
-    }
-    return render_template(
-        "intent_landing_page.html",
-        **with_meta(
-            context,
-            title=page["title"],
-            description=page["description"],
-            breadcrumbs=[
-                {"name": "Home", "url": f"{SITE_URL}/"},
-                {"name": "Calculator intents", "url": f"{SITE_URL}/calculators"},
-                {"name": page["h1"], "url": f"{SITE_URL}{request.path}"},
-            ],
-        ),
-    )
-
-
-@app.route("/cost-of-employing-someone-16-hours-a-week")
-@app.route("/cost-of-employing-someone-20-hours-a-week")
-@app.route("/cost-of-employing-someone-24-hours-a-week")
-@app.route("/cost-of-employing-someone-25-hours-a-week")
-@app.route("/cost-of-employing-someone-30-hours-a-week")
-@app.route("/cost-of-employing-someone-37-5-hours-a-week")
-@app.route("/cost-of-employing-someone-40-hours-a-week")
-def hours_scenario_page():
-    slug = request.path.lstrip("/")
-    page_data = HOURS_SCENARIO_PAGES.get(slug)
-    if not page_data:
-        abort(404)
-    page_data = _apply_year_deep(page_data)
-    hours = page_data["hours"]
-    salary = page_data["annual_salary_nlw"]
-    calc = calculate_employer_cost(salary=salary, pension_rate=3, overheads=0, allowance=0)
-    salary_mid = round(salary * 1.15 / 1000) * 1000  # a slightly higher example salary
-    calc_mid = calculate_employer_cost(salary=salary_mid, pension_rate=3, overheads=2000, allowance=0)
-    ni_above_threshold = max(0, salary - 5000)
-    ni_cost = round(ni_above_threshold * 0.15)
-    pension_qualifying = max(0, min(salary, 50270) - 6240)
-    pension_cost = round(pension_qualifying * 0.03)
-    page = {
-        "badge": page_data["badge"],
-        "h1": page_data["h1"],
-        "intro": page_data["intro"],
-        "bullets": [
-            f"Hours per week: {hours} hrs (approximately {round(hours * 52):,} hours per year).",
-            f"Annual salary at NLW (£12.71/hr): approximately £{salary:,}.",
-            f"Employer NI (15% above £5,000): approximately £{ni_cost:,}/year.",
-            f"Minimum employer pension (3% qualifying earnings): approximately £{pension_cost:,}/year.",
-            f"Total statutory employer cost: approximately £{salary + ni_cost + pension_cost:,}/year before overheads.",
-            "The employer NI secondary threshold (£5,000/year) is not pro-rated — it applies in full regardless of contracted hours.",
-        ],
-        "primary_cta": {"label": "Calculate exact employer cost", "url": f"/calculator?salary={salary}"},
-        "secondary_cta": {"label": "Part-time employee cost overview", "url": "/part-time-employee-cost"},
-        "faq_items": [
-            {"q": f"Do employers pay NI on {hours}-hour part-time workers?", "a": f"Yes, if annual earnings exceed the £5,000 secondary threshold. At {hours} hours per week on the National Living Wage, annual salary is approximately £{salary:,}, which is above the threshold. Employer NI at 15% applies on earnings above £5,000, regardless of whether the employee is part-time or full-time. The threshold is not pro-rated for contracted hours."},
-            {"q": "Does auto-enrolment apply to part-time employees?", "a": "Auto-enrolment triggers when a worker earns more than £10,000 per year and is aged 22–66. Part-time workers earning below £10,000 per year do not need to be automatically enrolled but can opt in, in which case the employer must still make contributions. Workers earning between £6,240 and £10,000 can opt in and the employer must contribute at the minimum rate on qualifying earnings."},
-            {"q": "Is it cheaper to employ someone part-time than full-time per hour?", "a": "The gross wage cost per hour is identical for part-time and full-time staff on the same hourly rate. However, the employer NI secondary threshold (£5,000/year) is not reduced for part-time hours. This means the NI cost as a percentage of gross salary is higher for lower-paid part-time workers than for higher-earning full-time staff. For very low-hour workers earning below £5,000/year, there is no employer NI at all."},
-            {"q": "What is the National Living Wage from April 2026?", "a": "The National Living Wage for workers aged 21 and over is £12.71 per hour from April 2026, rising from £12.21 per hour in 2025/26. The National Minimum Wage for workers aged 18–20 is £10.00 per hour."},
-        ],
-    }
-    return render_template(
-        "intent_landing_page.html",
-        **with_meta(
-            {"page": page, "sample_calc": calc, "faq_items": page["faq_items"], "tools_block": _TOOLS_BLOCK_DEFAULT},
-            title=page_data["title"] + " | EmployerCalculator.co.uk",
-            description=page_data["description"],
-            breadcrumbs=[
-                {"name": "Home", "url": f"{SITE_URL}/"},
-                {"name": "Cost of employing", "url": f"{SITE_URL}/cost-of-employing"},
-                {"name": page_data["h1"], "url": f"{SITE_URL}/{slug}"},
-            ],
-        ),
-    )
-
-
-@app.route("/employer-cost-at-10-pounds-per-hour")
-@app.route("/employer-cost-at-11-pounds-per-hour")
-@app.route("/employer-cost-at-minimum-wage-per-hour")
-@app.route("/employer-cost-at-13-pounds-per-hour")
-@app.route("/employer-cost-at-14-pounds-per-hour")
-@app.route("/employer-cost-at-15-pounds-per-hour")
-@app.route("/employer-cost-at-20-pounds-per-hour")
-@app.route("/employer-cost-at-25-pounds-per-hour")
-@app.route("/employer-cost-at-30-pounds-per-hour")
-def hourly_rate_page():
-    slug = request.path.lstrip("/")
-    page_data = HOURLY_RATE_PAGES.get(slug)
-    if not page_data:
-        abort(404)
-    page_data = _apply_year_deep(page_data)
-    rate = page_data["hourly_rate"]
-    salary_ft = page_data["annual_salary_ft"]
-    calc = calculate_employer_cost(salary=salary_ft, pension_rate=3, overheads=0, allowance=0)
-    ni = calc.employer_ni.ni_due
-    pension = calc.pension_contribution
-    total = salary_ft + ni + pension
-    hourly_total = round(total / 1950, 2)  # 37.5 × 52 = 1950 hours
-    # Part-time variants at 20 and 30 hrs/wk
-    salary_20h = round(rate * 20 * 52)
-    salary_30h = round(rate * 30 * 52)
-    calc_20h = calculate_employer_cost(salary=salary_20h, pension_rate=3, overheads=0, allowance=0)
-    calc_30h = calculate_employer_cost(salary=salary_30h, pension_rate=3, overheads=0, allowance=0)
-    page = {
-        "badge": page_data["badge"],
-        "h1": page_data["h1"],
-        "intro": f"An employee paid £{rate:.2f} per hour, working full-time (37.5 hours per week), earns approximately £{salary_ft:,} per year. The true employer cost is higher: employer NI at 15% on earnings above the £5,000 secondary threshold adds £{int(ni):,} per year, and minimum auto-enrolment pension at 3% adds £{int(pension):,} per year on qualifying earnings. Total employer cost: approximately £{int(total):,} per year — or roughly £{hourly_total:.2f} per productive hour before overheads.",
-        "bullets": [
-            f"Hourly rate: £{rate:.2f}/hour.",
-            f"Full-time annual salary (37.5 hrs/wk): approximately £{salary_ft:,}/year.",
-            f"Employer NI (15% above £5,000): approximately £{int(ni):,}/year.",
-            f"Minimum employer pension (3% on qualifying earnings): approximately £{int(pension):,}/year.",
-            f"Total statutory employer cost full-time: approximately £{int(total):,}/year.",
-            f"At 20 hrs/week: salary ≈ £{salary_20h:,} · total employer cost ≈ £{int(calc_20h.total_cost):,}/year.",
-            f"At 30 hrs/week: salary ≈ £{salary_30h:,} · total employer cost ≈ £{int(calc_30h.total_cost):,}/year.",
-        ],
-        "primary_cta": {"label": "Calculate exact employer cost", "url": f"/calculator?salary={salary_ft}"},
-        "secondary_cta": {"label": "Cost of employing by salary", "url": "/cost-of-employing"},
-        "faq_items": [
-            {"q": f"What does a £{rate:.2f}/hour employee cost an employer per year?", "a": f"A full-time employee at £{rate:.2f}/hour (37.5 hours per week) earns approximately £{salary_ft:,} per year. Adding employer NI of approximately £{int(ni):,} and minimum pension of approximately £{int(pension):,}, the total employer cost before overheads is approximately £{int(total):,} per year."},
-            {"q": "Does the employer NI rate change for lower-paid workers?", "a": "No — employer NI is always 15% on earnings above the £5,000 secondary threshold for 2025/26. There is no reduced rate for lower-paid workers. The practical effect is that lower wages carry a higher NI burden as a percentage of salary, because a larger proportion of total earnings falls in the NIable band relative to the threshold."},
-            {"q": "How does hourly employer cost differ from hourly wage?", "a": "The hourly wage is what the employee receives. The true employer hourly cost includes the wage plus the employer's share of NI and pension contributions. For a £15/hour worker on full-time hours, the true employer cost per hour is approximately £17.00–£17.50 depending on pension rate and overheads."},
-        ],
-    }
-    return render_template(
-        "intent_landing_page.html",
-        **with_meta(
-            {"page": page, "sample_calc": calc, "faq_items": page["faq_items"], "tools_block": _TOOLS_BLOCK_DEFAULT},
-            title=page_data["title"],
-            description=page_data["description"],
-            breadcrumbs=[
-                {"name": "Home", "url": f"{SITE_URL}/"},
-                {"name": "Cost of employing", "url": f"{SITE_URL}/cost-of-employing"},
-                {"name": page_data["h1"], "url": f"{SITE_URL}/{slug}"},
-            ],
-        ),
-    )
-
-
-@app.route("/cost-of-hiring-a-software-developer")
-@app.route("/cost-of-hiring-an-admin-assistant")
-@app.route("/cost-of-hiring-a-care-worker")
-@app.route("/cost-of-hiring-a-warehouse-operative")
-@app.route("/cost-of-hiring-a-receptionist")
-@app.route("/cost-of-hiring-a-sales-executive")
-@app.route("/cost-of-hiring-a-marketing-executive")
-@app.route("/cost-of-hiring-a-cleaner")
-@app.route("/cost-of-hiring-hospitality-staff")
-@app.route("/cost-of-hiring-a-teaching-assistant")
-@app.route("/cost-of-hiring-a-nurse")
-@app.route("/cost-of-hiring-a-teacher")
-@app.route("/cost-of-hiring-a-project-manager")
-@app.route("/cost-of-hiring-a-delivery-driver")
-@app.route("/cost-of-hiring-a-chef")
-@app.route("/cost-of-hiring-an-accountant")
-@app.route("/cost-of-hiring-an-hr-manager")
-@app.route("/cost-of-hiring-a-customer-service-advisor")
-def role_page():
-    slug = request.path.lstrip("/")
-    page_data = ROLE_PAGES.get(slug)
-    if not page_data:
-        abort(404)
-    page_data = _apply_year_deep(page_data)
-    example_salary = page_data["example_salary"]
-    calc = calculate_employer_cost(salary=example_salary, pension_rate=3, overheads=2000, allowance=0)
-    ni = calc.employer_ni.ni_due
-    pension = calc.pension_contribution
-    total_no_oh = example_salary + ni + pension
-    # Build salary table rows
-    levels_data = []
-    for lvl in page_data.get("role_levels", []):
-        lc = calculate_employer_cost(salary=lvl["example"], pension_rate=3, overheads=0, allowance=0)
-        levels_data.append({
-            "level": lvl["level"],
-            "salary_range": lvl["salary_range"],
-            "example": lvl["example"],
-            "ni": lc.employer_ni.ni_due,
-            "pension": lc.pension_contribution,
-            "total": lc.total_cost,
-        })
-    page = {
-        "badge": page_data["badge"],
-        "h1": page_data["h1"],
-        "intro": page_data["intro"],
-        "bullets": [
-            f"Typical salary range: {page_data['salary_range']}.",
-            f"At £{example_salary:,} salary: employer NI ≈ £{int(ni):,}/year, pension ≈ £{int(pension):,}/year.",
-            f"Total employer cost at £{example_salary:,} (before overheads): approximately £{int(total_no_oh):,}/year.",
-            "Employer NI: 15% on earnings above the £5,000 secondary threshold (2025/26).",
-            "Minimum employer pension: 3% on qualifying earnings between £6,240 and £50,270.",
-            "Employment Allowance (up to £10,500) can offset NI for eligible small employers.",
-        ],
-        "primary_cta": {"label": f"Calculate cost at any salary", "url": f"/calculator?salary={example_salary}"},
-        "secondary_cta": {"label": "All employer cost calculators", "url": "/calculators"},
-        "faq_items": [
-            {"q": f"How much does it cost to hire {page_data['badge'].lower()} in the UK?", "a": f"At a salary of £{example_salary:,}, the total employer cost including NI and minimum pension is approximately £{int(total_no_oh):,} per year before overheads. Adding typical workplace costs of £2,000–£5,000 per employee brings the realistic total to £{int(total_no_oh) + 2000:,}–£{int(total_no_oh) + 5000:,} per year."},
-            {"q": "What is employer NI and how is it calculated?", "a": "Employer Class 1 National Insurance is paid by the employer at 15% on employee earnings above the secondary threshold of £5,000 per year in 2025/26. It is in addition to the employee's NI contribution and does not reduce take-home pay. For a salary of £35,000, employer NI is £4,500 per year (15% of £30,000 above the threshold)."},
-            {"q": "Can Employment Allowance reduce my NI bill?", "a": "Yes. Eligible employers can offset up to £10,500 of annual employer NI through Employment Allowance in 2025/26. Most limited companies with at least one employee who is not also the sole director qualify. Single-director companies with no other employees cannot claim."},
-        ],
-    }
-    return render_template(
-        "role_page.html",
-        **with_meta(
-            {"page": page, "sample_calc": calc, "faq_items": page["faq_items"], "levels_data": levels_data, "tools_block": _TOOLS_BLOCK_DEFAULT},
-            title=page_data["title"],
-            description=page_data["description"],
-            breadcrumbs=[
-                {"name": "Home", "url": f"{SITE_URL}/"},
-                {"name": "Hiring cost by role", "url": f"{SITE_URL}/cost-of-hiring"},
-                {"name": page_data["h1"], "url": f"{SITE_URL}/{slug}"},
-            ],
-        ),
-    )
-
-
-@app.route("/cost-of-employing-hospitality-staff")
-@app.route("/cost-of-employing-care-workers")
-@app.route("/cost-of-employing-retail-staff")
-@app.route("/cost-of-employing-construction-workers")
-@app.route("/cost-of-employing-it-staff")
-@app.route("/cost-of-employing-education-staff")
-@app.route("/cost-of-employing-healthcare-workers")
-@app.route("/cost-of-employing-logistics-staff")
-def industry_page():
-    slug = request.path.lstrip("/")
-    page_data = INDUSTRY_PAGES.get(slug)
-    if not page_data:
-        abort(404)
-    page_data = _apply_year_deep(page_data)
-    salary = page_data["example_salary"]
-    calc = calculate_employer_cost(salary=salary, pension_rate=3, overheads=0, allowance=0)
-    ni = calc.employer_ni.ni_due
-    pension = calc.pension_contribution
-    page = {
-        "badge": page_data["badge"],
-        "h1": page_data["h1"],
-        "intro": page_data["intro"],
-        "bullets": page_data["bullets"],
-        "primary_cta": page_data["primary_cta"],
-        "secondary_cta": page_data["secondary_cta"],
-        "faq_items": page_data["faq_items"],
-    }
-    return render_template(
-        "intent_landing_page.html",
-        **with_meta(
-            {"page": page, "sample_calc": calc, "faq_items": page["faq_items"], "tools_block": _TOOLS_BLOCK_DEFAULT},
-            title=page_data["title"],
-            description=page_data["description"],
-            breadcrumbs=[
-                {"name": "Home", "url": f"{SITE_URL}/"},
-                {"name": "Industry employer costs", "url": f"{SITE_URL}/cost-of-hiring"},
-                {"name": page_data["h1"], "url": f"{SITE_URL}/{slug}"},
-            ],
-        ),
-    )
-
-
-@app.route("/contractor-vs-employee-cost")
-@app.route("/employee-vs-contractor-cost-uk")
-def contractor_vs_employee():
-    # Day rate equivalences at common salary points
-    examples = []
-    for salary in [35000, 50000, 70000, 100000]:
-        calc = calculate_employer_cost(salary=salary, pension_rate=3, overheads=3000, allowance=0)
-        # Day rate equivalent: total employer cost / 230 working days
-        day_rate = round(calc.total_cost / 230)
-        examples.append({
-            "salary": salary,
-            "employer_ni": calc.employer_ni.ni_due,
-            "pension": calc.pension_contribution,
-            "total_employer_cost": calc.total_cost,
-            "equivalent_day_rate": day_rate,
-        })
-    page = {
-        "badge": "Contractor vs employee",
-        "h1": "Contractor vs employee cost UK (2025/26)",
-        "intro": "Choosing between a permanent employee and a contractor involves more than the headline day rate. A PAYE employee at £50,000 salary costs an employer approximately £59,063 per year including NI, pension and modest overheads. The equivalent contractor at a day rate of approximately £257 per day for 230 days costs £59,110 — similar on paper, but with very different risk profiles, IR35 implications, and ongoing commitments. This page breaks down both sides so you can make a properly costed decision.",
-        "bullets": [
-            "PAYE employee total cost = salary + employer NI (15% above £5,000) + pension (3% minimum) + overheads.",
-            "Contractor cost = day rate × days worked (no employer NI, pension, holiday pay or sick pay obligations).",
-            "IR35 (off-payroll working rules): if a contractor works inside IR35, PAYE deductions apply and the employer cost structure changes significantly.",
-            "Contractor day rates typically embed a premium for flexibility, lack of benefits and self-employment risk.",
-            "Employment Allowance (up to £10,500) can offset employer NI costs for eligible PAYE employees.",
-        ],
-        "primary_cta": {"label": "Calculate employee total cost", "url": "/calculator"},
-        "secondary_cta": {"label": "What is Employment Allowance?", "url": "/guides/employment-allowance-guide"},
-        "faq_items": [
-            {"q": "Is a contractor cheaper than an employee in the UK?", "a": "On a day-rate basis, a contractor often appears more expensive than an equivalent PAYE salary. However, the employer avoids employer NI (15%), pension contributions, holiday pay (up to 28 days/year), sick pay obligations, and statutory payments. For short-term or specialist work, a contractor can be cost-effective. For long-term, consistent roles, a permanent employee is usually more economical once day-rate premiums are accounted for."},
-            {"q": "What is IR35 and how does it affect contractor costs?", "a": "IR35 (the off-payroll working rules) determines whether a contractor working through a limited company should be treated as an employee for tax purposes. If a contractor is deemed inside IR35, the engaging business must deduct PAYE tax and employee NI, and pay employer NI at 15%, eliminating most of the tax efficiency of contracting. Large and medium businesses have been responsible for assessing IR35 status since April 2021. Small businesses (meeting two of three criteria: fewer than 50 employees, turnover below £10.2m, balance sheet below £5.1m) are exempt and the contractor assesses their own status."},
-            {"q": "What day rate is equivalent to a £50,000 salary?", "a": "A £50,000 salary costs an employer approximately £58,063 per year including NI and minimum pension (before overheads). At 230 working days per year, this equates to approximately £252 per day. A contractor day rate of £252 would therefore represent breakeven before accounting for the employer's overhead savings on holiday pay, sick pay, and employment admin. In practice, contractors command a premium above this breakeven figure."},
-            {"q": "Do employers pay NI on contractor payments?", "a": "Employers do not pay employer NI on payments to genuine self-employed contractors or limited company contractors working outside IR35. If the contractor is deemed inside IR35, the fee-payer (usually the engaging business for medium/large companies) must operate PAYE and pay employer NI at 15% on the deemed employment income."},
-        ],
-    }
-    page = _apply_year_deep(page)
-    sample_calc = calculate_employer_cost(salary=50000, pension_rate=3, overheads=3000, allowance=0)
-    return render_template(
-        "contractor_vs_employee.html",
-        **with_meta(
-            {"page": page, "sample_calc": sample_calc, "faq_items": page["faq_items"], "examples": examples, "tools_block": _TOOLS_BLOCK_DEFAULT},
-            title="Contractor vs Employee Cost UK (2025/26) — Day Rate, NI & Total Comparison",
-            description="Should you hire a contractor or employee? Compare true employer cost at common salary levels. PAYE vs day-rate breakdown with IR35 context. UK 2025/26.",
-            breadcrumbs=[
-                {"name": "Home", "url": f"{SITE_URL}/"},
-                {"name": "Contractor vs employee", "url": f"{SITE_URL}/contractor-vs-employee-cost"},
-            ],
-        ),
-    )
-
-
-@app.route("/cost-of-hiring")
-@app.route("/cost-of-hiring-someone")
-def cost_of_hiring_hub():
-    role_list = [
-        {"slug": "cost-of-hiring-a-software-developer", "title": "Software developer", "range": "£35k–£90k", "example_cost": 64638},
-        {"slug": "cost-of-hiring-an-admin-assistant", "title": "Admin assistant", "range": "£21k–£32k", "example_cost": 29738},
-        {"slug": "cost-of-hiring-a-care-worker", "title": "Care worker", "range": "£22k–£28k", "example_cost": 27381},
-        {"slug": "cost-of-hiring-a-warehouse-operative", "title": "Warehouse operative", "range": "£22k–£32k", "example_cost": 29738},
-        {"slug": "cost-of-hiring-a-receptionist", "title": "Receptionist", "range": "£21k–£30k", "example_cost": 27381},
-        {"slug": "cost-of-hiring-a-sales-executive", "title": "Sales executive", "range": "£25k–£45k base", "example_cost": 36825},
-        {"slug": "cost-of-hiring-a-marketing-executive", "title": "Marketing executive", "range": "£25k–£45k", "example_cost": 36825},
-        {"slug": "cost-of-hiring-a-cleaner", "title": "Cleaner", "range": "NLW–£14/hr", "example_cost": 27155},
-        {"slug": "cost-of-hiring-hospitality-staff", "title": "Hospitality staff", "range": "NLW–£13/hr", "example_cost": 27381},
-        {"slug": "cost-of-hiring-a-teaching-assistant", "title": "Teaching assistant", "range": "£19k–£26k FTE", "example_cost": 25150},
-    ]
-    hours_list = [
-        {"slug": "cost-of-employing-someone-16-hours-a-week", "label": "16 hrs/wk", "nlw_salary": 10158},
-        {"slug": "cost-of-employing-someone-20-hours-a-week", "label": "20 hrs/wk", "nlw_salary": 12698},
-        {"slug": "cost-of-employing-someone-24-hours-a-week", "label": "24 hrs/wk", "nlw_salary": 15237},
-        {"slug": "cost-of-employing-someone-30-hours-a-week", "label": "30 hrs/wk", "nlw_salary": 19046},
-        {"slug": "cost-of-employing-someone-37-5-hours-a-week", "label": "37.5 hrs/wk (full-time)", "nlw_salary": 24785},
-        {"slug": "cost-of-employing-someone-40-hours-a-week", "label": "40 hrs/wk", "nlw_salary": 25397},
-    ]
-    industry_list = [
-        {"slug": "cost-of-employing-hospitality-staff", "title": "Hospitality staff", "range": "NLW–£45k", "badge": "Hospitality"},
-        {"slug": "cost-of-employing-care-workers", "title": "Care workers", "range": "£23,809–£32k", "badge": "Care"},
-        {"slug": "cost-of-employing-retail-staff", "title": "Retail staff", "range": "NLW–£40k", "badge": "Retail"},
-        {"slug": "cost-of-employing-construction-workers", "title": "Construction workers", "range": "£24k–£65k", "badge": "Construction"},
-        {"slug": "cost-of-employing-it-staff", "title": "IT & tech staff", "range": "£30k–£100k+", "badge": "Tech"},
-        {"slug": "cost-of-employing-education-staff", "title": "Education staff", "range": "£19k–£65k", "badge": "Education"},
-        {"slug": "cost-of-employing-healthcare-workers", "title": "Healthcare workers", "range": "£23k–£65k", "badge": "Healthcare"},
-        {"slug": "cost-of-employing-logistics-staff", "title": "Logistics & transport", "range": "£22k–£45k", "badge": "Logistics"},
-    ]
-    scenario_list = [
-        {"slug": "contractor-vs-employee-cost", "title": "Contractor vs employee", "desc": "Day-rate vs PAYE total cost comparison"},
-        {"slug": "full-time-vs-part-time-employee-cost", "title": "Full-time vs part-time", "desc": "NI threshold effect on hours split"},
-        {"slug": "sole-director-employer-ni", "title": "Sole director NI", "desc": "No Employment Allowance — optimal salary"},
-        {"slug": "first-employee-cost-uk", "title": "First employee cost", "desc": "What hiring your first person actually costs"},
-        {"slug": "minimum-wage-employer-cost", "title": "Minimum wage employer cost", "desc": "NLW total cost including NI and pension"},
-    ]
-    return render_template(
-        "cost_of_hiring_hub.html",
-        **with_meta(
-            {"role_list": role_list, "hours_list": hours_list, "industry_list": industry_list, "scenario_list": scenario_list, "tools_block": _TOOLS_BLOCK_DEFAULT},
-            title="Cost of Hiring Someone UK (2025/26) | Employer NI + Pension by Role & Salary",
-            description="How much does it cost to hire someone in the UK? Browse true employer costs by job role (developers, admin, care, hospitality) and hours worked. Salary + NI + pension for 2025/26.",
-            breadcrumbs=[
-                {"name": "Home", "url": f"{SITE_URL}/"},
-                {"name": "Cost of hiring", "url": f"{SITE_URL}/cost-of-hiring"},
-            ],
-        ),
-    )
-
-
-@app.route("/cost/<int:amount>")
-def cost_page(amount: int):
-    if amount not in SALARY_AMOUNTS:
-        abort(404)
-
-    calc = calculate_employer_cost(salary=amount, pension_rate=3, allowance=0, overheads=0)
-    with_allowance = calculate_employer_cost(salary=amount, pension_rate=3, allowance=EMPLOYMENT_ALLOWANCE_2025, overheads=0)
-    diff = change_2025_vs_2024(amount)
-    nearby = salary_neighbours(SALARY_AMOUNTS, amount, window=2)
-
-    faq_items = [
-        {
-            "q": f"How much does employer NI add at £{amount:,}?",
-            "a": f"At £{amount:,}, standard employer NI for 2025/26 is {gbp(calc.employer_ni.gross_ni)} before Employment Allowance.",
-        },
-        {
-            "q": "Does Employment Allowance remove NI completely?",
-            "a": "It can for smaller annual NI bills, but only if your business is eligible and allowance remains available.",
-        },
-        {
-            "q": "Are these numbers monthly or annual?",
-            "a": "The headline is annual, and monthly equivalents are shown throughout to support payroll planning.",
-        },
-    ]
-
-    context = {
-        "salary": amount,
-        "calc": calc,
-        "with_allowance": with_allowance,
-        "year_change": diff,
-        "nearby": nearby,
-        "faq_items": faq_items,
-    }
-
-    ni_meta = gbp(calc.employer_ni.gross_ni)
-    return render_template(
-        "cost_page.html",
-        **with_meta(
-            context,
-            title=f"Cost of Employing Someone on £{amount:,} in 2025/26 | Total Employer Cost {gbp(calc.total_cost)}",
-            description=(
-                f"How much does it cost to employ someone on £{amount:,}? "
-                f"Total employer cost is {gbp(calc.total_cost)} a year ({gbp(calc.total_cost / 12)} a month), "
-                f"including {ni_meta} employer NI and {gbp(calc.pension_contribution)} minimum pension."
-            ),
-            breadcrumbs=[
-                {"name": "Home", "url": f"{SITE_URL}/"},
-                {"name": "Cost of employing", "url": f"{SITE_URL}/cost-of-employing"},
-                {"name": f"£{amount:,}", "url": f"{SITE_URL}/cost/{amount}"},
-            ],
-        ),
-    )
-
-
-@app.route("/employer-ni/<int:amount>")
-def employer_ni_page(amount: int):
-    if amount not in SALARY_AMOUNTS:
-        abort(404)
-
-    ni_current = employer_ni_2025(amount)
-    ni_previous = employer_ni_2024(amount)
-    with_allowance = employer_ni_2025(amount, allowance=EMPLOYMENT_ALLOWANCE_2025)
-    nearby = salary_neighbours(SALARY_AMOUNTS, amount, window=2)
-
-    faq_items = [
-        {
-            "q": f"How much employer NI is due on £{amount:,}?",
-            "a": f"Standard employer NI is {gbp(ni_current.gross_ni)} for 2025/26 before allowance offsets.",
-        },
-        {
-            "q": "How does this compare with 2024/25?",
-            "a": f"The equivalent 2024/25 NI estimate is {gbp(ni_previous['gross_ni'])} before allowance.",
-        },
-    ]
-
-    context = {
-        "salary": amount,
-        "ni_current": ni_current,
-        "ni_previous": ni_previous,
-        "with_allowance": with_allowance,
-        "nearby": nearby,
-        "faq_items": faq_items,
-        "ni_rate": 15,
-        "ni_threshold": SECONDARY_THRESHOLD_2025,
-    }
-
-    return render_template(
-        "employer_ni_page.html",
-        **with_meta(
-            context,
-            title=f"Employer NI on £{amount:,} Salary in 2025/26 | {gbp(ni_current.gross_ni)} per Year",
-            description=f"Employer NI on a £{amount:,} salary is {gbp(ni_current.gross_ni)} a year ({gbp(monthly(ni_current.gross_ni))} a month) for 2025/26. See the NI formula, 2024/25 comparison and related total employer cost.",
-            breadcrumbs=[
-                {"name": "Home", "url": f"{SITE_URL}/"},
-                {"name": "Employer NI by salary", "url": f"{SITE_URL}/employer-ni"},
-                {"name": f"£{amount:,}", "url": f"{SITE_URL}/employer-ni/{amount}"},
-            ],
-        ),
-    )
-
-
-@app.route("/guides")
-def guides_index():
-    context = {"guide_items": GUIDES, "show_cross_links": True}
-    return render_template(
-        "guides_index.html",
-        **with_meta(
-            context,
-            title="UK Employer Guides — NI, Pension, Hiring Costs & Employment Law (2025/26)",
-            description="Practical guides for UK employers: employer NI at 15%, Employment Allowance, auto-enrolment pension, redundancy pay and hiring cost planning for 2025/26.",
-            breadcrumbs=[
-                {"name": "Home", "url": f"{SITE_URL}/"},
-                {"name": "Guides", "url": f"{SITE_URL}/guides"},
-            ],
-        ),
-    )
-
-
-@app.route("/guides/<slug>")
-def guide_page(slug: str):
-    guide = GUIDES.get(slug)
-    if not guide:
-        abort(404)
-    related = [
-        {"slug": s, "title": g["title"]}
-        for s, g in GUIDES.items()
-        if s != slug
-    ][:3]
-    _payroll_guides = {"employer-on-costs-explained", "hiring-costs-edinburgh", "hiring-costs-cardiff", "hiring-costs-leeds", "hiring-costs-manchester", "hiring-costs-birmingham", "hiring-costs-london", "hiring-costs-liverpool", "hiring-costs-bristol", "hiring-costs-newcastle", "hiring-costs-sheffield", "hiring-costs-nottingham", "first-employee-cost", "part-time-employee-cost"}
-    context = {
-        "guide": guide,
-        "slug": slug,
-        "related_guides": related,
-        "faq_items": guide.get("faq") or default_faq(),
-        "show_cross_links": True,
-        "tools_block": _TOOLS_BLOCK_DEFAULT if slug in _payroll_guides else None,
-        "payroll_software_link": True,
-    }
-    return render_template(
-        "guide_page.html",
-        **with_meta(
-            context,
-            title=f"{guide['title']} | EmployerCalculator.co.uk",
-            description=guide["description"],
-            breadcrumbs=[
-                {"name": "Home", "url": f"{SITE_URL}/"},
-                {"name": "Guides", "url": f"{SITE_URL}/guides"},
-                {"name": guide["title"], "url": f"{SITE_URL}/guides/{slug}"},
-            ],
-        ),
+        title="UK Benefits Calculator 2026 | Working Families, Universal Credit & Entitlement Check",
+        description="Free UK benefits calculator 2026. Working families, single parents and pensioners: estimate Universal Credit, Child Benefit, Pension Credit, PIP, housing and childcare support using the latest 2026/27 rates.",
+        canonical_path="/",
+        breadcrumbs_data=[],
+        home_calc_page=home_calc_page,
+        home_form_state=home_form_state,
+        home_estimate=home_estimate,
+        home_estimate_visual=build_estimate_visual(home_estimate),
+        featured_calculators=featured,
+        all_calculators=[CALCULATORS[slug] for slug in CALCULATOR_ORDER],
+        guide_cards=guide_cards,
+        scenario_guides=scenario_guides,
+        situation_guides=situation_guides,
+        topic_hubs=[TOPIC_HUBS[slug] for slug in ["universal-credit", "family-support", "rent-and-council-tax", "disability-support", "pension-age-support"] if slug in TOPIC_HUBS],
+        scenario_pages=[SCENARIO_PAGES[slug] for slug in ["what-happens-if-my-savings-increase", "what-happens-if-i-work-more-hours", "what-happens-if-my-partner-moves-in", "what-happens-if-my-rent-increases"] if slug in SCENARIO_PAGES],
+        situation_pages=[SITUATION_PAGES[slug] for slug in ["benefits-for-working-families", "benefits-for-single-parents", "benefits-for-renters", "benefits-for-pensioners", "benefits-if-you-cannot-work", "benefits-in-northern-ireland"] if slug in SITUATION_PAGES],
+        home_sources=page_sources("universal-credit-calculator"),
     )
 
 
 @app.route("/calculators")
 def calculators_index():
-    context = {"tools": TOOL_CARDS}
-    return render_template(
+    return render_page(
         "calculators_index.html",
-        **with_meta(
-            context,
-            title="UK Employer Calculators — NI, Payroll & HR Planning Tools (2025/26)",
-            description="Free UK employer calculators for 2025/26. Employer NI at 15%, total cost of hiring, pension contributions, redundancy pay, holiday entitlement and more.",
-            breadcrumbs=[
-                {"name": "Home", "url": f"{SITE_URL}/"},
-                {"name": "Calculators", "url": f"{SITE_URL}/calculators"},
-            ],
-        ),
+        title="UK benefits calculators and eligibility checkers",
+        description="Browse calculators and checkers for Universal Credit, Child Benefit, HICBC, Pension Credit, PIP, council tax help, childcare support and seasonal payments.",
+        canonical_path="/calculators",
+        breadcrumbs_data=breadcrumbs({"name": "Calculators", "url": f"{SITE_URL}/calculators"}),
+        tools=[CALCULATORS[slug] for slug in CALCULATOR_ORDER],
+        topic_hubs=[TOPIC_HUBS[slug] for slug in ["universal-credit", "family-support", "rent-and-council-tax", "disability-support", "pension-age-support"] if slug in TOPIC_HUBS],
+        scenario_pages=[SCENARIO_PAGES[slug] for slug in ["what-happens-if-my-savings-increase", "what-happens-if-i-work-more-hours", "what-happens-if-my-partner-moves-in", "what-happens-if-my-rent-increases"] if slug in SCENARIO_PAGES],
     )
 
 
-@app.route("/employer-ni")
-def employer_ni_index():
-    context = {
-        "amounts": SALARY_AMOUNTS,
-        "faq_items": [
-            {
-                "q": "How is employer NI calculated in 2025/26?",
-                "a": "Employer NI is 15% of the employee's earnings above the secondary threshold of £5,000 per year. Multiply (gross salary minus £5,000) by 0.15 to get the annual liability. For example: £40,000 salary — £5,000 threshold = £35,000 × 15% = £5,250 employer NI per year, or £437.50 per month.",
-            },
-            {
-                "q": "What was employer NI before April 2025?",
-                "a": "Before 6 April 2025, employer NI was 13.8% on earnings above the £9,100 secondary threshold. The April 2025 Budget changes raised the rate to 15% and cut the threshold to £5,000 — a dual impact that increased employer NI at virtually every salary level, particularly for lower-paid employees where the threshold reduction is proportionally larger.",
-            },
-            {
-                "q": "Is there an upper limit on employer NI?",
-                "a": "No. Unlike employee NI, which drops to 2% above £50,270, employer NI is charged at a flat 15% on all earnings above the £5,000 threshold with no cap. Reduced rates (0%) apply for employees under 21 and apprentices under 25, up to the upper secondary threshold of £50,270.",
-            },
-            {
-                "q": "Can Employment Allowance reduce my employer NI bill?",
-                "a": "Yes. Eligible employers can offset up to £10,500 of their annual employer NI liability through Employment Allowance in 2025/26. For small businesses with total employer NI below £10,500, this can eliminate the entire bill. The allowance is claimed via payroll software and applies against your cumulative employer NI payments during the tax year.",
-            },
-            {
-                "q": "Is this page an NI rise calculator?",
-                "a": "Yes. This employer NI calculator doubles as an NI rise calculator by showing 2025/26 NI outcomes against 2024/25 assumptions. The key policy shift is a rate increase to 15% and a lower secondary threshold (£5,000), which increases NI due at most salary levels.",
-            },
-            {
-                "q": "Where can I check total cost, not just NI?",
-                "a": "Use the full calculator at /calculator to include pension and overheads, or use /cost-of-employing for salary-by-salary total employer cost pages. Those pages combine salary, employer NI and minimum pension in one annual and monthly view.",
-            },
-            {
-                "q": "How do I calculate employer NI on a salary?",
-                "a": "The formula is: (gross salary − £5,000) × 15%. Examples: £25,000 salary → £3,000/yr. £35,000 → £4,500/yr. £50,000 → £6,750/yr. £75,000 → £10,500/yr. £100,000 → £14,250/yr. There is no upper earnings cap on employer NI.",
-            },
-            {
-                "q": "What is the employer NI threshold in 2025/26?",
-                "a": "The secondary threshold (the point above which employer NI is charged) is £5,000 per year in 2025/26, equivalent to £96.15 per week. This was cut from £9,100 in April 2025. Employer NI applies at 15% on all earnings above this threshold.",
-            },
-            {
-                "q": "How much is employers NI per month?",
-                "a": "Divide the annual employer NI by 12. At £30,000 salary: £3,750/yr ÷ 12 = £312.50/month. At £40,000: £5,250/yr ÷ 12 = £437.50/month. At £60,000: £8,250/yr ÷ 12 = £687.50/month. Select any salary from the table above for the exact monthly figure.",
-            },
-            {
-                "q": "Do employers pay NI on all of the salary or just above the threshold?",
-                "a": "Only on earnings above the £5,000 threshold. The first £5,000 is exempt. So on a £30,000 salary, NI is applied to £25,000 × 15% = £3,750. The threshold reduces the bill for every employee, but it is much lower in 2025/26 than it was pre-April 2025 (previously £9,100).",
-            },
-        ],
-    }
-    return render_template(
-        "employer_ni_index.html",
-        **with_meta(
-            context,
-            title="Employer NI Calculator UK 2025/26 | Employer National Insurance by Salary",
-            description="Employer NI calculator UK for 2025/26. Check employer National Insurance by salary, monthly NI, 2024/25 comparison and links to full employer cost pages.",
-            breadcrumbs=[
-                {"name": "Home", "url": f"{SITE_URL}/"},
-                {"name": "Employer NI by salary", "url": f"{SITE_URL}/employer-ni"},
-            ],
-        ),
+@app.route("/guides")
+def guides_index():
+    return render_page(
+        "guides_index.html",
+        title="UK benefits guides",
+        description="Plain-English guides covering Universal Credit, PIP, Pension Credit, family support, rent help and how UK benefit calculations work.",
+        canonical_path="/guides",
+        breadcrumbs_data=breadcrumbs({"name": "Guides", "url": f"{SITE_URL}/guides"}),
+        guide_items=GUIDES,
+        topic_hubs=[TOPIC_HUBS[slug] for slug in ["universal-credit", "family-support", "rent-and-council-tax", "disability-support", "pension-age-support"] if slug in TOPIC_HUBS],
+        situation_pages=[SITUATION_PAGES[slug] for slug in ["benefits-for-working-families", "benefits-for-single-parents", "benefits-for-renters", "benefits-for-pensioners", "benefits-if-you-cannot-work", "benefits-in-northern-ireland"] if slug in SITUATION_PAGES],
+        scenario_pages=[SCENARIO_PAGES[slug] for slug in ["what-happens-if-my-savings-increase", "what-happens-if-i-work-more-hours", "what-happens-if-my-partner-moves-in", "what-happens-if-my-rent-increases"] if slug in SCENARIO_PAGES],
     )
 
 
-@app.route("/cost-of-employing")
-@app.route("/cost-of-employing-someone")
-def cost_index():
-    context = {
-        "amounts": SALARY_AMOUNTS,
-        "faq_items": [
-            {
-                "q": "What is the true cost of employing someone in the UK?",
-                "a": "The true employer cost is salary plus employer National Insurance (15% above £5,000 for 2025/26) plus employer pension (minimum 3% of qualifying earnings) plus any overhead costs such as equipment, software or workspace. For a £35,000 salary with standard pension and no overheads, total employer cost is approximately £39,500 — about 13% above the headline salary.",
-            },
-            {
-                "q": "How does employer cost change above £50,270?",
-                "a": "Employer NI continues at 15% above the threshold with no upper cap — unlike employee NI which drops to 2% above £50,270. Pension qualifying earnings are capped at £50,270, so employer pension contributions stop increasing above that level. This means employer NI becomes a larger portion of total cost for higher salaries.",
-            },
-            {
-                "q": "What is auto-enrolment and what does it cost employers?",
-                "a": "Auto-enrolment requires employers to enrol eligible workers into a workplace pension and make contributions. The minimum employer contribution is 3% of qualifying earnings between £6,240 and £50,270 per year. For a £35,000 salary, qualifying earnings are £28,760 and minimum employer pension is £862.80 per year. Employers can pay more, but 3% is the statutory minimum.",
-            },
-            {
-                "q": "Do these costs include recruitment and training?",
-                "a": "These pages show the recurring employer cost — salary, NI, pension — not one-off hiring costs. Recruitment fees, onboarding, training, and equipment are additional. Use the full employer cost calculator at /calculator to add an overhead figure that captures your organisation-specific costs per head.",
-            },
-            {
-                "q": "Can I use this as a hiring budget calculator?",
-                "a": "Yes. These pages are designed as a practical hiring budget baseline: salary + employer NI + minimum pension. For role approval workflows, start with these baseline figures and then add your internal overhead assumptions in the full calculator.",
-            },
-            {
-                "q": "Why did employer cost jump in 2025/26?",
-                "a": "The jump comes from the April 2025 NI policy change: rate up from 13.8% to 15% and threshold down from £9,100 to £5,000. This raises recurring payroll cost even before discretionary benefits or one-off hiring spend.",
-            },
-        ],
-    }
-    return render_template(
-        "cost_index.html",
-        **with_meta(
-            context,
-            title="Cost of Employing Someone UK 2025/26 | Employer Cost by Salary",
-            description="Cost of employing someone in the UK by salary. Browse employer cost pages with employer NI, pension and monthly totals, then open the full employer cost calculator for any salary.",
-            breadcrumbs=[
-                {"name": "Home", "url": f"{SITE_URL}/"},
-                {"name": "Cost of employing", "url": f"{SITE_URL}/cost-of-employing"},
-            ],
-        ),
-    )
-
-
-@app.route("/contact")
-def contact_page():
-    context = {
-        "title_override": "Contact",
-        "lead": "Contact EmployerCalculator Editorial for corrections, source updates or general queries.",
-        "content": [
-            "Email: hello@employercalculator.co.uk",
-            "We aim to respond within two business days.",
-            "Please include the page URL and a concise description if reporting an issue.",
-        ],
-    }
-    return render_template(
-        "contact.html",
-        **with_meta(
-            context,
-            title="Contact EmployerCalculator.co.uk — Corrections & Feedback",
-            description="Contact the EmployerCalculator.co.uk editorial team for corrections, data-quality feedback or queries about UK employer cost and payroll content.",
-            breadcrumbs=[
-                {"name": "Home", "url": f"{SITE_URL}/"},
-                {"name": "Contact", "url": f"{SITE_URL}/contact"},
-            ],
-        ),
-    )
-
-
-@app.route("/methodology")
-@app.route("/sources")
-@app.route("/privacy")
-@app.route("/terms")
-def static_pages():
-    slug = request.path.strip("/")
-    page = STATIC_PAGES.get(slug)
+@app.route("/situations/<slug>")
+def situation_page(slug: str):
+    page = SITUATION_PAGES.get(slug)
     if not page:
         abort(404)
-    context = {"page": page, "slug": slug}
-    return render_template(
-        "static_page.html",
-        **with_meta(
-            context,
-            title=f"{page['title']} | EmployerCalculator.co.uk",
+    calcs = [CALCULATORS[s] for s in page["related_calculators"] if s in CALCULATORS]
+    guides = []
+    for g_slug in page.get("related_guides", []):
+        if g_slug in GUIDES:
+            item = dict(GUIDES[g_slug])
+            item["slug"] = g_slug
+            guides.append(item)
+    return render_page(
+        "situation_page.html",
+        title=f"{page['title']} | UK Benefits Calculator",
+        description=page["description"],
+        canonical_path=f"/situations/{slug}",
+        breadcrumbs_data=breadcrumbs({"name": "Situations", "url": f"{SITE_URL}/situations"}, {"name": page["title"], "url": f"{SITE_URL}/situations/{slug}"}),
+        page=page,
+        related_calculators=calcs,
+        related_guides=guides,
+    )
+
+
+@app.route("/what-if/<slug>")
+def scenario_page(slug: str):
+    page = SCENARIO_PAGES.get(slug)
+    if not page:
+        abort(404)
+    calcs = [CALCULATORS[s] for s in page["related_calculators"] if s in CALCULATORS]
+    guides = []
+    for g_slug in page.get("related_guides", []):
+        if g_slug in GUIDES:
+            item = dict(GUIDES[g_slug])
+            item["slug"] = g_slug
+            guides.append(item)
+    return render_page(
+        "scenario_page.html",
+        title=f"{page['title']} | UK Benefits Calculator",
+        description=page["description"],
+        canonical_path=f"/what-if/{slug}",
+        breadcrumbs_data=breadcrumbs({"name": "What if", "url": f"{SITE_URL}/what-if"}, {"name": page["title"], "url": f"{SITE_URL}/what-if/{slug}"}),
+        page=page,
+        related_calculators=calcs,
+        related_guides=guides,
+    )
+
+
+@app.route("/hub/<slug>")
+def hub_page(slug: str):
+    page = TOPIC_HUBS.get(slug)
+    if not page:
+        abort(404)
+    calcs = [CALCULATORS[s] for s in page["related_calculators"] if s in CALCULATORS]
+    guides = []
+    for g_slug in page.get("related_guides", []):
+        if g_slug in GUIDES:
+            item = dict(GUIDES[g_slug])
+            item["slug"] = g_slug
+            guides.append(item)
+    situations = [SITUATION_PAGES[s] for s in page.get("related_situations", []) if s in SITUATION_PAGES]
+    scenarios = [SCENARIO_PAGES[s] for s in page.get("related_scenarios", []) if s in SCENARIO_PAGES]
+    return render_page(
+        "hub_page.html",
+        title=f"{page['title']} | UK Benefits Calculator",
+        description=page["description"],
+        canonical_path=f"/hub/{slug}",
+        breadcrumbs_data=breadcrumbs({"name": "Hubs", "url": f"{SITE_URL}/hub"}, {"name": page["title"], "url": f"{SITE_URL}/hub/{slug}"}),
+        page=page,
+        related_calculators=calcs,
+        related_guides=guides,
+        related_situations=situations,
+        related_scenarios=scenarios,
+    )
+
+
+@app.route("/guides/<slug>")
+def guide_page(slug: str):
+    if slug == "pension-credit-who-can-claim":
+        return redirect("/guides/pension-credit-explained", code=301)
+    guide = GUIDES.get(slug)
+    if not guide:
+        abort(404)
+    related_calc = related_calculators(guide.get("related", []))
+    related_guides = []
+    seen_related = set()
+    for related_slug in guide.get("related_guides", []):
+        if related_slug in GUIDES and related_slug != slug and related_slug not in seen_related:
+            copy = dict(GUIDES[related_slug])
+            copy["slug"] = related_slug
+            related_guides.append(copy)
+            seen_related.add(related_slug)
+    for other_slug, item in GUIDES.items():
+        if other_slug != slug and other_slug not in seen_related:
+            copy = dict(item)
+            copy["slug"] = other_slug
+            related_guides.append(copy)
+            seen_related.add(other_slug)
+    return render_page(
+        "guide_page.html",
+        title=f"{guide['title']} | UK Benefits Calculator",
+        description=guide["description"],
+        canonical_path=f"/guides/{slug}",
+        breadcrumbs_data=breadcrumbs({"name": "Guides", "url": f"{SITE_URL}/guides"}, {"name": guide["title"], "url": f"{SITE_URL}/guides/{slug}"}),
+        guide=guide,
+        slug=slug,
+        faq_items=guide.get("faq", []),
+        related_guides=related_guides[:6],
+        related_calculators=related_calc,
+        page_sources=page_sources(slug),
+        next_steps=next_steps_for_slug(slug),
+    )
+
+
+@app.route("/<slug>")
+def calculator_or_static(slug: str):
+    if slug in CALCULATORS:
+        page = CALCULATORS[slug]
+        inputs = parse_inputs(page)
+        estimate = CALCULATION_FUNCTIONS[page["formula"]](inputs)
+        ordered_fields = ordered_fields_for_page(slug, page)
+        ui_config = calculator_ui_config(slug, page)
+        return render_page(
+            "calculator.html",
+            title=f"{page['title']} | UK Benefits Calculator",
             description=page["description"],
-            breadcrumbs=[
-                {"name": "Home", "url": f"{SITE_URL}/"},
-                {"name": page["title"], "url": f"{SITE_URL}/{slug}"},
-            ],
-        ),
-    )
-
-
-@app.route("/about")
-def about_page():
-    return render_template(
-        "about.html",
-        **with_meta(
-            {},
-            title="About EmployerCalculator.co.uk — UK Employer Cost Resource",
-            description="EmployerCalculator.co.uk is a UK employer cost and payroll reference maintained by a small editorial team. See how employer NI, pension costs and total hiring cost estimates are researched and kept current.",
-            breadcrumbs=[
-                {"name": "Home", "url": f"{SITE_URL}/"},
-                {"name": "About", "url": f"{SITE_URL}/about"},
-            ],
-        ),
-    )
-
-
-@app.route("/editorial-standards")
-def editorial_standards_page():
-    return render_template(
-        "editorial_standards.html",
-        **with_meta(
-            {},
-            title="Editorial Standards — EmployerCalculator.co.uk",
-            description="Editorial and quality standards used for UK employer cost, payroll and NI content on EmployerCalculator.co.uk. How we research, review and update our content.",
-            breadcrumbs=[
-                {"name": "Home", "url": f"{SITE_URL}/"},
-                {"name": "Editorial Standards", "url": f"{SITE_URL}/editorial-standards"},
-            ],
-        ),
-    )
+            canonical_path=f"/{slug}",
+            breadcrumbs_data=breadcrumbs({"name": "Calculators", "url": f"{SITE_URL}/calculators"}, {"name": page["title"], "url": f"{SITE_URL}/{slug}"}),
+            page=page,
+            faq_items=page["faq"],
+            form_state=inputs,
+            estimate=estimate,
+            estimate_visual=build_estimate_visual(estimate),
+            ordered_fields=ordered_fields,
+            ui_config=ui_config,
+            result_highlights=calculator_result_highlights(slug, page, estimate, inputs),
+            related_calculators=related_calculators(page["related"]),
+            related_guides=related_guides_for_calculator(slug),
+            page_sources=page_sources(slug),
+            next_steps=next_steps_for_slug(slug),
+        )
+    if slug in CALCULATOR_ALIASES:
+        return redirect(url_for("calculator_or_static", slug=CALCULATOR_ALIASES[slug]), code=301)
+    if slug in STATIC_ROUTES:
+        page = STATIC_PAGES[slug]
+        return render_page(
+            "static_page.html",
+            title=f"{page['title']} | UK Benefits Calculator",
+            description=page["content"][0],
+            canonical_path=f"/{slug}",
+            breadcrumbs_data=breadcrumbs({"name": page["title"], "url": f"{SITE_URL}/{slug}"}),
+            page=page,
+        )
+    if slug in GUIDES:
+        return redirect(f"/guides/{slug}", code=301)
+    if slug in {"benefits-calculator", "benefits-calculator-uk"}:
+        return redirect("/", code=301)
+    abort(404)
 
 
 @app.route("/html-sitemap")
 @app.route("/sitemap")
 @app.route("/sitemap.html")
 def html_sitemap():
-    context = {}
-    return render_template(
+    return render_page(
         "html_sitemap.html",
-        **with_meta(
-            context,
-            title="HTML sitemap",
-            description="HTML sitemap for EmployerCalculator.co.uk.",
-            breadcrumbs=[
-                {"name": "Home", "url": f"{SITE_URL}/"},
-                {"name": "HTML sitemap", "url": f"{SITE_URL}/html-sitemap"},
-            ],
-        ),
+        title="HTML sitemap | UK Benefits Calculator",
+        description="HTML sitemap for UK Benefits Calculator.",
+        canonical_path="/html-sitemap",
+        breadcrumbs_data=breadcrumbs({"name": "HTML sitemap", "url": f"{SITE_URL}/html-sitemap"}),
+        calculators=[CALCULATORS[slug] for slug in CALCULATOR_ORDER],
+        guides=GUIDES,
+        static_pages=STATIC_PAGES,
+        situation_pages=SITUATION_PAGES,
+        scenario_pages=SCENARIO_PAGES,
+        topic_hubs=TOPIC_HUBS,
     )
 
 
 @app.route("/trap")
 def honeypot_trap():
-    """Hidden honeypot — any visitor is a bot. Block their IP instantly."""
     ip_str = _get_real_ip()
     if ip_str:
         _HONEYPOT_BLOCKED.add(ip_str)
@@ -3192,1101 +3486,135 @@ def robots():
     body = (
         "User-agent: *\n"
         "Allow: /\n"
-        "Disallow: /trap\n"
-        "Disallow: /*?salary=\n"
-        "Disallow: /*?pension=\n"
-        "Allow: /calculator\n"
-        "Allow: /employer-total-cost-calculator\n"
-        "Allow: /employer-cost-calculator-uk\n"
-        "Allow: /total-cost-to-employer-calculator-uk\n"
-        "Allow: /auto-enrolment-payroll-costs\n"
-        "Allow: /favicon.ico\n"
-        "Allow: /favicon-32x32.png\n"
-        "Allow: /favicon-16x16.png\n"
-        "Allow: /apple-touch-icon.png\n"
-        "Allow: /site.webmanifest\n"
-        "Allow: /static/\n"
-        "\n"
-        "User-agent: Bytespider\n"
-        "Disallow: /\n"
-        "\n"
-        "User-agent: CCBot\n"
-        "Disallow: /\n"
-        "\n"
-        "User-agent: PetalBot\n"
-        "Disallow: /\n"
-        "\n"
-        "User-agent: DataForSeoBot\n"
-        "Disallow: /\n"
-        "\n"
+        "Allow: /universal-credit-calculator\n"
+        "Allow: /child-benefit-calculator\n"
+        "Allow: /guides/what-benefits-can-i-claim\n"
         f"Sitemap: {SITE_URL}/sitemap.xml\n"
     )
-    response = make_response(body)
-    response.headers["Content-Type"] = "text/plain; charset=utf-8"
-    return response
+    resp = make_response(body)
+    resp.mimetype = "text/plain"
+    return resp
 
 
 @app.route("/ads.txt")
 def ads_txt():
-    client = ADSENSE_CLIENT.replace("ca-", "").strip()
-    body = f"google.com, {client}, DIRECT, f08c47fec0942fa0\n"
+    pub_id = ADSENSE_CLIENT.replace("ca-pub-", "").strip()
+    body = f"google.com, pub-{pub_id}, DIRECT, f08c47fec0942fa0\n" if pub_id else ""
     resp = make_response(body)
-    resp.headers["Content-Type"] = "text/plain"
+    resp.mimetype = "text/plain"
     return resp
 
 
 @app.route("/favicon.ico")
 def favicon():
-    return send_from_directory(app.static_folder, "favicon.ico", mimetype="image/vnd.microsoft.icon")
+    return send_from_directory("static", "favicon.ico")
+
 
 @app.route("/site.webmanifest")
 def site_webmanifest():
-    return send_from_directory(app.static_folder, "site.webmanifest", mimetype="application/manifest+json")
+    return send_from_directory("static", "site.webmanifest")
+
 
 @app.route("/apple-touch-icon.png")
 def apple_touch_icon():
-    return send_from_directory(app.static_folder, "apple-touch-icon.png", mimetype="image/png")
+    return send_from_directory("static", "apple-touch-icon.png")
+
 
 @app.route("/favicon-32x32.png")
 def favicon_32():
-    return send_from_directory(app.static_folder, "favicon-32x32.png", mimetype="image/png")
+    return send_from_directory("static", "favicon-32x32.png")
+
 
 @app.route("/favicon-16x16.png")
 def favicon_16():
-    return send_from_directory(app.static_folder, "favicon-16x16.png", mimetype="image/png")
+    return send_from_directory("static", "favicon-16x16.png")
 
 
 @app.route("/llms.txt")
 def llms_txt():
-    body = f"""# EmployerCalculator.co.uk
-
-> Free UK employer cost calculator covering employer National Insurance, pension contributions, and total hiring costs for the 2025/26 tax year.
-
-EmployerCalculator.co.uk is an independent tool that helps UK employers, HR teams, and finance professionals calculate the true cost of employing someone. It uses current HMRC-published rates and thresholds.
-
-## What we calculate
-
-- Employer Class 1 National Insurance at 15% above the £5,000 secondary threshold (from 6 April 2025)
-- Employer pension contributions under auto-enrolment (3% minimum on qualifying earnings)
-- Total annual and monthly employer cost per employee
-- Cost increase from 2024/25 to 2025/26 rates
-- Employment Allowance offset modelling (£10,500 relief in 2025/26, no £100,000 NI bill cap)
-
-## Key 2025/26 figures
-
-- Employer NI rate: 15% (up from 13.8% in 2024/25)
-- Secondary threshold: £5,000 per year (down from £9,100)
-- Employment Allowance: £10,500 (up from £5,000; eligibility cap removed)
-- Minimum employer pension: 3% of qualifying earnings
-- Upper secondary threshold (under-21, apprentices): £50,270
-
-## Coverage
-
-- 48 salary reference points from £18,000 to £200,000
-- England, Wales, Scotland and Northern Ireland employer costs
-- Guides on employer NI, hiring costs, Employment Allowance, and pensions
-- Methodology and editorial standards published at {SITE_URL}/methodology
-
-## Pages
-
-- Calculator: {SITE_URL}/calculator
-- Cost of employing hub: {SITE_URL}/cost-of-employing
-- Employer NI hub: {SITE_URL}/employer-ni
-- Employer total cost calculator: {SITE_URL}/employer-total-cost-calculator
-- Employer cost calculator UK: {SITE_URL}/employer-cost-calculator-uk
-- Total cost to employer calculator UK: {SITE_URL}/total-cost-to-employer-calculator-uk
-- Auto-enrolment payroll costs: {SITE_URL}/auto-enrolment-payroll-costs
-- NI change calculator: {SITE_URL}/ni-change-calculator
-- Employer NI calculator 2025/26: {SITE_URL}/employer-ni-calculator-2025-26
-- Guides index: {SITE_URL}/guides
-- Methodology: {SITE_URL}/methodology
-- Sources: {SITE_URL}/sources
-- Editorial standards: {SITE_URL}/editorial-standards
-
-## Data sources
-
-- HMRC — Rates and thresholds for employers 2025 to 2026: https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2025-to-2026
-- HMRC — National Insurance rates and categories: https://www.gov.uk/national-insurance-rates-letters
-- The Pensions Regulator — Automatic enrolment contributions: https://www.thepensionsregulator.gov.uk/en/employers/automatic-enrolment-guide-for-employers/contributions
-- GOV.UK — Employment Allowance: https://www.gov.uk/claim-employment-allowance
-
-## How to cite
-
-Name: EmployerCalculator.co.uk
-URL: {SITE_URL}/
-Calculator: {SITE_URL}/calculator
-Contact: {SITE_URL}/contact
-
-## Licensing
-
-Factual HMRC data is Crown copyright and open government licensed. Calculator outputs and editorial content are copyright EmployerCalculator.co.uk. Content may be cited with attribution. See {SITE_URL}/terms for usage terms.
-"""
-    response = make_response(body)
-    response.headers["Content-Type"] = "text/plain; charset=utf-8"
-    return response
+    lines = [
+        "UK Benefits Calculator",
+        "",
+        f"Home: {SITE_URL}/",
+        f"Calculators: {SITE_URL}/calculators",
+        f"Guides: {SITE_URL}/guides",
+        "",
+        "Popular calculators:",
+        f"- Universal Credit calculator: {SITE_URL}/universal-credit-calculator",
+        f"- Child Benefit calculator: {SITE_URL}/child-benefit-calculator",
+        f"- Pension Credit calculator: {SITE_URL}/pension-credit-calculator",
+        f"- PIP eligibility checker: {SITE_URL}/pip-eligibility-checker",
+        f"- Council Tax Reduction estimator: {SITE_URL}/council-tax-reduction-calculator",
+    ]
+    resp = make_response("\n".join(lines))
+    resp.mimetype = "text/plain"
+    return resp
 
 
 @app.route("/sitemap.xml")
 def sitemap_xml():
-    # (url, priority, changefreq)
-    url_entries = [
-        (f"{SITE_URL}/", "1.0", "daily"),
-        (f"{SITE_URL}/calculator", "0.9", "weekly"),
-        (f"{SITE_URL}/employer-total-cost-calculator", "0.8", "weekly"),
-        (f"{SITE_URL}/employer-cost-calculator-uk", "0.8", "weekly"),
-        (f"{SITE_URL}/total-cost-to-employer-calculator-uk", "0.8", "weekly"),
-        (f"{SITE_URL}/auto-enrolment-payroll-costs", "0.8", "weekly"),
-        (f"{SITE_URL}/ni-change-calculator", "0.8", "weekly"),
-        (f"{SITE_URL}/employer-ni-calculator-2025-26", "0.8", "weekly"),
-        (f"{SITE_URL}/employer-national-insurance-calculator", "0.8", "weekly"),
-        (f"{SITE_URL}/employer-costs-uk", "0.8", "weekly"),
-        (f"{SITE_URL}/how-much-do-i-cost-my-employer", "0.8", "weekly"),
-        (f"{SITE_URL}/paye-cost-to-employer-calculator", "0.8", "weekly"),
-        (f"{SITE_URL}/salary-calculator-for-employers", "0.8", "weekly"),
-        (f"{SITE_URL}/employee-cost-calculator-uk", "0.8", "weekly"),
-        (f"{SITE_URL}/cost-of-employing", "0.8", "weekly"),
-        (f"{SITE_URL}/employer-ni", "0.8", "weekly"),
-        (f"{SITE_URL}/guides", "0.8", "weekly"),
-        (f"{SITE_URL}/payroll-software-uk", "0.8", "monthly"),
-        (f"{SITE_URL}/calculators", "0.7", "weekly"),
-        (f"{SITE_URL}/methodology", "0.6", "monthly"),
-        (f"{SITE_URL}/editorial-standards", "0.6", "monthly"),
-        (f"{SITE_URL}/sources", "0.6", "monthly"),
-        (f"{SITE_URL}/about", "0.5", "monthly"),
-        (f"{SITE_URL}/contact", "0.5", "monthly"),
-        (f"{SITE_URL}/holiday-entitlement", "0.8", "monthly"),
-        (f"{SITE_URL}/redundancy-pay", "0.8", "monthly"),
-        (f"{SITE_URL}/maternity-pay", "0.8", "monthly"),
-        (f"{SITE_URL}/notice-period", "0.8", "monthly"),
-        (f"{SITE_URL}/settlement-agreement", "0.7", "monthly"),
-        (f"{SITE_URL}/pro-rata-salary", "0.8", "monthly"),
-        (f"{SITE_URL}/sick-pay", "0.8", "monthly"),
-        (f"{SITE_URL}/pension-cost", "0.8", "monthly"),
-        (f"{SITE_URL}/bradford-factor", "0.7", "monthly"),
-        (f"{SITE_URL}/unfair-dismissal", "0.7", "monthly"),
-        (f"{SITE_URL}/html-sitemap", "0.3", "monthly"),
-        (f"{SITE_URL}/privacy", "0.3", "yearly"),
-        (f"{SITE_URL}/terms", "0.3", "yearly"),
-        (f"{SITE_URL}/uk-average-salary", "0.8", "monthly"),
-        (f"{SITE_URL}/employer-ni-historical-rates", "0.8", "monthly"),
-        (f"{SITE_URL}/true-cost-of-employee-calculator-uk", "0.8", "monthly"),
-        (f"{SITE_URL}/employer-salary-cost-calculator-uk", "0.8", "weekly"),
-        (f"{SITE_URL}/first-employee-cost-uk", "0.8", "monthly"),
-        (f"{SITE_URL}/part-time-employee-cost", "0.8", "monthly"),
-        (f"{SITE_URL}/minimum-wage-employer-cost", "0.8", "monthly"),
-        (f"{SITE_URL}/employer-cost-per-employee", "0.8", "monthly"),
-        # Hours-based scenario pages
-        (f"{SITE_URL}/cost-of-employing-someone-16-hours-a-week", "0.8", "monthly"),
-        (f"{SITE_URL}/cost-of-employing-someone-20-hours-a-week", "0.8", "monthly"),
-        (f"{SITE_URL}/cost-of-employing-someone-24-hours-a-week", "0.8", "monthly"),
-        (f"{SITE_URL}/cost-of-employing-someone-25-hours-a-week", "0.8", "monthly"),
-        (f"{SITE_URL}/cost-of-employing-someone-30-hours-a-week", "0.8", "monthly"),
-        (f"{SITE_URL}/cost-of-employing-someone-37-5-hours-a-week", "0.8", "monthly"),
-        (f"{SITE_URL}/cost-of-employing-someone-40-hours-a-week", "0.8", "monthly"),
-        # Hourly rate pages
-        (f"{SITE_URL}/employer-cost-at-10-pounds-per-hour", "0.8", "monthly"),
-        (f"{SITE_URL}/employer-cost-at-11-pounds-per-hour", "0.8", "monthly"),
-        (f"{SITE_URL}/employer-cost-at-minimum-wage-per-hour", "0.8", "monthly"),
-        (f"{SITE_URL}/employer-cost-at-13-pounds-per-hour", "0.8", "monthly"),
-        (f"{SITE_URL}/employer-cost-at-14-pounds-per-hour", "0.8", "monthly"),
-        (f"{SITE_URL}/employer-cost-at-15-pounds-per-hour", "0.8", "monthly"),
-        (f"{SITE_URL}/employer-cost-at-20-pounds-per-hour", "0.8", "monthly"),
-        (f"{SITE_URL}/employer-cost-at-25-pounds-per-hour", "0.8", "monthly"),
-        (f"{SITE_URL}/employer-cost-at-30-pounds-per-hour", "0.8", "monthly"),
-        # Role pages
-        (f"{SITE_URL}/cost-of-hiring-a-software-developer", "0.8", "monthly"),
-        (f"{SITE_URL}/cost-of-hiring-an-admin-assistant", "0.8", "monthly"),
-        (f"{SITE_URL}/cost-of-hiring-a-care-worker", "0.8", "monthly"),
-        (f"{SITE_URL}/cost-of-hiring-a-warehouse-operative", "0.8", "monthly"),
-        (f"{SITE_URL}/cost-of-hiring-a-receptionist", "0.8", "monthly"),
-        (f"{SITE_URL}/cost-of-hiring-a-sales-executive", "0.8", "monthly"),
-        (f"{SITE_URL}/cost-of-hiring-a-marketing-executive", "0.8", "monthly"),
-        (f"{SITE_URL}/cost-of-hiring-a-cleaner", "0.8", "monthly"),
-        (f"{SITE_URL}/cost-of-hiring-hospitality-staff", "0.8", "monthly"),
-        (f"{SITE_URL}/cost-of-hiring-a-teaching-assistant", "0.8", "monthly"),
-        # Hubs and special pages
-        (f"{SITE_URL}/cost-of-hiring", "0.8", "weekly"),
-        (f"{SITE_URL}/contractor-vs-employee-cost", "0.8", "monthly"),
-        (f"{SITE_URL}/team-cost-planner", "0.9", "weekly"),
-        # Payroll software comparison pages
-        (f"{SITE_URL}/xero-vs-sage-payroll", "0.8", "monthly"),
-        (f"{SITE_URL}/xero-vs-quickbooks-payroll", "0.8", "monthly"),
-        (f"{SITE_URL}/best-payroll-software-1-employee", "0.8", "monthly"),
-        # Apprenticeship Levy
-        (f"{SITE_URL}/apprenticeship-levy-calculator", "0.8", "monthly"),
-        # Industry cost pages
-        (f"{SITE_URL}/cost-of-employing-hospitality-staff", "0.8", "monthly"),
-        (f"{SITE_URL}/cost-of-employing-care-workers", "0.8", "monthly"),
-        (f"{SITE_URL}/cost-of-employing-retail-staff", "0.8", "monthly"),
-        (f"{SITE_URL}/cost-of-employing-construction-workers", "0.8", "monthly"),
-        (f"{SITE_URL}/cost-of-employing-it-staff", "0.8", "monthly"),
-        (f"{SITE_URL}/cost-of-employing-education-staff", "0.8", "monthly"),
-        (f"{SITE_URL}/cost-of-employing-healthcare-workers", "0.8", "monthly"),
-        (f"{SITE_URL}/cost-of-employing-logistics-staff", "0.8", "monthly"),
-        # New role pages
-        (f"{SITE_URL}/cost-of-hiring-a-nurse", "0.8", "monthly"),
-        (f"{SITE_URL}/cost-of-hiring-a-teacher", "0.8", "monthly"),
-        (f"{SITE_URL}/cost-of-hiring-a-project-manager", "0.8", "monthly"),
-        (f"{SITE_URL}/cost-of-hiring-a-delivery-driver", "0.8", "monthly"),
-        (f"{SITE_URL}/cost-of-hiring-a-chef", "0.8", "monthly"),
-        (f"{SITE_URL}/cost-of-hiring-an-accountant", "0.8", "monthly"),
-        (f"{SITE_URL}/cost-of-hiring-an-hr-manager", "0.8", "monthly"),
-        (f"{SITE_URL}/cost-of-hiring-a-customer-service-advisor", "0.8", "monthly"),
-        # Director and comparison pages
-        (f"{SITE_URL}/sole-director-employer-ni", "0.8", "monthly"),
-        (f"{SITE_URL}/full-time-vs-part-time-employee-cost", "0.8", "monthly"),
-    ]
-    for slug in GUIDES:
-        url_entries.append((f"{SITE_URL}/guides/{slug}", "0.8", "monthly"))
-    for s in SALARY_AMOUNTS:
-        url_entries.append((f"{SITE_URL}/cost/{s}", "0.7", "monthly"))
-    for s in SALARY_AMOUNTS:
-        url_entries.append((f"{SITE_URL}/employer-ni/{s}", "0.6", "monthly"))
-    now = datetime.utcnow().date().isoformat()
-    xml = render_template("sitemap.xml", url_entries=url_entries, now=now)
-    response = make_response(xml)
-    response.headers["Content-Type"] = "application/xml; charset=utf-8"
-    return response
+    now = now_utc().date().isoformat()
+    entries = [("/", "1.0", "weekly"), ("/calculators", "0.9", "weekly"), ("/guides", "0.9", "weekly"), ("/html-sitemap", "0.3", "monthly")]
+    for slug in CALCULATOR_ORDER:
+        entries.append((f"/{slug}", "0.8", "weekly"))
+    for slug in GUIDE_ORDER:
+        entries.append((f"/guides/{slug}", "0.7", "monthly"))
+    for slug in STATIC_PAGES.keys():
+        entries.append((f"/{slug}", "0.4", "monthly"))
+    for slug in SITUATION_PAGES.keys():
+        entries.append((f"/situations/{slug}", "0.7", "monthly"))
+    for slug in SCENARIO_PAGES.keys():
+        entries.append((f"/what-if/{slug}", "0.7", "monthly"))
+    for slug in TOPIC_HUBS.keys():
+        entries.append((f"/hub/{slug}", "0.7", "monthly"))
+    xml = render_template("sitemap.xml", url_entries=[{"loc": f"{SITE_URL}{path}", "lastmod": now, "priority": priority, "changefreq": freq} for path, priority, freq in entries], now=now)
+    resp = make_response(xml)
+    resp.mimetype = "application/xml"
+    return resp
+
+
+@app.route("/api/calculate/<slug>")
+def api_calculate(slug: str):
+    if slug not in CALCULATORS:
+        from flask import abort as _abort
+        _abort(404)
+    page = CALCULATORS[slug]
+    inputs = parse_inputs(page)
+    estimate = CALCULATION_FUNCTIONS[page["formula"]](inputs)
+    visual = build_estimate_visual(estimate)
+    from flask import jsonify as _jsonify
+    return _jsonify({
+        "primary_amount": estimate["primary_amount"],
+        "primary_label": estimate["primary_label"],
+        "secondary_amount": estimate["secondary_amount"],
+        "secondary_label": estimate["secondary_label"],
+        "summary": estimate.get("summary", ""),
+        "breakdown": estimate.get("breakdown", []),
+        "notes": estimate.get("notes", []),
+        "visual": visual,
+    })
 
 
 @app.route("/health")
 @app.route("/healthz")
 def health_check():
-    return {"status": "ok", "site": "employercalculator", "tax_year": active_tax_year()}
-
-
-@app.template_filter("money")
-def money_filter(value: float) -> str:
-    return gbp(float(value))
-
-
-@app.template_filter("monthly")
-def monthly_filter(value: float) -> str:
-    return gbp(monthly(float(value)))
-
-
-@app.template_filter("weekly")
-def weekly_filter(value: float) -> str:
-    return gbp(weekly(float(value)))
-
-
-@app.template_filter("percent")
-def percent_filter(value: float) -> str:
-    return pct(float(value))
-
-
-@app.route("/holiday-entitlement-calculator")
-def holiday_entitlement_alias():
-    return redirect("/holiday-entitlement", code=301)
-
-
-@app.route("/holiday-entitlement")
-def holiday_entitlement():
-    return render_template(
-        "holiday_entitlement.html",
-        **with_meta(
-            {},
-            title="Holiday Entitlement Calculator 2025/26 | EmployerCalculator.co.uk",
-            description="UK holiday entitlement calculator for 2025/26. Full-time: 28 days statutory minimum. Part-time: pro-rated by days or hours. Supports mid-year starters.",
-            breadcrumbs=[
-                {"name": "Home", "url": f"{SITE_URL}/"},
-                {"name": "Holiday Entitlement Calculator", "url": f"{SITE_URL}/holiday-entitlement"},
-            ],
-        ),
-    )
-
-
-@app.route("/redundancy-pay-calculator")
-def redundancy_pay_alias():
-    return redirect("/redundancy-pay", code=301)
-
-
-@app.route("/redundancy-pay")
-def redundancy_pay():
-    return render_template(
-        "redundancy_pay.html",
-        **with_meta(
-            {},
-            title="Statutory Redundancy Pay Calculator 2025/26 | EmployerCalculator.co.uk",
-            description="Statutory redundancy pay calculator for 2025/26. Age-banded calculation — up to 1.5 weeks' pay per year of service. Weekly pay capped at £700.",
-            breadcrumbs=[
-                {"name": "Home", "url": f"{SITE_URL}/"},
-                {"name": "Redundancy Pay Calculator", "url": f"{SITE_URL}/redundancy-pay"},
-            ],
-        ),
-    )
-
-
-@app.route("/maternity-pay-calculator")
-def maternity_pay_alias():
-    return redirect("/maternity-pay", code=301)
-
-
-@app.route("/maternity-pay")
-def maternity_pay():
-    return render_template(
-        "maternity_pay.html",
-        **with_meta(
-            {},
-            title="Statutory Maternity Pay Calculator 2025/26 | EmployerCalculator.co.uk",
-            description="Statutory maternity pay calculator for 2025/26. 6 weeks at 90% AWE, then 33 weeks at £184.03/week. Includes HMRC recovery at 92% or 103% for small employers.",
-            breadcrumbs=[
-                {"name": "Home", "url": f"{SITE_URL}/"},
-                {"name": "Statutory Maternity Pay Calculator", "url": f"{SITE_URL}/maternity-pay"},
-            ],
-        ),
-    )
-
-
-@app.route("/notice-period-calculator")
-def notice_period_alias():
-    return redirect("/notice-period", code=301)
-
-
-@app.route("/notice-period")
-def notice_period():
-    return render_template(
-        "notice_period.html",
-        **with_meta(
-            {},
-            title="Notice Period Calculator UK 2025/26 | EmployerCalculator.co.uk",
-            description="UK notice period calculator. Statutory minimum: 1 week per year of service (max 12 weeks). Calculates PILON and compares statutory vs contractual notice.",
-            breadcrumbs=[
-                {"name": "Home", "url": f"{SITE_URL}/"},
-                {"name": "Notice Period Calculator", "url": f"{SITE_URL}/notice-period"},
-            ],
-        ),
-    )
-
-
-@app.route("/settlement-agreement-calculator")
-def settlement_agreement_alias():
-    return redirect("/settlement-agreement", code=301)
-
-
-@app.route("/settlement-agreement")
-def settlement_agreement():
-    return render_template(
-        "settlement_agreement.html",
-        **with_meta(
-            {},
-            title="Settlement Agreement Calculator 2025/26 | EmployerCalculator.co.uk",
-            description="Settlement agreement calculator for UK employers. Estimates notice pay, statutory redundancy and compensatory amounts. First £30,000 generally tax-free.",
-            breadcrumbs=[
-                {"name": "Home", "url": f"{SITE_URL}/"},
-                {"name": "Settlement Agreement Calculator", "url": f"{SITE_URL}/settlement-agreement"},
-            ],
-        ),
-    )
-
-
-@app.route("/pro-rata-salary-calculator")
-def pro_rata_alias():
-    return redirect("/pro-rata-salary", code=301)
-
-
-@app.route("/pro-rata-salary")
-def pro_rata_salary():
-    return render_template(
-        "pro_rata_salary.html",
-        **with_meta(
-            {},
-            title="Pro Rata Salary Calculator UK | EmployerCalculator.co.uk",
-            description="Free pro-rata salary calculator for part-time workers. Convert full-time salary by days or hours per week. Shows annual, monthly and weekly pro-rata pay.",
-            breadcrumbs=[
-                {"name": "Home", "url": f"{SITE_URL}/"},
-                {"name": "Pro Rata Salary Calculator", "url": f"{SITE_URL}/pro-rata-salary"},
-            ],
-        ),
-    )
-
-
-@app.route("/sick-pay-calculator")
-def sick_pay_alias():
-    return redirect("/sick-pay", code=301)
-
-
-@app.route("/sick-pay")
-def sick_pay():
-    return render_template(
-        "sick_pay.html",
-        **with_meta(
-            {},
-            title="Statutory Sick Pay Calculator 2025/26 | EmployerCalculator.co.uk",
-            description="SSP calculator for 2025/26. Rate: £116.75 per week. Checks earnings eligibility (£123/week minimum), deducts 3 waiting days and applies 28-week cap.",
-            breadcrumbs=[
-                {"name": "Home", "url": f"{SITE_URL}/"},
-                {"name": "Statutory Sick Pay Calculator", "url": f"{SITE_URL}/sick-pay"},
-            ],
-        ),
-    )
-
-
-@app.route("/pension-cost-calculator")
-def pension_cost_alias():
-    return redirect("/pension-cost", code=301)
-
-
-@app.route("/auto-enrollment-payroll-costs")
-def auto_enrolment_payroll_costs_alias():
-    return redirect("/auto-enrolment-payroll-costs", code=301)
-
-
-@app.route("/pension-cost")
-def pension_cost():
-    return render_template(
-        "pension_cost.html",
-        **with_meta(
-            {},
-            title="Employer Pension Cost Calculator UK (2025/26) — Auto-Enrolment Costs",
-            description="Employer pension cost calculator UK for 2025/26. Estimate auto-enrolment payroll costs on qualifying earnings (£6,240–£50,270), including total contributions.",
-            breadcrumbs=[
-                {"name": "Home", "url": f"{SITE_URL}/"},
-                {"name": "Employer Pension Cost Calculator", "url": f"{SITE_URL}/pension-cost"},
-            ],
-        ),
-    )
-
-
-@app.route("/bradford-factor-calculator")
-def bradford_factor_alias():
-    return redirect("/bradford-factor", code=301)
-
-
-@app.route("/bradford-factor")
-def bradford_factor():
-    return render_template(
-        "bradford_factor.html",
-        **with_meta(
-            {},
-            title="Bradford Factor Calculator | EmployerCalculator.co.uk",
-            description="Bradford Factor calculator for HR teams. Formula: S² × D. Enter absence spells and total days to get your score, risk band and comparison with common benchmarks.",
-            breadcrumbs=[
-                {"name": "Home", "url": f"{SITE_URL}/"},
-                {"name": "Bradford Factor Calculator", "url": f"{SITE_URL}/bradford-factor"},
-            ],
-        ),
-    )
-
-
-@app.route("/unfair-dismissal-calculator")
-def unfair_dismissal_alias():
-    return redirect("/unfair-dismissal", code=301)
-
-
-@app.route("/unfair-dismissal")
-def unfair_dismissal():
-    return render_template(
-        "unfair_dismissal.html",
-        **with_meta(
-            {},
-            title="Unfair Dismissal Compensation Calculator 2025/26 | EmployerCalculator.co.uk",
-            description="Unfair dismissal calculator for 2025/26. Estimates basic award and compensatory award (capped at £105,707). Updated for Employment Rights Act 2025 changes.",
-            breadcrumbs=[
-                {"name": "Home", "url": f"{SITE_URL}/"},
-                {"name": "Unfair Dismissal Calculator", "url": f"{SITE_URL}/unfair-dismissal"},
-            ],
-        ),
-    )
-
-
-@app.route("/national-insurance-increase-calculator")
-@app.route("/national-insurance-rise-calculator-uk")
-@app.route("/national-insurance-rise-calculator")
-def ni_rise_alias():
-    return redirect("/ni-change-calculator", code=301)
-
-
-@app.route("/employer-nic-calculator")
-@app.route("/employers-ni-calculator")
-@app.route("/employers-ni-calculator-monthly")
-@app.route("/national-insurance-calculator-for-employers")
-@app.route("/calculate-employers-ni")
-@app.route("/calculate-employers-ni-on-salary")
-@app.route("/ni-calculator-2025-26")
-@app.route("/employers-ni-calculator-2025-26")
-def employer_ni_aliases():
-    return redirect("/employer-ni", code=301)
-
-
-@app.route("/employment-cost-calculator")
-@app.route("/cost-to-employ-calculator")
-@app.route("/salary-calculator-employers-uk")
-@app.route("/employer-salary-calculator")
-@app.route("/employers-salary-calculator")
-@app.route("/cost-to-employer-salary-calculator-uk")
-@app.route("/pay-calculator-for-employers")
-@app.route("/true-cost-of-employee-calculator-uk")
-@app.route("/uk-employee-cost-calculator")
-def employer_cost_aliases():
-    return redirect("/calculator", code=301)
-
-
-@app.route("/employer-salary-cost-calculator")
-def employer_salary_cost_calculator_alias():
-    return redirect("/employer-salary-cost-calculator-uk", code=301)
-
-
-@app.route("/first-employee-cost")
-@app.route("/hiring-first-employee-uk")
-def first_employee_cost_alias():
-    return redirect("/first-employee-cost-uk", code=301)
-
-
-@app.route("/part-time-employee-cost-uk")
-@app.route("/cost-of-part-time-employee")
-def part_time_cost_alias():
-    return redirect("/part-time-employee-cost", code=301)
-
-
-@app.route("/cost-per-employee-uk")
-@app.route("/average-employer-cost-per-employee")
-def employer_cost_per_employee_alias():
-    return redirect("/employer-cost-per-employee", code=301)
-
-
-@app.route("/cost-of-employment-calculator-uk")
-@app.route("/cost-of-employee-calculator-uk")
-@app.route("/how-much-does-it-cost-to-employ-someone")
-@app.route("/salary-cost-to-employer")
-def cost_index_aliases():
-    return redirect("/cost-of-employing", code=301)
-
-
-@app.route("/auto-enrolment-pension-rates")
-@app.route("/how-much-is-auto-enrolment-pension")
-def pension_aliases():
-    return redirect("/pension-cost", code=301)
-
-
-@app.route("/human-resources-calculator")
-def hr_calculator_alias():
-    return redirect("/calculators", code=301)
-
-
-@app.route("/employment-calculator")
-@app.route("/salary-employment-calculator")
-@app.route("/employee-salary-calculator-uk")
-def employment_calculator_alias():
-    return redirect("/calculator", code=301)
-
-
-@app.route("/on-costs-calculator")
-@app.route("/salary-on-costs-calculator")
-@app.route("/salary-on-costs-calculator-uk")
-@app.route("/employer-on-costs-calculator")
-@app.route("/employer-on-costs-calculator-uk")
-@app.route("/salary-costs-calculator")
-def on_costs_alias():
-    return redirect("/cost-of-employing", code=301)
-
-
-@app.route("/uk-average-salary-2025")
-@app.route("/average-salary-uk-2025")
-@app.route("/average-monthly-salary-uk")
-@app.route("/average-salary-uk")
-def average_salary_alias():
-    return redirect("/uk-average-salary", code=301)
-
-
-@app.route("/employer-ni-calculator-2022-23")
-@app.route("/employer-ni-calculator-2023-24")
-@app.route("/employer-ni-calculator-2024-25")
-@app.route("/employer-ni-rates-history")
-@app.route("/employer-ni-rates-by-year")
-@app.route("/historical-employer-ni-rates")
-@app.route("/employer-nic-rates-history")
-def historical_ni_alias():
-    return redirect("/employer-ni-historical-rates", code=301)
-
-
-@app.route("/paye-calculator-uk-for-employers")
-@app.route("/employer-paye-calculator")
-@app.route("/employer-paye-calculator-uk")
-@app.route("/employer-paye-tax-calculator")
-@app.route("/employer-payroll-tax-calculator")
-@app.route("/employers-tax-calculator")
-@app.route("/uk-employer-tax-calculator")
-@app.route("/cost-to-company-salary-calculator")
-@app.route("/total-payroll-cost-calculator")
-@app.route("/payroll-cost-calculator")
-@app.route("/staff-cost-calculator-uk")
-@app.route("/cost-of-employing-staff-calculator-uk")
-@app.route("/cost-to-employ-someone-calculator-uk")
-@app.route("/employee-costs-calculator")
-@app.route("/employer-costs-calculator")
-@app.route("/paye-cost-to-employer")
-@app.route("/total-employment-cost-calculator")
-@app.route("/employer-cost-salary-calculator")
-@app.route("/employers-cost-calculator-uk")
-@app.route("/employer-calculator")
-def calculator_more_aliases():
-    return redirect("/calculator", code=301)
-
-
-@app.route("/employers-nic-calculator")
-@app.route("/employer-ni-contribution-calculator")
-@app.route("/employer-ni-contributions-calculator")
-@app.route("/calculate-employer-ni")
-@app.route("/calculating-employers-ni")
-@app.route("/how-to-calculate-employers-ni")
-@app.route("/how-to-work-out-employers-ni")
-@app.route("/employer-ni-calculation")
-@app.route("/employers-ni-calculation")
-@app.route("/employer-ni-calculations")
-@app.route("/employers-national-insurance-calculations")
-@app.route("/employers-national-insurance-calculator")
-@app.route("/employers-national-insurance-calculator-2025-26")
-@app.route("/employer-national-insurance-calculator-uk")
-def employer_ni_more_aliases():
-    return redirect("/employer-ni", code=301)
-
-
-@app.route("/salary-on-costs")
-@app.route("/on-costs-salary")
-@app.route("/salary-oncosts")
-@app.route("/total-cost-of-employment")
-@app.route("/cost-of-employment-calculator")
-@app.route("/costs-of-an-employee")
-@app.route("/cost-of-an-employee-uk")
-@app.route("/cost-of-an-employee")
-@app.route("/cost-of-employee")
-@app.route("/employer-on-costs")
-@app.route("/employment-costs")
-@app.route("/employer-costs-for-employee-uk")
-def cost_index_more_aliases():
-    return redirect("/cost-of-employing", code=301)
-
-
-@app.route("/employer-contribution-calculator")
-@app.route("/pension-calculator-employer")
-@app.route("/employer-pension-calculator")
-@app.route("/pension-calculator-for-employers")
-@app.route("/employer-contribution-calculation")
-@app.route("/pension-calculator-for-employer")
-def pension_more_aliases():
-    return redirect("/pension-cost", code=301)
-
-
-@app.route("/payroll-software-uk")
-@app.route("/best-payroll-software-uk")
-@app.route("/payroll-software-for-small-business-uk")
-def payroll_software_page():
-    comparison_table = [
-        {"name": "Xero Payroll", "best_for": "Xero accounting users, 1–20 staff", "accounting": "Yes (Xero)", "hr": "Basic", "hmrc_rti": "Yes"},
-        {"name": "QuickBooks Payroll", "best_for": "QuickBooks accounting users", "accounting": "Yes (QuickBooks)", "hr": "Basic", "hmrc_rti": "Yes"},
-        {"name": "Sage Payroll", "best_for": "Standalone payroll, accountant-managed", "accounting": "Optional (Sage)", "hr": "Add-on", "hmrc_rti": "Yes"},
-        {"name": "FreeAgent", "best_for": "Micro-businesses, NatWest/RBS customers", "accounting": "Yes", "hr": "Minimal", "hmrc_rti": "Yes"},
-        {"name": "Employment Hero", "best_for": "HR + payroll, 5–50 staff", "accounting": "Integration", "hr": "Yes", "hmrc_rti": "Yes"},
-        {"name": "Rippling", "best_for": "Multi-country, fast-growing teams", "accounting": "Integration", "hr": "Yes", "hmrc_rti": "Yes"},
-    ]
-    faq_items = [
-        {"q": "What payroll software do UK small businesses use?", "a": "The most commonly used payroll software for UK small businesses are Xero Payroll, QuickBooks Payroll, Sage Payroll, and FreeAgent. All support HMRC RTI submissions and auto-enrolment pension handling."},
-        {"q": "Do I need payroll software if I only have one employee?", "a": "You can use HMRC's free Basic PAYE Tools for very small employers (fewer than 10 employees), but most small business owners prefer dedicated software for payslip generation, pension management, and accountant integration. HMRC Basic PAYE Tools is free but limited in features."},
-        {"q": "What is RTI and why does it matter?", "a": "RTI (Real Time Information) is HMRC's system that requires employers to submit payroll data on or before each pay day. All payroll software listed on this page handles RTI submissions automatically, which is the most important HMRC compliance requirement for employers."},
-        {"q": "Can payroll software handle Employment Allowance?", "a": "Yes. Xero, QuickBooks, and Sage all support Employment Allowance claims, which allows eligible employers to offset up to £10,500 of their annual employer NI bill in 2025/26. You declare eligibility through your payroll software."},
-        {"q": "What is the difference between payroll software and an HR system?", "a": "Payroll software handles wage calculations, PAYE deductions, RTI submissions, and payslips. An HR system (also called HRIS) handles contracts, onboarding, leave management, performance reviews, and other people operations. Products like Employment Hero combine both. For employers with under 10 staff, standalone payroll software is usually sufficient."},
-    ]
-    return render_template(
-        "payroll_software.html",
-        **with_meta(
-            {"comparison_table": comparison_table, "faq_items": faq_items},
-            title="Best Payroll Software for UK Small Businesses (2025/26) — Xero, QuickBooks, Sage",
-            description="Compare payroll software for UK small businesses in 2025/26 — Xero, QuickBooks, Sage, FreeAgent and Employment Hero. Includes HMRC RTI support, pricing overview, and which to use after calculating employer costs.",
-            breadcrumbs=[
-                {"name": "Home", "url": f"{SITE_URL}/"},
-                {"name": "Payroll software", "url": f"{SITE_URL}/payroll-software-uk"},
-            ],
-        ),
-    )
-
-
-_TOOLS_BLOCK_DEFAULT = [
-    {
-        "name": "Xero Payroll",
-        "short_desc": "Cloud payroll bundled with Xero accounting. Handles RTI submissions, auto-enrolment and payslip generation. Commonly used by UK small businesses already on Xero for bookkeeping.",
-        "href": "https://www.xero.com/uk/accounting-software/payroll/",
-        "cta": "See Xero Payroll",
-        "is_affiliate": False,
-        "enabled": True,
-    },
-    {
-        "name": "QuickBooks Payroll",
-        "short_desc": "Payroll add-on for QuickBooks. Used by UK small employers for PAYE, NI, pension and HMRC RTI. Integrates with QuickBooks accounting.",
-        "href": "https://quickbooks.intuit.com/uk/payroll/",
-        "cta": "See QuickBooks Payroll",
-        "is_affiliate": False,
-        "enabled": True,
-    },
-    {
-        "name": "Sage Payroll",
-        "short_desc": "Long-established UK payroll software with HMRC recognition. Works standalone (without Sage accounting) and is widely used in small businesses and accountancy practices.",
-        "href": "https://sageuklimited.sjv.io/n44Vmx",
-        "cta": "See Sage Payroll",
-        "is_affiliate": True,
-        "enabled": True,
-    },
-    {
-        "name": "Employment Hero",
-        "short_desc": "HR and payroll platform used by growing UK teams. Combines contracts, onboarding, leave management and payroll in one system. HMRC RTI integrated.",
-        "href": "https://employmenthero.com/uk/",
-        "cta": "See Employment Hero",
-        "is_affiliate": False,
-        "enabled": True,
-    },
-]
-
-
-@app.route("/sole-director-employer-ni")
-@app.route("/sole-director-national-insurance")
-@app.route("/director-employer-ni-uk")
-def sole_director_ni():
-    calc_12570 = calculate_employer_cost(salary=12570, pension_rate=3, overheads=0, allowance=0)
-    page = {
-        "badge": "Sole director · 2025/26",
-        "h1": "Sole director employer NI UK (2025/26)",
-        "intro": "Sole directors of their own limited company face a unique NI planning situation. Unlike most businesses, a sole director company with no other employees cannot claim Employment Allowance — meaning there is no offset against the employer NI bill. Many accountants recommend paying a director salary at or near the personal allowance (£12,570) to preserve an NI qualifying year while keeping employer NI to a minimum. At £12,570, employer NI is approximately £1,136 per year (15% above the £5,000 threshold). Above that level, dividends are typically more tax-efficient than salary for sole directors.",
-        "bullets": [
-            "Sole director companies with no other employees CANNOT claim Employment Allowance.",
-            "Salary at £5,000 or below: zero employer NI (below the secondary threshold).",
-            "Salary at £12,570 (personal allowance): employer NI ≈ £1,136/year.",
-            "Salary at £50,270 (NI qualifying earnings cap): employer NI ≈ £6,791/year.",
-            "Above the personal allowance, dividends typically attract less NI than salary for sole directors.",
-            "Hiring a second employee (even part-time) unlocks Employment Allowance eligibility.",
-        ],
-        "primary_cta": {"label": "Calculate director salary employer NI", "url": "/calculator?salary=12570"},
-        "secondary_cta": {"label": "Employment Allowance guide", "url": "/guides/employment-allowance-guide"},
-        "faq_items": [
-            {"q": "Can a sole director claim Employment Allowance?", "a": "No. A limited company where the sole director is the only employee cannot claim Employment Allowance. The rule requires at least one employee who is not also the only director. If you hire even one other employee through PAYE, the company typically becomes eligible for the full £10,500 allowance."},
-            {"q": "What is the most tax-efficient director salary in 2025/26?", "a": "Many accountants recommend a director salary at the personal allowance level (£12,570), which preserves an NI qualifying year without triggering income tax. This generates approximately £1,136 in employer NI per year. Additional remuneration above this level is often more efficiently extracted as dividends, which do not attract NI."},
-            {"q": "Does a sole director need auto-enrolment pension?", "a": "Directors who are the sole employee are exempt from auto-enrolment — they cannot legally enrol themselves. Once a non-director employee is hired, the company must comply with auto-enrolment obligations for that employee."},
-            {"q": "How does hiring my first employee change my NI position?", "a": "Hiring your first non-director employee unlocks Employment Allowance (up to £10,500/year). If your combined employer NI bill is below £10,500 — common for directors paying themselves £12,570 with one other employee — Employment Allowance can eliminate the entire NI liability, which is one of the most significant tax-planning benefits of growing beyond a sole director structure."},
-        ],
-    }
-    return render_template(
-        "intent_landing_page.html",
-        **with_meta(
-            {"page": page, "sample_calc": calc_12570, "faq_items": page["faq_items"], "tools_block": _TOOLS_BLOCK_DEFAULT},
-            title="Sole Director Employer NI UK 2025/26 — Optimal Salary & Employment Allowance",
-            description="Sole director employer NI guide for 2025/26. No Employment Allowance if you have no other employees. Optimal director salary of £12,570 explained. How to minimise employer NI as a sole director.",
-            breadcrumbs=[
-                {"name": "Home", "url": f"{SITE_URL}/"},
-                {"name": "Employer NI", "url": f"{SITE_URL}/employer-ni"},
-                {"name": "Sole director NI", "url": f"{SITE_URL}/sole-director-employer-ni"},
-            ],
-        ),
-    )
-
-
-@app.route("/full-time-vs-part-time-employee-cost")
-@app.route("/part-time-vs-full-time-cost-uk")
-def full_vs_part_time():
-    rate = 15.0
-    ft_salary = round(rate * 37.5 * 52)
-    ft_calc = calculate_employer_cost(salary=ft_salary, pension_rate=3, overheads=0, allowance=0)
-    pt20_salary = round(rate * 20 * 52)
-    pt20_calc = calculate_employer_cost(salary=pt20_salary, pension_rate=3, overheads=0, allowance=0)
-    pt25_salary = round(rate * 25 * 52)
-    pt25_calc = calculate_employer_cost(salary=pt25_salary, pension_rate=3, overheads=0, allowance=0)
-    ft_ni_pct = round(ft_calc.employer_ni.ni_due / ft_salary * 100, 1)
-    pt20_ni_pct = round(pt20_calc.employer_ni.ni_due / pt20_salary * 100, 1)
-    page = {
-        "badge": "Full-time vs part-time",
-        "h1": "Full-time vs part-time employee cost UK (2025/26)",
-        "intro": f"Comparing full-time and part-time employment costs is more nuanced than it looks. At the same hourly rate (£{rate:.0f}/hour in this example), a full-time employee (37.5 hrs/week, £{ft_salary:,}/year) costs more in total — but employer NI as a percentage of salary is actually lower for full-time workers, because the £5,000 NI threshold is not pro-rated for hours. Two part-time workers at 20 hours per week do NOT share one threshold — each gets their own £5,000. This means splitting a full-time role into two part-time roles does not reduce the overall NI bill — it typically increases it.",
-        "bullets": [
-            f"Full-time (37.5 hrs/wk, £{rate:.0f}/hr): salary £{ft_salary:,}, employer NI £{int(ft_calc.employer_ni.ni_due):,}, pension £{int(ft_calc.pension_contribution):,}, total £{int(ft_calc.total_cost):,}.",
-            f"Part-time 20 hrs/wk (£{rate:.0f}/hr): salary £{pt20_salary:,}, employer NI £{int(pt20_calc.employer_ni.ni_due):,}, pension £{int(pt20_calc.pension_contribution):,}, total £{int(pt20_calc.total_cost):,}.",
-            f"Part-time 25 hrs/wk (£{rate:.0f}/hr): salary £{pt25_salary:,}, employer NI £{int(pt25_calc.employer_ni.ni_due):,}, pension £{int(pt25_calc.pension_contribution):,}, total £{int(pt25_calc.total_cost):,}.",
-            "The £5,000 NI threshold is NOT pro-rated for hours — it applies in full per individual employee.",
-            f"NI as a share of salary: {pt20_ni_pct}% for 20-hour worker vs {ft_ni_pct}% for full-time at same hourly rate.",
-            "Two 20-hr workers generate more combined NI than one 40-hr worker at the same hourly rate.",
-        ],
-        "primary_cta": {"label": "Calculate employer cost for any salary", "url": "/calculator"},
-        "secondary_cta": {"label": "Part-time employee cost guide", "url": "/guides/part-time-employee-cost"},
-        "faq_items": [
-            {"q": "Is it cheaper to employ two part-time workers instead of one full-time?", "a": f"Not on NI. Two part-time workers each get their own £5,000 threshold, and combined they generate more NI than one full-time worker at the same total hours. At £{rate:.0f}/hour, two 20-hour workers generate combined NI of approximately £{int(pt20_calc.employer_ni.ni_due * 2):,}/year versus £{int(ft_calc.employer_ni.ni_due):,} for one full-time worker. You may save on pension if part-timers earn under the £10,000 auto-enrolment trigger, and on pro-rata holiday and benefits."},
-            {"q": "Is the employer NI threshold the same for part-time and full-time workers?", "a": "Yes. The £5,000 secondary threshold is fixed per employee per tax year and is not adjusted for contracted hours. This means lower-paid part-time workers have a higher NI burden as a share of salary than full-time staff at the same hourly rate."},
-            {"q": "Do you pay pension on part-time staff?", "a": "Auto-enrolment is triggered for workers aged 22–66 earning more than £10,000/year. Part-time workers earning below £10,000 are not auto-enrolled but can opt in — in which case the employer must contribute at 3% of qualifying earnings. Workers earning between £6,240 and £10,000 are entitled to opt in."},
-        ],
-    }
-    return render_template(
-        "intent_landing_page.html",
-        **with_meta(
-            {"page": page, "sample_calc": ft_calc, "faq_items": page["faq_items"], "tools_block": _TOOLS_BLOCK_DEFAULT},
-            title="Full-time vs Part-time Employee Cost UK (2025/26) — NI, Pension & True Total",
-            description="Compare full-time vs part-time employee costs in the UK for 2025/26. The NI threshold isn't pro-rated for hours — see how this affects employer cost at the same hourly rate.",
-            breadcrumbs=[
-                {"name": "Home", "url": f"{SITE_URL}/"},
-                {"name": "Scenarios", "url": f"{SITE_URL}/cost-of-hiring"},
-                {"name": "Full-time vs part-time", "url": f"{SITE_URL}/full-time-vs-part-time-employee-cost"},
-            ],
-        ),
-    )
-
-
-@app.route("/team-cost-planner")
-@app.route("/team-payroll-calculator")
-@app.route("/payroll-cost-calculator-multiple-employees")
-@app.route("/payroll-planner")
-@app.route("/payroll-cost-planner")
-def team_cost_planner():
-    return render_template(
-        "team_cost_planner.html",
-        **with_meta(
-            {"tools_block": _TOOLS_BLOCK_DEFAULT},
-            title="Payroll Planner UK 2025/26 | Team Payroll Cost Calculator",
-            description="Payroll planner for UK employers. Add multiple employees to estimate team payroll cost, employer NI, pension, Employment Allowance and overheads in one calculator.",
-            breadcrumbs=[
-                {"name": "Home", "url": f"{SITE_URL}/"},
-                {"name": "Calculators", "url": f"{SITE_URL}/calculators"},
-                {"name": "Team cost planner", "url": f"{SITE_URL}/team-cost-planner"},
-            ],
-        ),
-    )
-
-
-@app.route("/xero-vs-sage-payroll")
-@app.route("/xero-vs-sage-payroll-uk")
-def xero_vs_sage():
-    comparisons = [
-        {"feature": "Monthly price (1–5 staff)", "xero": "From £7/mo (Starter plan)", "sage": "From £8/mo (Sage Payroll Essential)"},
-        {"feature": "Monthly price (10+ staff)", "xero": "£15–£29/mo (Standard/Premium)", "sage": "£18–£36/mo depending on employees"},
-        {"feature": "Free trial", "xero": "30 days", "sage": "3 months free (promotional)"},
-        {"feature": "HMRC RTI submissions", "xero": "Yes", "sage": "Yes"},
-        {"feature": "Auto-enrolment pension", "xero": "Yes (NEST, The Peoples Pension etc.)", "sage": "Yes (NEST, multiple providers)"},
-        {"feature": "Accounting integration", "xero": "Native (Xero accounting)", "sage": "Native (Sage Accounting)"},
-        {"feature": "Self-service employee portal", "xero": "Yes (via Xero Me app)", "sage": "Yes (Sage Employee Self Service)"},
-        {"feature": "Payslip distribution", "xero": "Email / app", "sage": "Email / portal"},
-        {"feature": "CIS subcontractor support", "xero": "Yes", "sage": "Yes"},
-        {"feature": "Multi-company payroll", "xero": "Separate Xero account per company", "sage": "Yes (Sage 50 Payroll)"},
-    ]
-    page = {
-        "badge": "Software comparison",
-        "h1": "Xero vs Sage Payroll UK (2025/26)",
-        "intro": "Xero and Sage are two of the most widely used payroll software platforms for UK small and medium businesses. Both handle HMRC RTI submissions, auto-enrolment pension, and PAYE calculations. The main differences are in ecosystem (Xero suits businesses already using Xero accounting; Sage suits those already on Sage), pricing structure, and the level of payroll complexity each handles out of the box. Xero Payroll is generally preferred for businesses wanting a modern, app-driven experience. Sage is often preferred by accountants and larger businesses needing more granular payroll controls or CIS management.",
-        "bullets": [
-            "Both handle HMRC RTI, auto-enrolment pension, PAYE, NI and CIS (Construction Industry Scheme).",
-            "Xero Payroll is bundled with Xero accounting — best for businesses already using Xero for bookkeeping.",
-            "Sage Payroll (including Sage 50 Payroll) has more feature depth for complex payroll — preferred by many UK accountants.",
-            "Xero pricing is subscription-based (from ~£7/mo). Sage pricing varies by employee count.",
-            "Both integrate with major pension providers including NEST, The Peoples Pension, and Smart Pension.",
-            "Neither calculates employer NI for you at offer stage — use the employer cost calculator first.",
-        ],
-        "primary_cta": {"label": "Calculate employer cost before choosing software", "url": "/calculator"},
-        "secondary_cta": {"label": "Compare all payroll software", "url": "/payroll-software-uk"},
-        "faq_items": [
-            {"q": "Is Xero or Sage better for payroll in the UK?", "a": "It depends on your existing accounting software and business complexity. Xero Payroll is the better choice if you already use Xero for accounting — the integration is seamless and the app experience is modern. Sage is often preferred by accountants and businesses needing more detailed payroll reporting, cost centre coding, or CIS subcontractor management. For businesses with fewer than 10 employees looking for simplicity, Xero is generally easier to use."},
-            {"q": "Can I run payroll on Xero without having Xero accounting?", "a": "Technically yes — Xero Payroll can be run without the full Xero accounting subscription, but it is designed to work best within the Xero ecosystem. If you use a different accounting platform (QuickBooks, Sage Accounting, Xero), you would typically use that provider's payroll module to avoid manual journal entries."},
-            {"q": "Does Sage or Xero support Employment Allowance?", "a": "Both Sage and Xero support Employment Allowance for eligible employers. You declare eligibility in the payroll settings and the software automatically offsets employer NI against the £10,500 annual allowance across the year. Both systems flag when the allowance is exhausted."},
-        ],
-    }
-    page = _apply_year_deep(page)
-    calc = calculate_employer_cost(salary=35000, pension_rate=3, overheads=0, allowance=0)
-    return render_template(
-        "intent_landing_page.html",
-        **with_meta(
-            {"page": page, "sample_calc": calc, "faq_items": page["faq_items"], "comparison_rows": comparisons, "tools_block": _TOOLS_BLOCK_DEFAULT},
-            title="Xero vs Sage Payroll UK (2025/26) — Which Is Best for Your Business?",
-            description="Xero vs Sage Payroll UK comparison. Both handle HMRC RTI, auto-enrolment and PAYE. See pricing, features and which suits your business for 2025/26 payroll.",
-            breadcrumbs=[
-                {"name": "Home", "url": f"{SITE_URL}/"},
-                {"name": "Payroll software", "url": f"{SITE_URL}/payroll-software-uk"},
-                {"name": "Xero vs Sage", "url": f"{SITE_URL}/xero-vs-sage-payroll"},
-            ],
-        ),
-    )
-
-
-@app.route("/xero-vs-quickbooks-payroll")
-@app.route("/xero-vs-quickbooks-uk")
-def xero_vs_quickbooks():
-    comparisons = [
-        {"feature": "Monthly price (1–5 staff)", "xero": "From £7/mo (Starter)", "qb": "From £6/mo (Simple Start with Payroll)"},
-        {"feature": "Monthly price (10+ staff)", "xero": "£15–£29/mo", "qb": "£22–£35/mo depending on plan"},
-        {"feature": "Free trial", "xero": "30 days", "qb": "30 days"},
-        {"feature": "HMRC RTI", "xero": "Yes", "qb": "Yes"},
-        {"feature": "Auto-enrolment pension", "xero": "Yes", "qb": "Yes"},
-        {"feature": "Accounting integration", "xero": "Native (Xero)", "qb": "Native (QuickBooks)"},
-        {"feature": "Payslip distribution", "xero": "Email / Xero Me app", "qb": "Email / QuickBooks portal"},
-        {"feature": "CIS support", "xero": "Yes", "qb": "Yes (QuickBooks Payroll Advanced)"},
-        {"feature": "Pensions provider integration", "xero": "NEST, Peoples Pension, Smart Pension", "qb": "NEST, Peoples Pension"},
-        {"feature": "Best for", "xero": "Xero accounting users, app-first teams", "qb": "QuickBooks accounting users, US-headquartered businesses"},
-    ]
-    page = {
-        "badge": "Software comparison",
-        "h1": "Xero vs QuickBooks Payroll UK (2025/26)",
-        "intro": "Xero and QuickBooks are the two dominant cloud accounting and payroll platforms for UK small businesses. Both handle HMRC RTI submissions, auto-enrolment pension, and PAYE. The choice usually comes down to which accounting platform you already use: if you run your books on Xero, use Xero Payroll; if you are on QuickBooks, use QuickBooks Payroll. Switching accounting platforms to use a different payroll system is generally not worth the disruption for most small businesses.",
-        "bullets": [
-            "Both handle HMRC RTI, PAYE, NI, auto-enrolment pension and payslip distribution.",
-            "Xero Payroll integrates natively with Xero accounting — journal entries post automatically.",
-            "QuickBooks Payroll integrates natively with QuickBooks — preferred by QuickBooks accounting users.",
-            "Both are cloud-based and accessible from any device — no desktop software required.",
-            "Both integrate with NEST and The Peoples Pension for auto-enrolment.",
-            "Neither replaces calculating your employer cost at offer stage — do that first at /calculator.",
-        ],
-        "primary_cta": {"label": "Calculate employer cost before choosing software", "url": "/calculator"},
-        "secondary_cta": {"label": "Compare all payroll software", "url": "/payroll-software-uk"},
-        "faq_items": [
-            {"q": "Is Xero or QuickBooks better for payroll in the UK?", "a": "For most small UK businesses, the better choice is whichever accounting platform you already use. Xero Payroll is better if you run your accounts on Xero — the native integration means payroll journals post automatically. QuickBooks Payroll is better if you are already on QuickBooks. Both provide HMRC-compliant payroll for UK businesses, and the day-to-day functionality is similar for businesses with under 20 employees."},
-            {"q": "Can I use Xero Payroll without Xero accounting?", "a": "Xero Payroll can technically be purchased without the full Xero accounting subscription, but most of its value comes from the native accounting integration. Running payroll on Xero while using a different bookkeeping tool would require manual journal entries, which eliminates the main efficiency benefit."},
-            {"q": "Which is cheaper — Xero or QuickBooks payroll?", "a": "Pricing is comparable at small headcounts. QuickBooks has marginally lower entry pricing for micro-businesses, while Xero may be slightly cheaper at 10–20 employee headcounts depending on the plan. Both offer promotional pricing and free trials. Compare current pricing on each provider's website, as rates change frequently."},
-        ],
-    }
-    page = _apply_year_deep(page)
-    calc = calculate_employer_cost(salary=35000, pension_rate=3, overheads=0, allowance=0)
-    return render_template(
-        "intent_landing_page.html",
-        **with_meta(
-            {"page": page, "sample_calc": calc, "faq_items": page["faq_items"], "comparison_rows": comparisons, "tools_block": _TOOLS_BLOCK_DEFAULT},
-            title="Xero vs QuickBooks Payroll UK (2025/26) — Which Is Right for Your Business?",
-            description="Xero vs QuickBooks Payroll UK. Both handle HMRC RTI, auto-enrolment and PAYE. Choose based on your accounting platform. Full 2025/26 comparison with pricing and features.",
-            breadcrumbs=[
-                {"name": "Home", "url": f"{SITE_URL}/"},
-                {"name": "Payroll software", "url": f"{SITE_URL}/payroll-software-uk"},
-                {"name": "Xero vs QuickBooks", "url": f"{SITE_URL}/xero-vs-quickbooks-payroll"},
-            ],
-        ),
-    )
-
-
-@app.route("/best-payroll-software-1-employee")
-@app.route("/best-payroll-software-one-employee")
-@app.route("/payroll-software-for-1-employee-uk")
-def payroll_1_employee():
-    page = {
-        "badge": "Single employee payroll",
-        "h1": "Best payroll software for 1 employee UK (2025/26)",
-        "intro": "Running payroll for a single employee in the UK requires HMRC RTI submissions, PAYE calculations, auto-enrolment pension handling, and payslip generation. You have three main options: HMRC's free Basic PAYE Tools (functional but limited), a low-cost cloud payroll platform like Xero, QuickBooks or FreeAgent, or a standalone payroll-specific tool like Sage Payroll. For a single employee, HMRC Basic PAYE Tools is free and HMRC-compliant, but most small business owners prefer paid software for its payslip quality, pension provider integration, and accountant access.",
-        "bullets": [
-            "HMRC Basic PAYE Tools: free, HMRC-compliant, handles RTI — but limited payslips, no pension auto-enrolment integration.",
-            "Xero Payroll (Starter): from ~£7/mo — best for Xero accounting users, includes app-based payslips and NEST integration.",
-            "QuickBooks Payroll: from ~£6/mo — best for QuickBooks accounting users, full HMRC RTI and pension support.",
-            "FreeAgent: from £3.50/mo (NatWest/RBS customers may get free access) — good for freelancers and micro-businesses.",
-            "All paid options include auto-enrolment pension handling — critical once your employee earns above £10,000/year.",
-            "Your first employee's total cost is more than just salary — see the employer cost calculator before making offers.",
-        ],
-        "primary_cta": {"label": "Calculate total cost of your first employee", "url": "/first-employee-cost-uk"},
-        "secondary_cta": {"label": "Compare all payroll software", "url": "/payroll-software-uk"},
-        "faq_items": [
-            {"q": "Do I need payroll software for one employee?", "a": "You are not required to use commercial payroll software — HMRC's free Basic PAYE Tools handles RTI submissions for up to 9 employees. However, most employers with even one employee find that a paid cloud platform (Xero, QuickBooks, FreeAgent) is worth the monthly cost for better payslips, automatic pension provider integration, and accountant-friendly access. From around £6–£7 per month for a single employee, the administrative benefit usually outweighs the cost."},
-            {"q": "Does my single employee need auto-enrolment pension?", "a": "Yes, if they are aged 22–66 and earn more than £10,000 per year. You are legally required to automatically enrol them into a qualifying pension scheme and contribute at least 3% of their qualifying earnings (between £6,240 and £50,270). HMRC Basic PAYE Tools does not manage pension provider submissions — paid payroll software handles this automatically."},
-            {"q": "What does it cost to employ one person in the UK?", "a": "Beyond the salary, you pay employer NI (15% on earnings above £5,000 in 2025/26) and minimum pension (3% on qualifying earnings). At a £30,000 salary, the total employer cost is approximately £34,464 per year — £4,464 above headline salary. Use the employer cost calculator for any specific salary."},
-        ],
-    }
-    page = _apply_year_deep(page)
-    calc = calculate_employer_cost(salary=30000, pension_rate=3, overheads=0, allowance=10500)
-    return render_template(
-        "intent_landing_page.html",
-        **with_meta(
-            {"page": page, "sample_calc": calc, "faq_items": page["faq_items"], "tools_block": _TOOLS_BLOCK_DEFAULT},
-            title="Best Payroll Software for 1 Employee UK (2025/26) — Free and Paid Options",
-            description="Best payroll software for one employee in the UK. HMRC Basic PAYE Tools (free) vs Xero, QuickBooks and FreeAgent. RTI, pension, payslips — what you need for a single employee.",
-            breadcrumbs=[
-                {"name": "Home", "url": f"{SITE_URL}/"},
-                {"name": "Payroll software", "url": f"{SITE_URL}/payroll-software-uk"},
-                {"name": "Best for 1 employee", "url": f"{SITE_URL}/best-payroll-software-1-employee"},
-            ],
-        ),
-    )
-
-
-@app.route("/apprenticeship-levy-calculator")
-@app.route("/apprenticeship-levy-uk")
-@app.route("/how-to-calculate-apprenticeship-levy")
-def apprenticeship_levy():
-    # Worked examples at common payroll sizes
-    examples = []
-    for annual_payroll in [2500000, 5000000, 10000000, 25000000]:
-        levy_due = max(0, annual_payroll * 0.005 - 15000)
-        monthly = round(levy_due / 12)
-        examples.append({
-            "payroll": annual_payroll,
-            "levy_gross": round(annual_payroll * 0.005),
-            "allowance": 15000,
-            "levy_due": round(levy_due),
-            "monthly": monthly,
-        })
-    page = {
-        "badge": "Apprenticeship Levy · 2025/26",
-        "h1": "Apprenticeship Levy calculator UK (2025/26)",
-        "intro": "The Apprenticeship Levy applies to UK employers with an annual wage bill above £3 million. The levy rate is 0.5% of total annual payroll, with a £15,000 annual allowance that effectively sets the threshold at £3 million. Employers below £3 million pay nothing. Above that level, the levy is paid monthly through PAYE alongside employer NI. The funds paid into the Digital Apprenticeship Service (DAS) account can only be used to fund apprenticeship training and assessment — they cannot be withdrawn as cash. Use the calculator below to estimate your levy liability at any payroll level.",
-        "bullets": [
-            "Levy rate: 0.5% of total annual wage bill above the £15,000 allowance.",
-            "Threshold: businesses with annual payroll above £3 million pay the levy.",
-            "Allowance: all employers receive a £15,000 annual allowance (£1,250/month).",
-            "At £3m payroll: levy due = (£3,000,000 × 0.5%) − £15,000 = £0.",
-            "At £5m payroll: levy due = (£5,000,000 × 0.5%) − £15,000 = £10,000/year.",
-            "At £10m payroll: levy due = (£10,000,000 × 0.5%) − £15,000 = £35,000/year.",
-            "Funds expire: unspent DAS funds expire 24 months after entering the account.",
-        ],
-        "primary_cta": {"label": "Calculate employer NI and payroll cost", "url": "/calculator"},
-        "secondary_cta": {"label": "Team payroll cost planner", "url": "/team-cost-planner"},
-        "faq_items": [
-            {"q": "What is the Apprenticeship Levy?", "a": "The Apprenticeship Levy is a payroll tax applied to UK employers with an annual wage bill above £3 million. It is charged at 0.5% of the total wage bill above a £15,000 annual allowance. The funds are paid into a Digital Apprenticeship Service (DAS) account and can only be used to pay for apprenticeship training and End-Point Assessment. Businesses that do not use their levy funds lose them after 24 months."},
-            {"q": "Who has to pay the Apprenticeship Levy?", "a": "All UK employers with a total annual wage bill above approximately £3 million. This includes all sectors — public sector organisations (including NHS trusts, local authorities, and universities) pay the levy as well as private sector businesses. Employers can check their liability by multiplying total annual payroll by 0.5% and subtracting the £15,000 allowance."},
-            {"q": "Can I transfer my Apprenticeship Levy funds to other businesses?", "a": "Yes. Since 2019, levy-paying employers can transfer up to 25% of their annual levy funds to other employers, including smaller businesses in their supply chain. From April 2024, the transfer limit increased to 50%. This allows large employers to support apprenticeship training in their supply chain or among smaller partner businesses."},
-            {"q": "What happens to unused Apprenticeship Levy funds?", "a": "Unspent levy funds expire 24 months after they entered your DAS account. If you pay levy but do not use it to fund apprenticeship training, the funds are effectively forfeited. Employers with large DAS balances and no apprenticeship programme should either start one or use levy transfer to support other employers."},
-            {"q": "Does the Apprenticeship Levy apply to part-time employees?", "a": "Yes. The levy is calculated on total annual wage bill — the sum of all employee gross wages including part-time, full-time, and any taxable benefits in kind. There is no adjustment or exclusion for part-time workers. The calculation is straightforward: total gross wage bill × 0.5% − £15,000 = annual levy due."},
-        ],
-    }
-    page = _apply_year_deep(page)
-    calc = calculate_employer_cost(salary=35000, pension_rate=3, overheads=0, allowance=0)
-    return render_template(
-        "intent_landing_page.html",
-        **with_meta(
-            {"page": page, "sample_calc": calc, "faq_items": page["faq_items"], "levy_examples": examples, "tools_block": _TOOLS_BLOCK_DEFAULT},
-            title="Apprenticeship Levy Calculator UK 2025/26 — 0.5% Above £3m Payroll",
-            description="Calculate Apprenticeship Levy liability for 2025/26. Rate: 0.5% on payroll above £3m (£15,000 annual allowance). Monthly levy amounts for £3m–£25m payrolls. UK employers explained.",
-            breadcrumbs=[
-                {"name": "Home", "url": f"{SITE_URL}/"},
-                {"name": "Calculators", "url": f"{SITE_URL}/calculators"},
-                {"name": "Apprenticeship Levy", "url": f"{SITE_URL}/apprenticeship-levy-calculator"},
-            ],
-        ),
-    )
-
-
-@app.route("/<path:slug>")
-def fallback_tools(slug: str):
-    if slug.endswith("-calculator"):
-        ctx = with_meta(
-            {
-                "page": {
-                    "title": slug.replace("-", " ").title(),
-                    "description": "Calculator page",
-                    "content": [
-                        "This calculator is coming soon. In the meantime, use the full employer cost calculator for live 2025/26 outputs.",
-                        "You can calculate employer NI, pension and total hiring cost for any UK salary using the calculator below.",
-                    ],
-                },
-                "slug": slug,
-                "meta_robots": "noindex,follow",
-            },
-            title=f"{slug.replace('-', ' ').title()} | EmployerCalculator.co.uk",
-            description="Employer calculator page.",
-            breadcrumbs=[
-                {"name": "Home", "url": f"{SITE_URL}/"},
-                {"name": "Calculators", "url": f"{SITE_URL}/calculators"},
-            ],
-        )
-        return render_template("static_page.html", **ctx)
-    abort(404)
+    return {"status": "ok", "site": "ukbenefitscalculator", "updated": "2026-04-20"}
 
 
 @app.errorhandler(404)
-def page_not_found(e):
-    context = {}
-    return render_template(
-        "404.html",
-        **with_meta(
-            context,
-            title="Page not found | EmployerCalculator.co.uk",
-            description="The page you are looking for does not exist. Try the employer NI calculator or browse all tools.",
-            breadcrumbs=[{"name": "Home", "url": f"{SITE_URL}/"}],
+def not_found(_err):
+    return (
+        render_page(
+            "404.html",
+            title="Page not found | UK Benefits Calculator",
+            description="The page could not be found.",
+            canonical_path=request.path,
+            breadcrumbs_data=[],
         ),
-    ), 404
+        404,
+    )
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "8080")), debug=False)
+    port = int(os.getenv("PORT", "8080"))
+    app.run(host="0.0.0.0", port=port, debug=False)

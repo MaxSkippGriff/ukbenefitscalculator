@@ -1,15 +1,12 @@
-<!-- AdSense Placeholder — replace with real ad unit when approved -->
-<!-- To activate: set ENABLE_ADS=true in .env and replace this with your AdSense script -->
-<!--
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX" crossorigin="anonymous"></script>
+{% set ad_slot = adsense_slot_calculator or adsense_slot_content %}
+{% if adsense_enabled and adsense_client and ad_slot %}
 <ins class="adsbygoogle"
      style="display:block"
-     data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
-     data-ad-slot="XXXXXXXXXX"
+     data-ad-client="{{ adsense_client }}"
+     data-ad-slot="{{ ad_slot }}"
      data-ad-format="auto"
      data-full-width-responsive="true"></ins>
-<script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
--->
-<div class="bg-gray-50 border border-dashed border-gray-200 rounded-xl p-4 text-center text-xs text-gray-400">
-  Ad placement
-</div>
+<script>
+  (adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+{% endif %}

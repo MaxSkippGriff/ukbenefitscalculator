@@ -1,717 +1,7 @@
 {% extends "base.html" %}
 
 {% block head_extra %}
-<style>
-  .page-wrap {
-    max-width: var(--max-w);
-    margin: 0 auto;
-    padding: 1.5rem 1.25rem 3rem;
-  }
-  .calc-hero {
-    display: grid;
-    grid-template-columns: minmax(0, 1.1fr) minmax(260px, 0.9fr);
-    gap: 1rem;
-    align-items: start;
-    margin-bottom: 1.15rem;
-  }
-  .hero-panel,
-  .trust-panel {
-    background: var(--surface);
-    border: 1.5px solid var(--border-strong);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow-sm);
-  }
-  .hero-panel {
-    padding: 1.2rem 1.25rem 1.1rem;
-  }
-  .eyebrow-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.45rem;
-    margin-bottom: 0.75rem;
-  }
-  .mini-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    padding: 0.3rem 0.72rem;
-    border-radius: 999px;
-    border: 1px solid var(--border);
-    background: var(--surface-alt);
-    color: var(--text-secondary);
-    font-size: 0.76rem;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-  }
-  .mini-pill.accent {
-    color: var(--accent);
-    background: var(--accent-light);
-    border-color: rgba(27,107,74,0.12);
-  }
-  .hero-panel h1 {
-    font-size: clamp(1.7rem, 3.6vw, 2.55rem);
-    margin-bottom: 0.5rem;
-  }
-  .hero-panel p {
-    color: var(--text-secondary);
-    max-width: 62ch;
-    margin-bottom: 0.95rem;
-  }
-  .hero-notes {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.45rem;
-  }
-  .hero-note {
-    font-size: 0.76rem;
-    color: var(--text-tertiary);
-    padding: 0.28rem 0.65rem;
-    border-radius: 999px;
-    border: 1px solid var(--border);
-    background: var(--bg);
-  }
-  .hero-note strong {
-    color: var(--text-secondary);
-  }
-  .trust-panel {
-    padding: 1.05rem 1.1rem;
-    display: grid;
-    gap: 0.8rem;
-  }
-  .trust-block strong {
-    display: block;
-    font-size: 0.9rem;
-    margin-bottom: 0.12rem;
-  }
-  .trust-block p {
-    font-size: 0.83rem;
-    color: var(--text-secondary);
-    line-height: 1.55;
-  }
-
-  .calc-card {
-    background: var(--surface);
-    border: 1.5px solid var(--border-strong);
-    border-top: 3px solid var(--accent);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow-lg);
-    overflow: hidden;
-    margin-bottom: 1rem;
-  }
-  .calc-header {
-    padding: 0.8rem 1.1rem 0;
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-  }
-  .calc-header h2 {
-    font-size: 1.18rem;
-    margin-bottom: 0.18rem;
-  }
-  .calc-header p {
-    color: var(--text-secondary);
-    font-size: 0.84rem;
-  }
-  .calc-year-badge {
-    flex-shrink: 0;
-    display: inline-flex;
-    align-items: center;
-    background: var(--accent-light);
-    color: var(--accent);
-    font-size: 0.72rem;
-    font-weight: 700;
-    padding: 0.28rem 0.7rem;
-    border-radius: var(--radius-sm);
-    letter-spacing: 0.01em;
-    border: 1px solid rgba(27,107,74,0.18);
-    margin-top: 0.15rem;
-  }
-  .calc-split {
-    display: grid;
-    grid-template-columns: minmax(0, 390px) minmax(0, 1fr);
-    margin-top: 0.75rem;
-  }
-
-  .calc-inputs {
-    padding: 0.85rem 1.25rem 1.25rem;
-    min-width: 0;
-    overflow: hidden;
-  }
-  .field-group + .field-group {
-    margin-top: 0.9rem;
-    padding-top: 0.85rem;
-    border-top: 1px solid var(--border);
-  }
-  .group-label {
-    font-size: 0.73rem;
-    font-weight: 700;
-    color: var(--text-tertiary);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 0.7rem;
-  }
-  .field {
-    margin-bottom: 0.68rem;
-  }
-  .field:last-child {
-    margin-bottom: 0;
-  }
-  .field label {
-    display: block;
-    font-size: 0.73rem;
-    font-weight: 600;
-    color: var(--text-secondary);
-    margin-bottom: 0.25rem;
-    letter-spacing: 0.03em;
-    text-transform: uppercase;
-  }
-  .field input,
-  .field select {
-    width: 100%;
-    height: 40px;
-    border: 1.5px solid var(--border);
-    border-radius: var(--radius-sm);
-    background: var(--surface);
-    color: var(--text-primary);
-    padding: 0 0.875rem;
-    font-size: 0.92rem;
-    transition: border-color var(--transition), box-shadow var(--transition);
-    -webkit-appearance: none;
-  }
-  .field select {
-    padding-right: 2rem;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%236B6860'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 0.75rem center;
-    background-color: var(--surface);
-  }
-  .field input:focus,
-  .field select:focus {
-    outline: none;
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(27,107,74,0.12);
-  }
-  .input-wrap {
-    position: relative;
-  }
-  .input-wrap::before {
-    content: attr(data-prefix);
-    position: absolute;
-    left: 0.875rem;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--text-tertiary);
-    font-size: 0.92rem;
-    pointer-events: none;
-    z-index: 1;
-    line-height: 1;
-  }
-  .input-wrap.has-prefix input {
-    padding-left: 1.65rem;
-  }
-  .field-choices {
-    display: flex;
-    gap: 0.35rem;
-    margin-top: 0.42rem;
-    flex-wrap: wrap;
-  }
-  .choice-chip {
-    font-size: 0.73rem;
-    font-weight: 500;
-    padding: 0.28rem 0.65rem;
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    background: var(--bg);
-    color: var(--text-secondary);
-    cursor: pointer;
-    transition: all var(--transition);
-  }
-  .choice-chip:hover,
-  .choice-chip.is-active {
-    border-color: var(--accent);
-    color: var(--accent);
-    background: var(--accent-light);
-  }
-  .choice-chip[data-tone="warm"]:hover,
-  .choice-chip[data-tone="warm"].is-active {
-    border-color: var(--accent-warm);
-    color: var(--accent-warm);
-    background: var(--accent-warm-light);
-  }
-  .preset-block {
-    margin-bottom: 0.85rem;
-  }
-  .quick-amounts {
-    display: flex;
-    gap: 0.38rem;
-    margin-top: 0.4rem;
-    flex-wrap: wrap;
-  }
-  .quick-amounts[hidden] {
-    display: none;
-  }
-  .quick-amounts button {
-    font-size: 0.76rem;
-    font-weight: 500;
-    padding: 0.3rem 0.7rem;
-    border: 1.5px solid var(--border);
-    border-radius: 100px;
-    background: var(--bg);
-    color: var(--text-secondary);
-    cursor: pointer;
-    transition: all var(--transition);
-  }
-  .quick-amounts button:hover,
-  .quick-amounts button.qa-active {
-    border-color: var(--accent);
-    color: var(--accent);
-    background: var(--accent-light);
-    font-weight: 600;
-  }
-  .more-toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--accent);
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 0.1rem 0 0;
-    letter-spacing: 0.01em;
-    margin-top: 0.15rem;
-  }
-  .more-toggle svg {
-    width: 12px;
-    height: 12px;
-    transition: transform 0.2s ease;
-  }
-  .more-toggle.open svg {
-    transform: rotate(180deg);
-  }
-  .more-fields {
-    display: none;
-  }
-  .more-fields.open {
-    display: block;
-  }
-  .boolean-grid {
-    display: grid;
-    gap: 0.55rem;
-  }
-  .checkbox-row {
-    display: flex;
-    align-items: center;
-    gap: 0.65rem;
-    padding: 0.75rem 0.85rem;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    background: #fafaf8;
-  }
-  .checkbox-row input {
-    width: 18px;
-    height: 18px;
-    accent-color: var(--accent);
-    flex-shrink: 0;
-  }
-  .checkbox-row span {
-    color: var(--text-primary);
-    font-size: 0.88rem;
-    font-weight: 600;
-    line-height: 1.4;
-  }
-
-  .calc-visual {
-    background: var(--surface);
-    border-left: 1px solid var(--border);
-    padding: 1rem 1.25rem 1.25rem;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.8rem;
-    min-width: 0;
-  }
-  .donut-svg {
-    width: 210px;
-    height: 210px;
-    display: block;
-    overflow: visible;
-    filter: drop-shadow(0 4px 12px rgba(26,26,24,0.08));
-    transition: transform 0.3s ease, filter 0.3s ease;
-    flex-shrink: 0;
-  }
-  .calc-visual:hover .donut-svg {
-    transform: scale(1.015);
-    filter: drop-shadow(0 6px 18px rgba(26,26,24,0.12));
-  }
-  .donut-track {
-    fill: none;
-    stroke: var(--border);
-    stroke-width: 26;
-  }
-  .donut-seg {
-    fill: none;
-    stroke-width: 26;
-    stroke-dasharray: 0 452;
-    stroke-dashoffset: 0;
-    stroke-linecap: round;
-    transition: stroke-dasharray 0.55s cubic-bezier(0.4,0,0.2,1), stroke-dashoffset 0.55s cubic-bezier(0.4,0,0.2,1), stroke-width 0.22s ease, opacity 0.22s ease;
-  }
-  .donut-seg.seg-muted {
-    opacity: 0.6 !important;
-  }
-  .donut-seg.seg-focus {
-    stroke-width: 29;
-  }
-  .donut-total-text {
-    font-family: var(--font-display);
-    font-size: 23px;
-    font-weight: 600;
-    fill: var(--text-primary);
-  }
-  .donut-sub-text {
-    font-family: var(--font-body);
-    font-size: 10px;
-    fill: var(--text-tertiary);
-  }
-  .donut-month-text {
-    font-family: var(--font-body);
-    font-size: 11.5px;
-    fill: var(--accent);
-    font-weight: 700;
-  }
-  .visual-right {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-  .visual-kpis {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.5rem;
-  }
-  .vk {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.5rem;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 0.55rem 0.7rem;
-  }
-  .vk-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--accent);
-    flex-shrink: 0;
-    margin-top: 0.22rem;
-  }
-  .vk-label {
-    font-size: 0.71rem;
-    color: var(--text-tertiary);
-    font-weight: 500;
-  }
-  .vk-value {
-    font-size: 1rem;
-    font-weight: 700;
-    color: var(--text-primary);
-    font-variant-numeric: tabular-nums lining-nums;
-    font-feature-settings: 'tnum' 1, 'lnum' 1;
-    letter-spacing: -0.02em;
-  }
-  .summary-card {
-    padding: 0.78rem 0.9rem;
-    background: var(--surface-alt);
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--border);
-    color: var(--text-secondary);
-    font-size: 0.84rem;
-    line-height: 1.55;
-  }
-  .donut-legend {
-    width: 100%;
-  }
-  .legend-row {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.38rem 0.5rem;
-    font-size: 0.79rem;
-    transition: background-color 0.15s ease;
-    border-radius: 5px;
-    cursor: default;
-  }
-  .legend-row:nth-child(even) {
-    background: var(--bg);
-  }
-  .legend-row:hover,
-  .legend-row.legend-active {
-    background: var(--accent-light);
-  }
-  .legend-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-  .legend-name {
-    flex: 1;
-    color: var(--text-secondary);
-  }
-  .legend-val {
-    font-weight: 600;
-    color: var(--text-primary);
-    font-variant-numeric: tabular-nums;
-    font-feature-settings: 'tnum' 1;
-  }
-
-  .calc-footer {
-    border-top: 1px solid var(--border);
-    padding: 0.85rem 1.25rem 1.15rem;
-    background: var(--surface);
-  }
-  .assumptions {
-    font-size: 0.78rem;
-    color: var(--text-tertiary);
-    line-height: 1.65;
-    padding: 0.65rem 0.9rem;
-    background: var(--bg);
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--border);
-    margin-bottom: 0.65rem;
-  }
-  .assumptions strong {
-    color: var(--text-secondary);
-  }
-
-  .result-block {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    box-shadow: var(--shadow-sm);
-    padding: 1rem 1.05rem;
-  }
-  .result-block + .result-block {
-    margin-top: 0.9rem;
-  }
-  .result-block h3 {
-    font-size: 0.76rem;
-    color: var(--text-tertiary);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 0.75rem;
-  }
-  .breakdown-list,
-  .note-list {
-    display: grid;
-    gap: 0.55rem;
-  }
-  .breakdown-row {
-    display: flex;
-    justify-content: space-between;
-    gap: 1rem;
-    padding: 0.7rem 0.8rem;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    background: #fcfcfa;
-    font-size: 0.87rem;
-  }
-  .breakdown-row span:first-child {
-    color: var(--text-secondary);
-  }
-  .note-item {
-    padding: 0.82rem 0.95rem;
-    border-left: 3px solid var(--accent);
-    background: rgba(229,243,235,0.55);
-    border-radius: 0 12px 12px 0;
-    color: var(--text-secondary);
-    font-size: 0.86rem;
-  }
-
-  .content-layout {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(250px, 300px);
-    gap: 1rem;
-    align-items: start;
-  }
-  .article-card,
-  .side-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    box-shadow: var(--shadow-sm);
-  }
-  .article-card {
-    padding: 1.35rem 1.35rem 1.45rem;
-  }
-  .article-card h2 {
-    font-size: 1.26rem;
-    margin: 1.2rem 0 0.55rem;
-  }
-  .article-card h2:first-of-type {
-    margin-top: 0;
-  }
-  .article-card p {
-    color: var(--text-secondary);
-    margin-bottom: 0.82rem;
-    max-width: 68ch;
-  }
-  .article-card ul {
-    margin: 0.4rem 0 0.95rem 1.15rem;
-    color: var(--text-secondary);
-  }
-  .article-card li + li {
-    margin-top: 0.4rem;
-  }
-  .side-stack {
-    position: sticky;
-    top: 74px;
-    display: grid;
-    gap: 0.9rem;
-  }
-  .side-card {
-    padding: 1rem 1.05rem;
-  }
-  .side-card h3 {
-    font-size: 0.75rem;
-    color: var(--text-tertiary);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 0.7rem;
-  }
-  .source-list,
-  .next-step-list {
-    display: grid;
-    gap: 0.5rem;
-  }
-  .source-link,
-  .next-step-link {
-    display: flex;
-    gap: 0.5rem;
-    align-items: flex-start;
-    color: var(--text-secondary);
-    text-decoration: none;
-    font-size: 0.84rem;
-    line-height: 1.45;
-  }
-  .source-link::before,
-  .next-step-link::before {
-    content: "→";
-    color: var(--accent);
-    flex-shrink: 0;
-  }
-  .source-link:hover,
-  .next-step-link:hover {
-    color: var(--accent);
-  }
-  .bottom-grid {
-    margin-top: 1rem;
-    display: grid;
-    gap: 1rem;
-  }
-  .bottom-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    box-shadow: var(--shadow-sm);
-    padding: 1.15rem 1.2rem;
-  }
-  .bottom-card h2 {
-    font-size: 1.12rem;
-    margin-bottom: 0.45rem;
-  }
-  .bottom-card p {
-    color: var(--text-secondary);
-    margin-bottom: 0.75rem;
-  }
-  .bottom-card.notice {
-    background: var(--surface-alt);
-  }
-  .sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-  }
-
-  @media (max-width: 920px) {
-    .calc-hero,
-    .content-layout {
-      grid-template-columns: 1fr;
-    }
-    .calc-split {
-      grid-template-columns: 1fr;
-    }
-    .calc-visual {
-      border-left: none;
-      border-top: 1px solid var(--border);
-      padding: 1rem 1.1rem 1rem;
-    }
-    .side-stack {
-      position: static;
-    }
-  }
-  @media (max-width: 780px) {
-    .page-wrap {
-      padding: 1rem 0 2.5rem;
-    }
-    .calc-header {
-      padding: 0.75rem 0.95rem 0;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    .calc-header h2 {
-      font-size: 1rem;
-    }
-    .calc-header p {
-      font-size: 0.8rem;
-    }
-    .calc-inputs {
-      padding: 0.85rem 1rem 1rem;
-    }
-    .calc-footer {
-      padding: 0.75rem 1rem 1rem;
-    }
-    .visual-kpis {
-      grid-template-columns: 1fr;
-    }
-    .hero-panel,
-    .trust-panel,
-    .article-card,
-    .side-card,
-    .bottom-card,
-    .result-block {
-      border-radius: 14px;
-    }
-  }
-  @media (max-width: 560px) {
-    .hero-panel {
-      padding: 1rem;
-    }
-    .hero-panel h1 {
-      font-size: 1.55rem;
-    }
-    .donut-svg {
-      width: 188px;
-      height: 188px;
-    }
-    .breakdown-row {
-      padding: 0.62rem 0.7rem;
-      font-size: 0.84rem;
-    }
-  }
-</style>
+<link rel="stylesheet" href="/static/calculator-ui.css">
 {% endblock %}
 
 {% block jsonld %}
@@ -733,13 +23,13 @@
 {% endblock %}
 
 {% block content %}
-{% set non_boolean_fields = page.fields | rejectattr("type", "equalto", "boolean") | list %}
-{% set boolean_fields = page.fields | selectattr("type", "equalto", "boolean") | list %}
+{% set non_boolean_fields = ordered_fields | rejectattr("type", "equalto", "boolean") | list %}
+{% set boolean_fields = ordered_fields | selectattr("type", "equalto", "boolean") | list %}
 {% set main_fields = non_boolean_fields[:4] %}
 {% set advanced_fields = non_boolean_fields[4:] %}
 
 <section class="page-wrap">
-  <div class="calc-hero">
+  <header class="calc-hero">
     <div class="hero-panel">
       <div class="eyebrow-row">
         <span class="mini-pill accent">Updated for {{ tax_year }}</span>
@@ -749,37 +39,37 @@
       <h1>{{ page.title }}</h1>
       <p>{{ page.summary }}</p>
       <div class="hero-notes">
-        <span class="hero-note"><strong>Fast:</strong> results update as you type</span>
-        <span class="hero-note"><strong>Clear:</strong> chart, totals and breakdown together</span>
-        <span class="hero-note"><strong>Practical:</strong> built for mobile and desktop</span>
+        {% for note in ui_config.hero_notes %}
+        <span class="hero-note">{{ note }}</span>
+        {% endfor %}
       </div>
-      <div class="pill-grid" style="margin-top:0.9rem;">
-        {% for related in related_calculators[:4] %}
+      <div class="hero-geo">
+        <strong>Coverage note:</strong> {{ ui_config.geo_note }}
+      </div>
+      <div class="hero-links" style="margin-top:0.85rem;">
+        {% for related in related_calculators[:3] %}
         <a class="pill" href="{{ related.url }}">{{ related.title }}</a>
         {% endfor %}
       </div>
     </div>
-    <aside class="trust-panel">
-      <div class="trust-block">
-        <strong>Core answer first</strong>
-        <p>The result panel keeps the main number, the annual view and the biggest moving parts visible without making you scan the whole page.</p>
-      </div>
-      <div class="trust-block">
-        <strong>What is simplified</strong>
-        <p>Local rules, evidence requirements, sanctions, transitional protection and unusual household details are not fully modelled here.</p>
-      </div>
-      <div class="trust-block">
-        <strong>Verify before acting</strong>
-        <p>Use the official links and methodology after estimating if you need to make a claim or challenge a decision.</p>
-      </div>
-    </aside>
-  </div>
+  </header>
 
   <section class="calc-card">
     <div class="calc-header">
-      <div>
-        <h2>{{ page.title }}</h2>
-        <p>Use quick presets, adjust the details, and review the visual breakdown as the estimate changes.</p>
+      <div class="calc-header-copy">
+        <h2>{{ ui_config.calculator_title }}</h2>
+        <p>{{ ui_config.calculator_subcopy }}</p>
+        <div class="calc-header-notes">
+          <span class="header-note accent">Live answer card summary</span>
+          {% if "savings" in ui_config.priority_fields %}
+          <span class="header-note">Savings shown early</span>
+          {% endif %}
+          {% if page.formula == "pip" %}
+          <span class="header-note">Daily living and mobility split</span>
+          {% elif page.formula == "child_benefit" %}
+          <span class="header-note">Weekly, monthly and annual totals</span>
+          {% endif %}
+        </div>
       </div>
       <span class="calc-year-badge">{{ tax_year }}</span>
     </div>
@@ -795,7 +85,7 @@
           <div class="field-group">
             <div class="group-label">Main details</div>
             {% for field in main_fields %}
-            <div class="field" data-field-name="{{ field.name }}" data-field-type="{{ field.type }}">
+            <div class="field">
               <label for="{{ field.name }}">{{ field.label }}</label>
               {% if field.type == "select" %}
               <select id="{{ field.name }}" name="{{ field.name }}">
@@ -824,7 +114,7 @@
             <div class="field-group">
               <div class="group-label">Extra details</div>
               {% for field in advanced_fields %}
-              <div class="field" data-field-name="{{ field.name }}" data-field-type="{{ field.type }}">
+              <div class="field">
                 <label for="{{ field.name }}">{{ field.label }}</label>
                 {% if field.type == "select" %}
                 <select id="{{ field.name }}" name="{{ field.name }}">
@@ -876,38 +166,16 @@
         </svg>
 
         <div class="visual-right">
-          <div class="visual-kpis">
-            <div class="vk">
-              <span class="vk-dot"></span>
-              <div>
-                <div class="vk-label">Main estimate</div>
-                <div id="vkPrimary" class="vk-value">{{ "£{:,.2f}".format(estimate.primary_amount) }}</div>
-              </div>
-            </div>
-            <div class="vk">
-              <span class="vk-dot" style="background:var(--c-housing);"></span>
-              <div>
-                <div class="vk-label">Annual view</div>
-                <div id="vkAnnual" class="vk-value">{{ "£{:,.2f}".format(estimate.secondary_amount) }}</div>
-              </div>
-            </div>
-            <div class="vk">
-              <span class="vk-dot" style="background:var(--c-child);"></span>
-              <div>
-                <div class="vk-label">Period used</div>
-                <div id="vkPeriod" class="vk-value" style="font-size:0.9rem;">{{ estimate.primary_label }}</div>
-              </div>
-            </div>
-            <div class="vk">
-              <span class="vk-dot" style="background:var(--c-other);"></span>
-              <div>
-                <div class="vk-label">Estimate type</div>
-                <div class="vk-value" style="font-size:0.9rem;">Planning only</div>
-              </div>
-            </div>
-          </div>
-
           <div id="result-summary" class="summary-card">{{ estimate.summary }}</div>
+
+          <div id="result-highlights" class="result-highlights">
+            {% for item in result_highlights %}
+            <div class="result-highlight" data-tone="{{ item.tone }}">
+              <span class="result-highlight-label">{{ item.label }}</span>
+              <div class="result-highlight-value">{{ item.value }}</div>
+            </div>
+            {% endfor %}
+          </div>
 
           <div class="donut-legend" id="breakdownLegend">
             {% for item in estimate_visual.legend %}
@@ -924,13 +192,28 @@
 
     <div class="calc-footer">
       <div class="assumptions">
-        <strong>Note:</strong> This page keeps the interface quick and consistent across mobile and desktop, but the estimate is still simplified. Check the official sources and the methodology before relying on it for a claim or appeal.
+        <strong>Use this as a planning estimate:</strong> the interface is designed to answer the most common search intent fast, but local authority rules, evidence requirements, deductions and special-case rules can still change the final outcome.
       </div>
       <div class="pill-grid">
         {% for related in related_calculators[:5] %}
         <a class="pill" href="{{ related.url }}">{{ related.title }}</a>
         {% endfor %}
       </div>
+    </div>
+  </section>
+
+  <section class="trust-grid">
+    <div class="trust-card">
+      <h3>What this page answers</h3>
+      <p>{{ ui_config.calculator_subcopy }}</p>
+    </div>
+    <div class="trust-card">
+      <h3>How the rules are scoped</h3>
+      <p>{{ ui_config.geo_note }}</p>
+    </div>
+    <div class="trust-card">
+      <h3>Why the guidance matters</h3>
+      <p>The worked explanation, official links and related calculators below are there to answer the next question as well, not leave the page as a generic one-number tool.</p>
     </div>
   </section>
 
@@ -955,8 +238,8 @@
     </div>
   </div>
 
-  {% if adsense_client %}
-  <section class="section" style="padding:0 0 1rem;">
+  {% if adsense_enabled and adsense_slot_calculator %}
+  <section class="section adsense-wrap" style="padding:0 0 1rem;">
     {% include "partials/adsense_snippet.html" %}
   </section>
   {% endif %}
@@ -973,7 +256,7 @@
 
     <aside class="side-stack">
       <div class="side-card">
-        <h3>Official sources</h3>
+        <h3>Official rules and rates</h3>
         <div class="source-list">
           {% for source in page_sources %}
           <a class="source-link" href="{{ source.url }}" target="_blank" rel="noopener">{{ source.label }}</a>
@@ -981,7 +264,7 @@
         </div>
       </div>
       <div class="side-card">
-        <h3>Next steps</h3>
+        <h3>Best next checks</h3>
         <div class="next-step-list">
           {% for step in next_steps %}
           <a class="next-step-link" href="{{ step.url }}">{{ step.label }}</a>
@@ -990,7 +273,7 @@
       </div>
       {% if related_guides %}
       <div class="side-card">
-        <h3>Related guides</h3>
+        <h3>Guides for this topic</h3>
         <div class="next-step-list">
           {% for guide in related_guides %}
           <a class="next-step-link" href="/guides/{{ guide.slug }}">{{ guide.title }}</a>
@@ -1003,8 +286,8 @@
 
   <div class="bottom-grid">
     <section class="bottom-card">
-      <h2>Related calculators</h2>
-      <p>People usually check these pages next when they are comparing support, testing a change of circumstances, or trying to explain a low result.</p>
+      <h2>Related calculators for this topic</h2>
+      <p>{{ ui_config.related_intro }}</p>
       <div class="pill-grid">
         {% for related in related_calculators %}
         <a class="pill" href="{{ related.url }}">{{ related.title }}</a>
@@ -1028,7 +311,7 @@
 
     <section class="bottom-card notice">
       <h2>Independent estimate only</h2>
-      <p>This page is written to help you understand the likely direction of the answer quickly, not to replace the official claim process. Local authority rules, evidence requirements, deductions, sanctions, timing and special-case rules can all change the final outcome.</p>
+      <p>This page is written to answer the real search query quickly, then hand off to the official process and the more specific guides that decide the final outcome. That is deliberate: these pages are designed to be useful, not generic.</p>
       <div class="pill-grid">
         <a class="pill" href="/methodology">Methodology</a>
         <a class="pill" href="/editorial-standards">Editorial standards</a>
@@ -1042,444 +325,11 @@
 {% block scripts %}
 <script src="/static/calc-engine.js"></script>
 <script>
-(function () {
-  var FORMULA = {{ page.formula|tojson }};
-  var FIELDS = {{ page.fields|tojson }};
-  var form = document.querySelector('.calc-inputs form');
-  if (!form || !window.CALC_ENGINE) return;
-
-  var CIRC = 452;
-  var SEG_IDS = ['seg-0', 'seg-1', 'seg-2', 'seg-3'];
-  var SEG_COLS = ['#1B6B4A', '#5B8DB8', '#D4763C', '#B0A89E'];
-  var FIELD_QUICK_CHOICES = {
-    children: [
-      { value: 0, label: 'None' },
-      { value: 1, label: '1' },
-      { value: 2, label: '2' },
-      { value: 3, label: '3' },
-      { value: 4, label: '4+' }
-    ],
-    savings: [
-      { value: 0, label: '£0' },
-      { value: 6000, label: '£6k' },
-      { value: 10000, label: '£10k' },
-      { value: 16000, label: '£16k' }
-    ],
-    earnings: [
-      { value: 0, label: '£0' },
-      { value: 800, label: '£800' },
-      { value: 1200, label: '£1.2k' },
-      { value: 1800, label: '£1.8k' }
-    ],
-    housing_cost: [
-      { value: 0, label: '£0' },
-      { value: 600, label: '£600' },
-      { value: 900, label: '£900' },
-      { value: 1200, label: '£1.2k' }
-    ],
-    childcare_cost: [
-      { value: 0, label: '£0' },
-      { value: 300, label: '£300' },
-      { value: 700, label: '£700' },
-      { value: 1200, label: '£1.2k' }
-    ],
-    adjusted_net_income: [
-      { value: 60000, label: '£60k' },
-      { value: 70000, label: '£70k' },
-      { value: 80000, label: '£80k' }
-    ],
-    weekly_income: [
-      { value: 0, label: '£0' },
-      { value: 100, label: '£100' },
-      { value: 200, label: '£200' },
-      { value: 300, label: '£300' }
-    ],
-    monthly_income: [
-      { value: 800, label: '£800' },
-      { value: 1200, label: '£1.2k' },
-      { value: 1600, label: '£1.6k' },
-      { value: 2200, label: '£2.2k' }
-    ],
-    monthly_benefits: [
-      { value: 1200, label: '£1.2k' },
-      { value: 1800, label: '£1.8k' },
-      { value: 2200, label: '£2.2k' }
-    ],
-    daily_living_points: [
-      { value: 0, label: '0' },
-      { value: 8, label: '8' },
-      { value: 12, label: '12' }
-    ],
-    mobility_points: [
-      { value: 0, label: '0' },
-      { value: 8, label: '8' },
-      { value: 12, label: '12' }
-    ],
-    weeks_off: [
-      { value: 1, label: '1 wk' },
-      { value: 4, label: '4 wks' },
-      { value: 12, label: '12 wks' },
-      { value: 28, label: '28 wks' }
-    ],
-    average_weekly_earnings: [
-      { value: 250, label: '£250' },
-      { value: 420, label: '£420' },
-      { value: 600, label: '£600' }
-    ]
-  };
-  var PRESETS_BY_FORMULA = {
-    universal_credit: [
-      { label: 'Single renter', values: { household: 'single', age_band: '25_plus', children: 0, housing_cost: 700, earnings: 900, savings: 0, childcare_cost: 0, health: 'none', first_child_pre_2017: false } },
-      { label: 'Working family', values: { household: 'couple', age_band: '25_plus', children: 2, housing_cost: 950, earnings: 1600, savings: 0, childcare_cost: 450, health: 'none', first_child_pre_2017: true } },
-      { label: 'Health condition', values: { household: 'single', age_band: '25_plus', children: 0, housing_cost: 750, earnings: 0, savings: 0, childcare_cost: 0, health: 'severe', first_child_pre_2017: false } }
-    ],
-    child_benefit: [
-      { label: '1 child', values: { children: 1 } },
-      { label: '2 children', values: { children: 2 } },
-      { label: '3 children', values: { children: 3 } }
-    ],
-    hicbc: [
-      { label: 'Threshold', values: { children: 2, adjusted_net_income: 60000 } },
-      { label: 'Mid taper', values: { children: 2, adjusted_net_income: 70000 } },
-      { label: 'Full charge', values: { children: 2, adjusted_net_income: 80000 } }
-    ],
-    pension_credit: [
-      { label: 'Single pensioner', values: { household: 'single', weekly_income: 180, savings: 0, severe_disability: false, carer: false } },
-      { label: 'Low income couple', values: { household: 'couple', weekly_income: 250, savings: 5000, severe_disability: false, carer: false } },
-      { label: 'With additions', values: { household: 'single', weekly_income: 140, savings: 12000, severe_disability: true, carer: true } }
-    ],
-    pip: [
-      { label: 'No award', values: { daily_living_points: 0, mobility_points: 0 } },
-      { label: 'Standard rates', values: { daily_living_points: 8, mobility_points: 8 } },
-      { label: 'Enhanced rates', values: { daily_living_points: 12, mobility_points: 12 } }
-    ],
-    council_tax_reduction: [
-      { label: 'Low income', values: { monthly_council_tax: 180, monthly_income: 900, savings: 0, on_means_tested_benefit: false, single_adult: false, on_guarantee_pension_credit: false } },
-      { label: 'Single adult', values: { monthly_council_tax: 180, monthly_income: 1500, savings: 0, on_means_tested_benefit: false, single_adult: true, on_guarantee_pension_credit: false } },
-      { label: 'Means-tested benefit', values: { monthly_council_tax: 180, monthly_income: 0, savings: 0, on_means_tested_benefit: true, single_adult: false, on_guarantee_pension_credit: false } }
-    ],
-    housing_benefit: [
-      { label: 'Legacy claimant', values: { weekly_rent: 140, weekly_income: 100, savings: 0, legacy_claimant: true, spare_room: false, pension_age: false } },
-      { label: 'Spare room', values: { weekly_rent: 140, weekly_income: 160, savings: 0, legacy_claimant: true, spare_room: true, pension_age: false } },
-      { label: 'Pension age', values: { weekly_rent: 160, weekly_income: 180, savings: 12000, legacy_claimant: true, spare_room: false, pension_age: true } }
-    ],
-    benefit_cap: [
-      { label: 'Outside London', values: { inside_london: false, household: 'couple', monthly_benefits: 1900 } },
-      { label: 'Inside London', values: { inside_london: true, household: 'couple', monthly_benefits: 2400 } },
-      { label: 'Single adult', values: { inside_london: false, household: 'single', monthly_benefits: 1300 } }
-    ],
-    ssp: [
-      { label: 'Short absence', values: { average_weekly_earnings: 420, weeks_off: 2 } },
-      { label: '1 month off', values: { average_weekly_earnings: 420, weeks_off: 4 } },
-      { label: 'Long absence', values: { average_weekly_earnings: 420, weeks_off: 12 } }
-    ],
-    maternity_comparison: [
-      { label: 'Eligible for both', values: { average_weekly_earnings: 380, employed_long_enough: true, employed_or_self_employed_long_enough: true } },
-      { label: 'MA only', values: { average_weekly_earnings: 260, employed_long_enough: false, employed_or_self_employed_long_enough: true } },
-      { label: 'Lower earnings', values: { average_weekly_earnings: 180, employed_long_enough: true, employed_or_self_employed_long_enough: true } }
-    ],
-    esa: [
-      { label: 'Work-related', values: { group: 'work_related', private_pension_weekly: 0, has_recent_ni_record: true } },
-      { label: 'Support group', values: { group: 'support', private_pension_weekly: 0, has_recent_ni_record: true } },
-      { label: 'Pension deduction', values: { group: 'support', private_pension_weekly: 140, has_recent_ni_record: true } }
-    ]
-  };
-
-  function fmt(n, decimals) {
-    var abs = Math.abs(Number(n) || 0);
-    var places = typeof decimals === 'number' ? decimals : 2;
-    var out = abs.toLocaleString('en-GB', { minimumFractionDigits: places, maximumFractionDigits: places });
-    return (n < 0 ? '-£' : '£') + out;
-  }
-
-  function fmtCompactCurrency(n) {
-    return fmt(n, Math.abs(n) >= 100 ? 0 : 2);
-  }
-
-  function esc(s) {
-    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  }
-
-  function findFieldConfig(name) {
-    for (var i = 0; i < FIELDS.length; i++) {
-      if (FIELDS[i].name === name) return FIELDS[i];
-    }
-    return null;
-  }
-
-  function readInputs() {
-    var inp = {};
-    FIELDS.forEach(function (f) {
-      var el = form.elements[f.name];
-      if (!el) return;
-      if (f.type === 'boolean') {
-        inp[f.name] = !!el.checked;
-      } else if (f.type === 'number') {
-        var v = parseFloat(String(el.value).replace(/[,£]/g, ''));
-        inp[f.name] = isNaN(v) ? (f['default'] || 0) : v;
-      } else {
-        inp[f.name] = el.value || f['default'] || '';
-      }
-    });
-    return inp;
-  }
-
-  function setInputValue(name, value) {
-    var field = findFieldConfig(name);
-    var el = form.elements[name];
-    if (!field || !el) return;
-    if (field.type === 'boolean') {
-      el.checked = !!value;
-      return;
-    }
-    if (field.type === 'number') {
-      el.value = value;
-      return;
-    }
-    el.value = value;
-  }
-
-  function updateChoiceState() {
-    document.querySelectorAll('.field-choices').forEach(function (wrap) {
-      var name = wrap.getAttribute('data-choices-for');
-      var el = form.elements[name];
-      if (!el) return;
-      var current = el.type === 'checkbox' ? String(!!el.checked) : String(el.value);
-      wrap.querySelectorAll('.choice-chip').forEach(function (chip) {
-        chip.classList.toggle('is-active', chip.getAttribute('data-value') === current);
-      });
-    });
-  }
-
-  function renderFieldChoices() {
-    FIELDS.forEach(function (field) {
-      var wrap = document.querySelector('[data-choices-for="' + field.name + '"]');
-      if (!wrap) return;
-      var choices = FIELD_QUICK_CHOICES[field.name];
-      if (!choices && field.type === 'select' && Array.isArray(field.options) && field.options.length <= 4) {
-        choices = field.options.map(function (option) {
-          return { value: option.value, label: option.label };
-        });
-      }
-      if (!choices || !choices.length) {
-        wrap.innerHTML = '';
-        return;
-      }
-      var html = '';
-      choices.forEach(function (choice) {
-        html += '<button type="button" class="choice-chip" data-field="' + esc(field.name) + '" data-value="' + esc(String(choice.value)) + '">' + esc(choice.label) + '</button>';
-      });
-      wrap.innerHTML = html;
-    });
-
-    document.querySelectorAll('.choice-chip').forEach(function (chip) {
-      chip.addEventListener('click', function () {
-        var name = chip.getAttribute('data-field');
-        var value = chip.getAttribute('data-value');
-        var field = findFieldConfig(name);
-        if (!field) return;
-        if (field.type === 'number') value = Number(value);
-        setInputValue(name, value);
-        updateChoiceState();
-        recalculate();
-      });
-    });
-
-    updateChoiceState();
-  }
-
-  function presetMatchesInputs(preset, inputs) {
-    if (!preset || !preset.values) return false;
-    for (var key in preset.values) {
-      if (!Object.prototype.hasOwnProperty.call(preset.values, key)) continue;
-      if (String(inputs[key]) !== String(preset.values[key])) return false;
-    }
-    return true;
-  }
-
-  function updatePresetState() {
-    var current = readInputs();
-    var chips = document.querySelectorAll('#preset-chip-group button');
-    chips.forEach(function (chip, idx) {
-      var preset = (PRESETS_BY_FORMULA[FORMULA] || [])[idx];
-      chip.classList.toggle('qa-active', presetMatchesInputs(preset, current));
-    });
-  }
-
-  function renderPresets() {
-    var wrap = document.getElementById('preset-chip-group');
-    var presets = PRESETS_BY_FORMULA[FORMULA] || [];
-    if (!wrap) return;
-    if (!presets.length) {
-      wrap.hidden = true;
-      return;
-    }
-    wrap.hidden = false;
-    wrap.innerHTML = presets.map(function (preset, idx) {
-      return '<button type="button" data-preset-index="' + idx + '">' + esc(preset.label) + '</button>';
-    }).join('');
-    wrap.querySelectorAll('button').forEach(function (chip) {
-      chip.addEventListener('click', function () {
-        var preset = presets[Number(chip.getAttribute('data-preset-index'))];
-        if (!preset || !preset.values) return;
-        Object.keys(preset.values).forEach(function (key) {
-          setInputValue(key, preset.values[key]);
-        });
-        var moreFields = document.getElementById('moreFields');
-        var moreToggle = document.getElementById('moreToggle');
-        if (moreFields && moreToggle) {
-          var needsAdvanced = Object.keys(preset.values).some(function (key) {
-            return !!document.querySelector('#moreFields [name="' + key + '"]');
-          });
-          if (needsAdvanced) {
-            moreFields.classList.add('open');
-            moreToggle.classList.add('open');
-            moreToggle.firstChild.textContent = 'Fewer options';
-          }
-        }
-        updateChoiceState();
-        updatePresetState();
-        recalculate();
-      });
-    });
-    updatePresetState();
-  }
-
-  function updateDonut(legend) {
-    var cumulative = 0;
-    var total = legend.reduce(function (sum, item) { return sum + Math.max(0, Number(item.value) || 0); }, 0);
-    if (total <= 0) {
-      SEG_IDS.forEach(function (id) {
-        var seg = document.getElementById(id);
-        if (seg) {
-          seg.style.strokeDasharray = '0 452';
-          seg.style.strokeDashoffset = '0';
-        }
-      });
-      return;
-    }
-    legend.forEach(function (item, idx) {
-      var seg = document.getElementById(SEG_IDS[idx]);
-      if (!seg) return;
-      var value = Math.max(0, Number(item.value) || 0);
-      var fraction = value / total;
-      var dash = fraction * CIRC * 0.92;
-      var gap = CIRC - dash;
-      var offset = -(cumulative / total * CIRC * 0.92);
-      seg.style.stroke = item.color || SEG_COLS[idx];
-      seg.style.strokeDasharray = dash + ' ' + gap;
-      seg.style.strokeDashoffset = offset;
-      cumulative += value;
-    });
-    for (var i = legend.length; i < SEG_IDS.length; i++) {
-      var extra = document.getElementById(SEG_IDS[i]);
-      if (extra) {
-        extra.style.strokeDasharray = '0 452';
-        extra.style.strokeDashoffset = '0';
-      }
-    }
-  }
-
-  function bindLegendHover() {
-    var rows = document.querySelectorAll('#breakdownLegend .legend-row');
-    rows.forEach(function (row, idx) {
-      row.addEventListener('mouseenter', function () {
-        document.querySelectorAll('.donut-seg').forEach(function (seg, segIdx) {
-          seg.classList.toggle('seg-focus', segIdx === idx);
-          seg.classList.toggle('seg-muted', segIdx !== idx);
-        });
-        row.classList.add('legend-active');
-      });
-      row.addEventListener('mouseleave', function () {
-        document.querySelectorAll('.donut-seg').forEach(function (seg) {
-          seg.classList.remove('seg-focus');
-          seg.classList.remove('seg-muted');
-        });
-        row.classList.remove('legend-active');
-      });
-    });
-  }
-
-  function updateUI(d) {
-    var el;
-    el = document.getElementById('vkPrimary'); if (el) el.textContent = fmt(d.primary_amount);
-    el = document.getElementById('vkAnnual'); if (el) el.textContent = fmt(d.secondary_amount);
-    el = document.getElementById('vkPeriod'); if (el) el.textContent = d.primary_label;
-    el = document.getElementById('result-summary'); if (el) el.textContent = d.summary;
-    el = document.getElementById('result-primary-chart'); if (el) el.textContent = fmtCompactCurrency(d.primary_amount);
-    el = document.getElementById('result-kicker-chart'); if (el) el.textContent = d.primary_label;
-    el = document.getElementById('result-annual-chart'); if (el) el.textContent = fmtCompactCurrency(d.secondary_amount) + '/yr';
-
-    var legend = (d.visual && d.visual.legend) ? d.visual.legend : [];
-    el = document.getElementById('breakdownLegend');
-    if (el) {
-      var legendHtml = '';
-      legend.forEach(function (item) {
-        legendHtml += '<div class="legend-row">'
-          + '<span class="legend-dot" style="background:' + esc(item.color) + '"></span>'
-          + '<span class="legend-name">' + esc(item.label) + '</span>'
-          + '<span class="legend-val">' + fmt(item.value) + '</span>'
-          + '</div>';
-      });
-      el.innerHTML = legendHtml;
-    }
-    updateDonut(legend);
-    bindLegendHover();
-
-    el = document.getElementById('result-breakdown');
-    if (el) {
-      var breakdownHtml = '';
-      (d.breakdown || []).forEach(function (pair) {
-        var label = pair[0];
-        var value = Number(pair[1]) || 0;
-        var isPercent = label.toLowerCase().indexOf('percentage') !== -1;
-        var formatted = isPercent ? Math.round(value) + '%' : fmt(value);
-        breakdownHtml += '<div class="breakdown-row"><span>' + esc(label) + '</span><strong>' + esc(formatted) + '</strong></div>';
-      });
-      el.innerHTML = breakdownHtml;
-    }
-
-    el = document.getElementById('result-notes');
-    if (el) {
-      var noteHtml = '';
-      (d.notes || []).forEach(function (note) {
-        noteHtml += '<div class="note-item">' + esc(note) + '</div>';
-      });
-      el.innerHTML = noteHtml;
-    }
-  }
-
-  function recalculate() {
-    var d = window.CALC_ENGINE.calculate(FORMULA, readInputs());
-    if (d) updateUI(d);
-    updateChoiceState();
-    updatePresetState();
-  }
-
-  form.querySelectorAll('input, select').forEach(function (el) {
-    el.addEventListener('input', recalculate);
-    el.addEventListener('change', recalculate);
-  });
-
-  form.addEventListener('submit', function (e) {
-    e.preventDefault();
-    recalculate();
-  });
-
-  var moreToggle = document.getElementById('moreToggle');
-  if (moreToggle) {
-    moreToggle.addEventListener('click', function () {
-      var fields = document.getElementById('moreFields');
-      if (!fields) return;
-      var open = fields.classList.toggle('open');
-      moreToggle.classList.toggle('open', open);
-      moreToggle.firstChild.textContent = open ? 'Fewer options' : 'More options';
-    });
-  }
-
-  renderFieldChoices();
-  renderPresets();
-  recalculate();
-})();
+window.CALCULATOR_PAGE = {{ {
+  "formula": page.formula,
+  "fields": page.fields,
+  "initialHighlights": result_highlights
+}|tojson }};
 </script>
+<script src="/static/calculator-ui.js"></script>
 {% endblock %}
