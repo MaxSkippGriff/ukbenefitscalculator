@@ -453,21 +453,19 @@
   }
 
   function renderHighlights(highlights) {
-    var wrap = document.getElementById('result-highlights');
+    var wrap = document.getElementById('result-facts');
     if (!wrap) return;
     wrap.innerHTML = highlights.map(function (item) {
-      return '<div class="result-highlight" data-tone="' + esc(item.tone || 'standard') + '">'
-        + '<span class="result-highlight-label">' + esc(item.label) + '</span>'
-        + '<div class="result-highlight-value">' + esc(item.value) + '</div>'
+      return '<div class="result-fact" data-tone="' + esc(item.tone || 'standard') + '">'
+        + '<span class="result-fact-dot"></span>'
+        + '<span class="result-fact-label">' + esc(item.label) + '</span>'
+        + '<span class="result-fact-value">' + esc(item.value) + '</span>'
         + '</div>';
     }).join('');
   }
 
   function updateUI(d) {
     var el;
-    el = document.getElementById('result-summary');
-    if (el) el.textContent = d.summary;
-
     el = document.getElementById('result-primary-chart');
     if (el) el.textContent = fmtCompactMoney(d.primary_amount);
     el = document.getElementById('result-kicker-chart');

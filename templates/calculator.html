@@ -166,13 +166,12 @@
         </svg>
 
         <div class="visual-right">
-          <div id="result-summary" class="summary-card">{{ estimate.summary }}</div>
-
-          <div id="result-highlights" class="result-highlights">
+          <div id="result-facts" class="result-facts">
             {% for item in result_highlights %}
-            <div class="result-highlight" data-tone="{{ item.tone }}">
-              <span class="result-highlight-label">{{ item.label }}</span>
-              <div class="result-highlight-value">{{ item.value }}</div>
+            <div class="result-fact" data-tone="{{ item.tone }}">
+              <span class="result-fact-dot"></span>
+              <span class="result-fact-label">{{ item.label }}</span>
+              <span class="result-fact-value">{{ item.value }}</span>
             </div>
             {% endfor %}
           </div>
@@ -199,21 +198,6 @@
         <a class="pill" href="{{ related.url }}">{{ related.title }}</a>
         {% endfor %}
       </div>
-    </div>
-  </section>
-
-  <section class="trust-grid">
-    <div class="trust-card">
-      <h3>What this page answers</h3>
-      <p>{{ ui_config.calculator_subcopy }}</p>
-    </div>
-    <div class="trust-card">
-      <h3>How the rules are scoped</h3>
-      <p>{{ ui_config.geo_note }}</p>
-    </div>
-    <div class="trust-card">
-      <h3>Why the guidance matters</h3>
-      <p>The worked explanation, official links and related calculators below are there to answer the next question as well, not leave the page as a generic one-number tool.</p>
     </div>
   </section>
 
