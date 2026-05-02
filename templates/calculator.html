@@ -149,6 +149,17 @@
           </div>
           {% endif %}
 
+          {% if ui_config.input_brief_points %}
+          <div class="input-brief">
+            <div class="input-brief-label">{{ ui_config.input_brief_title }}</div>
+            <div class="input-brief-points">
+              {% for point in ui_config.input_brief_points %}
+              <span class="input-brief-point">{{ point }}</span>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+
           <button class="sr-only" type="submit">Update estimate</button>
         </form>
       </div>
@@ -160,9 +171,9 @@
           <circle class="donut-seg" id="seg-1" cx="100" cy="100" r="72" stroke="#5B8DB8" transform="rotate(-90 100 100)"></circle>
           <circle class="donut-seg" id="seg-2" cx="100" cy="100" r="72" stroke="#D4763C" transform="rotate(-90 100 100)"></circle>
           <circle class="donut-seg" id="seg-3" cx="100" cy="100" r="72" stroke="#B0A89E" transform="rotate(-90 100 100)"></circle>
-          <text class="donut-total-text" x="100" y="92" text-anchor="middle" id="result-primary-chart">{{ "£{:,.0f}".format(estimate.primary_amount) }}</text>
-          <text class="donut-sub-text" x="100" y="107" text-anchor="middle" id="result-kicker-chart">{{ estimate.primary_label }}</text>
-          <text class="donut-month-text" x="100" y="121" text-anchor="middle" id="result-annual-chart">{{ "£{:,.0f}/yr".format(estimate.secondary_amount) }}</text>
+          <text class="donut-total-text" x="100" y="91" text-anchor="middle" id="result-primary-chart">{{ "£{:,.0f}".format(estimate.primary_amount) }}</text>
+          <text class="donut-sub-text" x="100" y="107" text-anchor="middle" id="result-kicker-chart">{{ ui_config.chart_unit_label }}</text>
+          <text class="donut-month-text" x="100" y="123" text-anchor="middle" id="result-annual-chart">{{ ui_config.chart_secondary_prefix }}{{ "£{:,.0f}".format(estimate.secondary_amount) }}{{ ui_config.chart_secondary_suffix }}</text>
         </svg>
 
         <div class="visual-right">

@@ -2982,6 +2982,11 @@ def calculator_ui_config(slug: str, page: Dict[str, Any]) -> Dict[str, Any]:
         "geo_note": "UK-wide estimator using current published rules, with local or case-specific limitations explained below.",
         "priority_fields": [],
         "result_mode": page["formula"],
+        "chart_unit_label": "estimate",
+        "chart_secondary_prefix": "",
+        "chart_secondary_suffix": "/yr",
+        "input_brief_title": "Key rules",
+        "input_brief_points": [],
         "related_intro": "Use the linked calculators and guides below to test the next question people usually have after this estimate.",
     }
     per_slug = {
@@ -2994,6 +2999,9 @@ def calculator_ui_config(slug: str, page: Dict[str, Any]) -> Dict[str, Any]:
             ],
             "geo_note": "UK-wide Universal Credit rules with simplified housing-cost treatment. Local rent limits, service charges and special-case rules can still change the final award.",
             "priority_fields": ["household", "earnings", "savings", "housing_cost", "children", "age_band", "childcare_cost", "health"],
+            "chart_unit_label": "per month",
+            "input_brief_title": "Capital rules to know",
+            "input_brief_points": ["£6,000 ignored", "£4.35 per £250 over £6,000", "£16,000 usually stops standard UC"],
             "related_intro": "These next pages are the usual follow-up checks for people comparing UC, capital limits, childcare help and capped awards.",
         },
         "child-benefit-calculator": {
@@ -3005,7 +3013,17 @@ def calculator_ui_config(slug: str, page: Dict[str, Any]) -> Dict[str, Any]:
             ],
             "geo_note": "UK-wide Child Benefit rates are fixed nationally. The follow-up issue for many families is the High Income Child Benefit Charge.",
             "priority_fields": ["children"],
+            "chart_unit_label": "per week",
+            "input_brief_title": "2026/27 rates used",
+            "input_brief_points": ["First child £27.05/wk", "Each extra child £17.90/wk", "Usually paid every 4 weeks"],
             "related_intro": "These are the pages most families need next when checking Child Benefit, HICBC and childcare support together.",
+        },
+        "hicbc-calculator": {
+            "chart_unit_label": "per year",
+            "chart_secondary_prefix": "keeps ",
+            "chart_secondary_suffix": "",
+            "input_brief_title": "HICBC threshold",
+            "input_brief_points": ["Starts above £60,000 ANI", "1% per £200 over the threshold", "Full charge at £80,000"],
         },
         "pension-credit-calculator": {
             "calculator_subcopy": "See the likely weekly Pension Credit top-up first, with savings treatment and key additions kept visible from the start.",
@@ -3016,6 +3034,9 @@ def calculator_ui_config(slug: str, page: Dict[str, Any]) -> Dict[str, Any]:
             ],
             "geo_note": "Pension Credit uses UK-wide core rates, but housing costs, Savings Credit and mixed-age couple rules can still change the final position.",
             "priority_fields": ["household", "weekly_income", "savings"],
+            "chart_unit_label": "per week",
+            "input_brief_title": "Savings rules",
+            "input_brief_points": ["First £10,000 ignored", "No UC-style £16,000 stop point", "Even small awards can unlock extra help"],
             "related_intro": "Most Pension Credit searches lead into council tax, winter support and worked examples rather than ending at the weekly cash figure alone.",
         },
         "pip-eligibility-checker": {
@@ -3027,6 +3048,9 @@ def calculator_ui_config(slug: str, page: Dict[str, Any]) -> Dict[str, Any]:
             ],
             "geo_note": "PIP rules are UK-wide in core structure, but this remains an indicative points checker rather than a DWP decision tool.",
             "priority_fields": ["daily_living_points", "mobility_points"],
+            "chart_unit_label": "per week",
+            "input_brief_title": "PIP point thresholds",
+            "input_brief_points": ["8 points = standard rate", "12 points = enhanced rate", "Not affected by earnings or savings"],
             "related_intro": "People usually use these follow-up pages when they are comparing PIP with ESA, UC health routes or other disability-related support.",
         },
         "council-tax-reduction-calculator": {
@@ -3038,6 +3062,9 @@ def calculator_ui_config(slug: str, page: Dict[str, Any]) -> Dict[str, Any]:
             ],
             "geo_note": "Council Tax Reduction is local, not one national scheme. This page is built as a UK directional estimator, not a council-specific decision tool.",
             "priority_fields": ["monthly_council_tax", "monthly_income", "savings"],
+            "chart_unit_label": "per month",
+            "input_brief_title": "CTR reminders",
+            "input_brief_points": ["Local scheme, not one UK formula", "Savings can reduce help", "Single-person discount is separate"],
             "related_intro": "Council tax support searches usually connect to rent help, Pension Credit and wider affordability support, so the follow-up links stay tightly focused.",
         },
         "housing-benefit-calculator": {
@@ -3049,6 +3076,9 @@ def calculator_ui_config(slug: str, page: Dict[str, Any]) -> Dict[str, Any]:
             ],
             "geo_note": "Housing Benefit is mainly a legacy or specialist route now. This page is meant to answer that search intent while steering most new cases back to Universal Credit housing costs.",
             "priority_fields": ["weekly_rent", "weekly_income", "savings"],
+            "chart_unit_label": "per week",
+            "input_brief_title": "Before you rely on it",
+            "input_brief_points": ["Mainly legacy or pension-age cases", "Working-age savings can still stop entitlement", "Bedroom and rent caps can reduce support"],
             "related_intro": "Housing Benefit searches usually need a second check on Universal Credit, council tax help or the Benefit Cap once the legacy-versus-new-claim question is clear.",
         },
         "benefit-cap-calculator": {
@@ -3060,7 +3090,29 @@ def calculator_ui_config(slug: str, page: Dict[str, Any]) -> Dict[str, Any]:
             ],
             "geo_note": "The Benefit Cap uses national cap levels, but exemptions and earnings rules still matter. This page is designed as a quick first cap check rather than a full exemption checker.",
             "priority_fields": ["monthly_benefits", "household", "inside_london"],
+            "chart_unit_label": "over cap",
+            "chart_secondary_prefix": "cap ",
+            "chart_secondary_suffix": "",
+            "input_brief_title": "Cap levels to compare",
+            "input_brief_points": ["Outside London family cap £1,835/mo", "Inside London family cap £2,110/mo", "Many disability awards exempt the household"],
             "related_intro": "Benefit Cap searches often come after a lower-than-expected UC result, so the related links stay centred on rent, family support and cap exemptions.",
+        },
+        "tax-free-childcare-calculator": {
+            "chart_unit_label": "per year",
+            "chart_secondary_suffix": "/mo equiv",
+            "input_brief_title": "How the top-up works",
+            "input_brief_points": ["Government adds £2 for every £8 paid in", "Up to £2,000 a year per child", "Cannot usually be used with UC childcare support"],
+        },
+        "free-school-meals-checker": {
+            "chart_unit_label": "school year",
+            "chart_secondary_suffix": " family value",
+            "input_brief_title": "England rules used here",
+            "input_brief_points": ["UC earnings test usually £7,400 net", "Reception to year 2 often get universal infant meals", "Other UK nations use different rules"],
+        },
+        "savings-impact-calculator": {
+            "chart_unit_label": "per month",
+            "input_brief_title": "UC savings thresholds",
+            "input_brief_points": ["Below £6,000 ignored", "£4.35 a month per £250 band", "£16,000 or more usually means no standard UC"],
         },
     }
     merged = dict(base)

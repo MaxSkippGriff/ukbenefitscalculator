@@ -288,6 +288,42 @@
   margin-top: 0.45rem;
 }
 
+.input-brief {
+  margin-top: 0.82rem;
+  padding: 0.76rem 0.82rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: linear-gradient(180deg, #fcfcfa 0%, #f6f5f1 100%);
+}
+
+.input-brief-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.48rem;
+}
+
+.input-brief-points {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.input-brief-point {
+  display: inline-flex;
+  align-items: center;
+  min-height: 31px;
+  padding: 0.28rem 0.62rem;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 0.77rem;
+  font-weight: 600;
+}
+
 .more-toggle {
   display: inline-flex;
   align-items: center;
@@ -356,7 +392,7 @@
   flex-direction: column;
   gap: 0.68rem;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 .donut-svg {
@@ -392,7 +428,7 @@
 
 .donut-total-text {
   font-family: var(--font-display);
-  font-size: 22px;
+  font-size: 23px;
   font-weight: 600;
   fill: var(--text-primary);
 }
@@ -405,7 +441,7 @@
 
 .donut-month-text {
   font-family: var(--font-body);
-  font-size: 11px;
+  font-size: 11.5px;
   fill: var(--accent);
   font-weight: 700;
 }
@@ -423,6 +459,10 @@
   width: 100%;
   display: grid;
   gap: 0.38rem;
+}
+
+.result-facts:empty {
+  display: none;
 }
 
 .result-fact {
@@ -770,6 +810,11 @@
     min-height: 40px;
     font-size: 0.76rem;
     padding: 0.42rem 0.74rem;
+  }
+
+  .input-brief {
+    margin-top: 0.72rem;
+    padding: 0.72rem 0.78rem;
   }
 
   .breakdown-row {

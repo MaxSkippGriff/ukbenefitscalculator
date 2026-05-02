@@ -156,6 +156,14 @@
     return fmtMoney(n, Math.abs(n) >= 100 ? 0 : 2);
   }
 
+  function fmtCompactRoundedMoney(n) {
+    var value = Math.abs(Number(n) || 0);
+    return (n < 0 ? '-£' : '£') + value.toLocaleString('en-GB', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: value >= 100 ? 0 : 2
+    });
+  }
+
   function roundMoney(n) {
     return Math.round((Number(n || 0) + 1e-9) * 100) / 100;
   }
@@ -452,6 +460,50 @@
     ];
   }
 
+  function chartUnitLabel() {
+    var labels = {
+      universal_credit: 'per month',
+      child_benefit: 'per week',
+      hicbc: 'per year',
+      pension_credit: 'per week',
+      pip: 'per week',
+      council_tax_reduction: 'per month',
+      housing_benefit: 'per week',
+      benefit_cap: 'over cap',
+      ssp: 'per week',
+      maternity_comparison: 'best route',
+      esa: 'per week',
+      jsa: 'per week',
+      working_tax_credit: 'per year',
+      child_tax_credit: 'per year',
+      tax_free_childcare: 'per year',
+      sure_start: 'one-off',
+      healthy_start: 'per month',
+      free_school_meals: 'school year',
+      winter_fuel: 'one-off',
+      cold_weather: 'winter total',
+      savings_impact: 'per month',
+      earnings_impact: 'per month',
+      maternity_pay: 'total pay',
+      tax_free_childcare_monthly: 'per month',
+      attendance_allowance: 'per week',
+      carers_allowance: 'per week'
+    };
+    return labels[FORMULA] || 'estimate';
+  }
+
+  function chartSecondaryText(d) {
+    if (FORMULA === 'hicbc') return 'keeps ' + fmtCompactRoundedMoney(d.secondary_amount);
+    if (FORMULA === 'benefit_cap') return 'cap ' + fmtCompactRoundedMoney(d.secondary_amount);
+    if (FORMULA === 'tax_free_childcare') return fmtCompactRoundedMoney(roundMoney((d.primary_amount || 0) / 12)) + '/mo equiv';
+    if (FORMULA === 'tax_free_childcare_monthly') return fmtCompactRoundedMoney(d.secondary_amount) + '/yr';
+    if (FORMULA === 'free_school_meals') return fmtCompactRoundedMoney(d.secondary_amount) + ' family value';
+    if (FORMULA === 'maternity_comparison') return 'MA ' + fmtCompactRoundedMoney(d.secondary_amount);
+    if (FORMULA === 'sure_start' || FORMULA === 'winter_fuel') return fmtCompactRoundedMoney(d.secondary_amount);
+    if (FORMULA === 'cold_weather') return fmtCompactRoundedMoney(d.secondary_amount);
+    return fmtCompactRoundedMoney(d.secondary_amount) + '/yr';
+  }
+
   function renderHighlights(highlights) {
     var wrap = document.getElementById('result-facts');
     if (!wrap) return;
@@ -469,9 +521,9 @@
     el = document.getElementById('result-primary-chart');
     if (el) el.textContent = fmtCompactMoney(d.primary_amount);
     el = document.getElementById('result-kicker-chart');
-    if (el) el.textContent = d.primary_label;
+    if (el) el.textContent = chartUnitLabel();
     el = document.getElementById('result-annual-chart');
-    if (el) el.textContent = fmtCompactMoney(d.secondary_amount) + '/yr';
+    if (el) el.textContent = chartSecondaryText(d);
 
     var legend = d.visual && d.visual.legend ? d.visual.legend : [];
     el = document.getElementById('breakdownLegend');
