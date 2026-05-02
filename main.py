@@ -1071,9 +1071,9 @@ COMMON_SAVINGS_FIELD = {"name": "savings", "label": "Savings and investments", "
 CALCULATORS: Dict[str, Dict[str, Any]] = {
     "universal-credit-calculator": calc_page(
         "universal-credit-calculator",
-        "Universal Credit calculator",
-        "Estimate monthly Universal Credit using household type, children, housing costs, childcare, earnings and savings. Independent UK estimator.",
-        "Estimate what support you may get through Universal Credit using a simplified but practical monthly model.",
+        "Universal Credit calculator 2026/27",
+        "Estimate monthly Universal Credit using household type, children, housing costs, childcare, earnings and savings. Independent UK estimator with the £6,000 and £16,000 capital rules.",
+        "Estimate what support you may get through Universal Credit using a simplified but practical monthly model with savings and tariff income effects shown early.",
         "universal_credit",
         [
             {"name": "age_band", "label": "Main claimant age", "type": "select", "default": "25_plus", "options": [{"value": "under_25", "label": "Under 25"}, {"value": "25_plus", "label": "25 or over"}]},
@@ -1101,8 +1101,8 @@ CALCULATORS: Dict[str, Dict[str, Any]] = {
     ),
     "child-benefit-calculator": calc_page(
         "child-benefit-calculator",
-        "Child Benefit calculator",
-        "Estimate weekly, monthly and annual Child Benefit for 2026 to 2027 using the latest published UK rates.",
+        "Child Benefit calculator 2026/27",
+        "Estimate weekly, monthly and annual Child Benefit for 2026 to 2027 using the latest published UK rates for 1, 2 or more children.",
         "Work out the current Child Benefit amount for your household and compare it with the HICBC charge if income is higher.",
         "child_benefit",
         [COMMON_CHILDREN_FIELD],
@@ -1122,8 +1122,8 @@ CALCULATORS: Dict[str, Dict[str, Any]] = {
     "hicbc-calculator": calc_page(
         "hicbc-calculator",
         "High Income Child Benefit Charge calculator 2026",
-        "Calculate the High Income Child Benefit Charge (HICBC) using adjusted net income and 2026/27 Child Benefit rates.",
-        "Check how much Child Benefit a higher earner may have to repay through the HICBC in 2026/27.",
+        "Calculate the High Income Child Benefit Charge (HICBC) using adjusted net income and 2026/27 Child Benefit rates across the £60,000 to £80,000 taper band.",
+        "Check how much Child Benefit a higher earner may have to repay through the HICBC in 2026/27 and how much the household may actually keep.",
         "hicbc",
         [COMMON_CHILDREN_FIELD, {"name": "adjusted_net_income", "label": "Adjusted net income", "type": "number", "default": 68000, "step": 100, "min": 0, "prefix": "£"}],
         [
@@ -1141,9 +1141,9 @@ CALCULATORS: Dict[str, Dict[str, Any]] = {
     ),
     "pension-credit-calculator": calc_page(
         "pension-credit-calculator",
-        "Pension Credit calculator",
+        "Pension Credit calculator 2026/27",
         "Estimate Guarantee Credit using weekly income, savings and key additions such as severe disability or carer status.",
-        "Check whether low retirement income could translate into Pension Credit and the wider passported help that often comes with it.",
+        "Check whether low retirement income could translate into Pension Credit, even with savings, and the wider passported help that often comes with it.",
         "pension_credit",
         [
             {"name": "household", "label": "Household type", "type": "select", "default": "single", "options": [{"value": "single", "label": "Single"}, {"value": "couple", "label": "Couple"}]},
@@ -1167,9 +1167,9 @@ CALCULATORS: Dict[str, Dict[str, Any]] = {
     ),
     "pip-eligibility-checker": calc_page(
         "pip-eligibility-checker",
-        "PIP eligibility checker",
-        "Use a simplified points-based PIP checker to estimate whether a daily living or mobility award may be in range.",
-        "Sense-check a likely PIP band by entering your likely points for daily living and mobility activities.",
+        "PIP eligibility checker 2026/27",
+        "Use a simplified points-based PIP checker to estimate whether a daily living or mobility award may be in range, plus the current weekly, monthly and annual amounts.",
+        "Sense-check a likely PIP band by entering your likely points for daily living and mobility activities, then see the current PIP rates.",
         "pip",
         [
             {"name": "daily_living_points", "label": "Daily living points", "type": "number", "default": 8, "step": 1, "min": 0},
@@ -1215,7 +1215,7 @@ CALCULATORS: Dict[str, Dict[str, Any]] = {
         "housing-benefit-calculator",
         "Housing Benefit estimator",
         "Check whether a legacy Housing Benefit case may still qualify using weekly rent, income, savings and pension-age status.",
-        "Estimate possible Housing Benefit in legacy cases and understand when Universal Credit housing costs are more relevant.",
+        "Estimate possible Housing Benefit in legacy or pension-age cases and understand when Universal Credit housing costs are more relevant.",
         "housing_benefit",
         [
             {"name": "weekly_rent", "label": "Weekly eligible rent", "type": "number", "default": 140, "step": 1, "min": 0, "prefix": "£"},
@@ -1237,8 +1237,8 @@ CALCULATORS: Dict[str, Dict[str, Any]] = {
     "benefit-cap-calculator": calc_page(
         "benefit-cap-calculator",
         "Benefit Cap calculator",
-        "Check whether your monthly benefits appear to be above the current cap inside or outside Greater London.",
-        "See whether a household benefit total looks higher than the current Benefit Cap limit.",
+        "Check whether your monthly benefits appear to be above the current cap inside or outside Greater London, using the current family and single-adult limits.",
+        "See whether a household benefit total looks higher than the current Benefit Cap limit and whether an exemption is the next thing to check.",
         "benefit_cap",
         [
             {"name": "monthly_benefits", "label": "Monthly benefits total", "type": "number", "default": 1950, "step": 10, "min": 0, "prefix": "£"},
@@ -1500,8 +1500,8 @@ CALCULATORS: Dict[str, Dict[str, Any]] = {
     "savings-impact-calculator": calc_page(
         "savings-impact-calculator",
         "Savings and Universal Credit calculator",
-        "See how savings between £6,000 and £16,000 reduce your Universal Credit through the tariff income rule.",
-        "Work out the monthly UC deduction generated by savings above the £6,000 threshold.",
+        "See how savings between £6,000 and £16,000 reduce your Universal Credit through the tariff income rule of £4.35 a month per £250 above the lower limit.",
+        "Work out the monthly UC deduction generated by savings above the £6,000 threshold and when the £16,000 capital limit stops entitlement.",
         "savings_impact",
         [
             {"name": "savings", "label": "Total savings and investments", "type": "number", "default": 8000, "step": 250, "min": 0, "prefix": "£"},
@@ -1666,8 +1666,8 @@ GUIDES: Dict[str, Dict[str, Any]] = {
         "related_guides": ["universal-credit-explained", "benefits-for-low-income-families", "help-with-rent-and-council-tax", "pension-credit-explained", "pip-explained-simply"],
     },
     "universal-credit-explained": {
-        "title": "Universal Credit explained",
-        "description": "Plain-English guide to Universal Credit 2026/27 — what drives the award, how earnings and savings affect it, and what to check alongside it.",
+        "title": "Universal Credit explained 2026/27 — rates, capital limits and working-family rules",
+        "description": "Plain-English guide to Universal Credit 2026/27 — rates, work allowance, £6,000 and £16,000 capital limits, tariff income and what working families should check next.",
         "topic": "Universal Credit",
         "sections": [
             {"heading": "Universal Credit is one payment built from several elements", "paragraphs": [
@@ -1746,8 +1746,8 @@ GUIDES: Dict[str, Dict[str, Any]] = {
         ],
     },
     "how-savings-affect-benefits": {
-        "title": "How savings affect benefits",
-        "description": "How savings affect Universal Credit 2026/27: the £6,000 lower limit, tariff income, £16,000 upper limit and what counts as capital — ISAs yes, CTFs no.",
+        "title": "How savings affect benefits — UC capital limits, tariff income and capital disregards",
+        "description": "How savings affect Universal Credit 2026/27: the £6,000 lower limit, £16,000 upper limit, tariff income of £4.35 per £250 and what counts as capital or capital disregards.",
         "topic": "Savings rules",
         "sections": [
             {"heading": "There is no single savings rule for the whole benefits system", "paragraphs": [
@@ -1785,6 +1785,8 @@ GUIDES: Dict[str, Dict[str, Any]] = {
         "faq": [
             {"q": "Do savings affect PIP or Carer's Allowance?", "a": "No. PIP, DLA and Carer's Allowance are not means tested. Income and savings do not affect them."},
             {"q": "Does Universal Credit stop at exactly £16,000 in savings?", "a": "Yes, for most standard cases the award stops when capital reaches £16,000 or more. Between £6,000 and £16,000 the award is reduced through an assumed-income calculation of £4.35 a month per £250 above the lower threshold."},
+            {"q": "Does an ISA count as capital for Universal Credit?", "a": "Yes. ISAs usually count as capital for Universal Credit in the same way as ordinary savings accounts and investments."},
+            {"q": "What are Universal Credit capital disregards?", "a": "Your main home is disregarded, and some compensation payments, business assets and care-related amounts can also be ignored for a period or in full depending on the circumstances."},
             {"q": "Does Pension Credit have the same £16,000 limit?", "a": "No. Pension Credit uses different rules. It disregards the first £10,000 and then applies an assumed-income formula above that, but there is no hard upper limit equivalent to the £16,000 UC stop-point."},
             {"q": "Does a joint account count as capital for one person or two?", "a": "Joint accounts are usually split 50:50 between partners for benefits purposes unless there is evidence of a different beneficial ownership split."},
             {"q": "Can spending savings before claiming be a problem?", "a": "It can be. DWP can apply a deprivation of capital rule if they believe savings were deliberately reduced to get below a threshold. Ordinary spending on living expenses is unlikely to trigger this, but large transfers to family members shortly before a claim may be questioned."},
@@ -2377,9 +2379,9 @@ SITUATION_PAGES: Dict[str, Dict[str, Any]] = {
     },
     "benefits-in-northern-ireland": {
         "slug": "benefits-in-northern-ireland",
-        "title": "Benefits calculator for Northern Ireland",
-        "description": "Benefits calculator for Northern Ireland 2026/27 — Universal Credit, Child Benefit, PIP and housing support. Managed by DfC, same rates as Great Britain.",
-        "intro": "The UK benefits system in Northern Ireland largely mirrors Great Britain, with Universal Credit using the same rates and rules. The key difference is administration: Universal Credit in Northern Ireland is managed by the Department for Communities (DfC) rather than DWP. The calculators on this site use rates that apply equally to Northern Ireland claimants.",
+        "title": "Benefits calculator for Northern Ireland 2026/27",
+        "description": "Benefits calculator for Northern Ireland 2026/27 — Universal Credit, Child Benefit, PIP, Pension Credit and housing support. Managed by DfC with mostly GB-matching rates.",
+        "intro": "The benefits system in Northern Ireland is close to Great Britain on core rates, but the administration, domestic rates system and some local schemes are different. Universal Credit in Northern Ireland is run by the Department for Communities (DfC), not DWP. The calculators on this site use the core published rates that also apply to Northern Ireland, while the guidance below flags where Northern Ireland users should expect a different route or official contact point.",
         "sections": [
             {
                 "heading": "Universal Credit in Northern Ireland",
@@ -2429,9 +2431,9 @@ SITUATION_PAGES: Dict[str, Dict[str, Any]] = {
     },
     "benefits-for-working-families": {
         "slug": "benefits-for-working-families",
-        "title": "Benefits for working families 2026",
-        "description": "Benefits for working families 2026/27: UC work allowance, Child Benefit, childcare support, Free School Meals and council tax help.",
-        "intro": "Working does not end benefit entitlement for families. Universal Credit tapers gradually as earnings rise, and several other schemes — Child Benefit, Free School Meals, childcare support and Council Tax Reduction — remain available well into moderate incomes. This guide explains what working families can still claim in 2026/27 and where the biggest gaps are.",
+        "title": "Benefits for working families 2026/27",
+        "description": "Benefits for working families 2026/27: Universal Credit work allowance, Child Benefit rates, childcare support, Free School Meals and council tax help.",
+        "intro": "Working does not end benefit entitlement for families. Universal Credit tapers gradually as earnings rise, and several other schemes — Child Benefit, Free School Meals, childcare support and Council Tax Reduction — remain available well into moderate incomes. This guide is built around the search most working parents actually have: what can a working family still claim in the UK in 2026/27, and what changes first as wages rise.",
         "sections": [
             {
                 "heading": "The work allowance: earnings a working family keeps in full",
@@ -2984,7 +2986,7 @@ def calculator_ui_config(slug: str, page: Dict[str, Any]) -> Dict[str, Any]:
     }
     per_slug = {
         "universal-credit-calculator": {
-            "calculator_subcopy": "Check the monthly Universal Credit estimate first, with savings, capital limits and tariff income effects visible early.",
+            "calculator_subcopy": "Check the monthly Universal Credit estimate first, with savings, the £16,000 capital limit and tariff income effects visible early.",
             "hero_notes": [
                 "Capital over £6,000 changes the award",
                 "£16,000 usually stops entitlement",
@@ -2995,7 +2997,7 @@ def calculator_ui_config(slug: str, page: Dict[str, Any]) -> Dict[str, Any]:
             "related_intro": "These next pages are the usual follow-up checks for people comparing UC, capital limits, childcare help and capped awards.",
         },
         "child-benefit-calculator": {
-            "calculator_subcopy": "Get the weekly Child Benefit figure first, then the monthly equivalent and annual amount for your child count.",
+            "calculator_subcopy": "Get the weekly Child Benefit figure first, then the monthly equivalent and annual amount for your child count in 2026/27.",
             "hero_notes": [
                 "Weekly rate first",
                 "Monthly and annual equivalents included",
@@ -3006,7 +3008,7 @@ def calculator_ui_config(slug: str, page: Dict[str, Any]) -> Dict[str, Any]:
             "related_intro": "These are the pages most families need next when checking Child Benefit, HICBC and childcare support together.",
         },
         "pension-credit-calculator": {
-            "calculator_subcopy": "See the likely weekly Pension Credit top-up first, with savings treatment and key additions kept visible.",
+            "calculator_subcopy": "See the likely weekly Pension Credit top-up first, with savings treatment and key additions kept visible from the start.",
             "hero_notes": [
                 "Savings do not automatically rule it out",
                 "Weekly top-up first",
@@ -3017,7 +3019,7 @@ def calculator_ui_config(slug: str, page: Dict[str, Any]) -> Dict[str, Any]:
             "related_intro": "Most Pension Credit searches lead into council tax, winter support and worked examples rather than ending at the weekly cash figure alone.",
         },
         "pip-eligibility-checker": {
-            "calculator_subcopy": "Turn likely daily living and mobility points into the PIP rate bands and weekly, monthly and annual amounts people actually search for.",
+            "calculator_subcopy": "Turn likely daily living and mobility points into the PIP rate bands and the weekly, monthly and annual amounts people actually search for.",
             "hero_notes": [
                 "Daily living and mobility shown separately",
                 "Weekly, monthly and annual equivalents",
@@ -3050,11 +3052,11 @@ def calculator_ui_config(slug: str, page: Dict[str, Any]) -> Dict[str, Any]:
             "related_intro": "Housing Benefit searches usually need a second check on Universal Credit, council tax help or the Benefit Cap once the legacy-versus-new-claim question is clear.",
         },
         "benefit-cap-calculator": {
-            "calculator_subcopy": "Check the cap amount for your household first, then see whether your entered monthly total looks above it.",
+            "calculator_subcopy": "Check the cap amount for your household first, then see whether your entered monthly total looks above it and whether an exemption is likely worth checking next.",
             "hero_notes": [
                 "London versus outside London made explicit",
                 "Monthly cap amount shown clearly",
-                "Useful after UC or Child Benefit checks",
+                "Useful after UC, rent or Child Benefit checks",
             ],
             "geo_note": "The Benefit Cap uses national cap levels, but exemptions and earnings rules still matter. This page is designed as a quick first cap check rather than a full exemption checker.",
             "priority_fields": ["monthly_benefits", "household", "inside_london"],
