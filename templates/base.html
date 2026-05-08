@@ -8,21 +8,22 @@
   <meta name="robots" content="{{ meta_robots|default('index,follow') }}">
   <link rel="canonical" href="{{ canonical_url }}">
   <link rel="alternate" hreflang="en-gb" href="{{ canonical_url }}">
-  <link rel="alternate" hreflang="en" href="{{ canonical_url }}">
   <link rel="alternate" hreflang="x-default" href="{{ canonical_url }}">
   <meta property="og:locale" content="en_GB">
   <meta property="og:type" content="website">
   <meta property="og:title" content="{{ title }}">
   <meta property="og:description" content="{{ meta_description }}">
   <meta property="og:url" content="{{ canonical_url }}">
-  <meta property="og:site_name" content="EmployerCalculator.co.uk">
+  <meta property="og:site_name" content="UK Benefits Calculator">
+  <meta property="og:image" content="{{ site_url }}/static/logo-512.png">
+  <meta property="og:image:alt" content="UK Benefits Calculator">
+  <meta property="og:image:width" content="512">
+  <meta property="og:image:height" content="512">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="{{ title }}">
   <meta name="twitter:description" content="{{ meta_description }}">
   <meta name="twitter:image" content="{{ site_url }}/static/logo-512.png">
-  <meta property="og:image" content="{{ site_url }}/static/logo-512.png">
   <meta name="theme-color" content="#1B6B4A">
-  <meta name="msapplication-TileColor" content="#1B6B4A">
   {% if adsense_client %}
   <meta name="google-adsense-account" content="{{ adsense_client }}">
   {% endif %}
@@ -51,27 +52,21 @@
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
-    gtag('config', '{{ ga_measurement_id }}', {
-      anonymize_ip: true,
-      allow_google_signals: false
-    });
+    gtag('config', '{{ ga_measurement_id }}', { anonymize_ip: true, allow_google_signals: false });
     window.trackEvent = function(name, params) {
-      try { gtag('event', name, params || {}); } catch (e) {}
+      try { gtag('event', name, params || {}); } catch (err) {}
     };
   </script>
   {% else %}
   <script>
     window.dataLayer = window.dataLayer || [];
     window.trackEvent = function(name, params) {
-      window.dataLayer.push({
-        event: name,
-        ...((params && typeof params === 'object') ? params : {})
-      });
+      window.dataLayer.push({ event: name, ...((params && typeof params === 'object') ? params : {}) });
     };
   </script>
   {% endif %}
   <style>
-    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
       --bg: #FAFAF8;
       --surface: #FFFFFF;
@@ -83,19 +78,23 @@
       --text-tertiary: #9C9890;
       --accent: #1B6B4A;
       --accent-light: #E8F5EE;
+      --accent-strong: #155A3D;
       --accent-hover: #155A3D;
       --accent-warm: #D4763C;
       --accent-warm-light: #FFF3EB;
-      --destructive: #C53030;
-      --destructive-light: #FFF5F5;
       --font-display: 'Fraunces', Georgia, serif;
       --font-body: 'DM Sans', system-ui, sans-serif;
       --radius: 10px;
       --radius-sm: 6px;
       --shadow-sm: 0 1px 2px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.06);
       --shadow-md: 0 2px 8px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
+      --shadow-lg: 0 4px 24px rgba(0,0,0,0.10), 0 8px 32px rgba(0,0,0,0.05);
       --max-w: 980px;
       --transition: 0.2s ease;
+      --c-uc: #1B6B4A;
+      --c-child: #D4763C;
+      --c-housing: #5B8DB8;
+      --c-other: #B0A89E;
     }
     html { font-size: 16px; scroll-behavior: smooth; overflow-x: hidden; }
     body {
@@ -107,89 +106,107 @@
       min-height: 100vh;
       overflow-x: hidden;
     }
-    h1, h2, h3, h4, h5, h6 {
+    a { color: inherit; }
+    h1, h2, h3, h4 {
       font-family: var(--font-display);
       font-weight: 500;
       letter-spacing: -0.02em;
-      color: var(--text-primary);
+      line-height: 1.18;
     }
-    input, select, button,
-    .kpi-value, .result-primary, .result-total-value, .sr-value, .vk-value,
-    .legend-val, .legend-pct, .donut-total-text, .donut-month-text,
-    .table td:last-child, .breakdown-table td:last-child {
-      font-family: var(--font-body) !important;
-      font-variant-numeric: tabular-nums lining-nums !important;
-      font-feature-settings: 'tnum' 1, 'lnum' 1 !important;
+    input, select, button {
+      font-family: var(--font-body);
+      font-variant-numeric: tabular-nums lining-nums;
+      font-feature-settings: 'tnum' 1, 'lnum' 1;
     }
     .container { max-width: var(--max-w); margin: 0 auto; padding: 0 1.25rem; }
     .nav {
-      position: sticky; top: 0; z-index: 100;
-      background: rgba(250,250,248,0.92);
-      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(250,250,248,0.94);
+      backdrop-filter: blur(14px);
       border-bottom: 1px solid var(--border);
     }
     .nav-inner {
-      max-width: var(--max-w); margin: 0 auto;
+      max-width: var(--max-w);
+      margin: 0 auto;
       padding: 0 1.25rem;
-      display: flex; align-items: center; justify-content: space-between;
       height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
     .nav-brand {
-      font-family: var(--font-display); font-weight: 600; font-size: 1.1rem;
-      color: var(--text-primary); text-decoration: none;
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 1.1rem;
+      color: var(--text-primary);
+      text-decoration: none;
       letter-spacing: -0.02em;
     }
     .nav-brand span { color: var(--accent); }
-    .nav-links { display: flex; gap: 0.25rem; }
+    .nav-links {
+      display: flex;
+      gap: 0.25rem;
+    }
     .nav-links a {
-      font-size: 0.875rem; font-weight: 500; color: var(--text-secondary);
-      text-decoration: none; padding: 0.4rem 0.75rem; border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.875rem;
+      font-weight: 500;
+      padding: 0.4rem 0.75rem;
+      border-radius: var(--radius-sm);
       transition: all var(--transition);
     }
-    .nav-links a:hover, .nav-links a.active { color: var(--accent); background: var(--accent-light); }
+    .nav-links a:hover,
+    .nav-links a.active {
+      color: var(--accent);
+      background: var(--accent-light);
+    }
     .nav-mobile-toggle {
-      display: none; background: none; border: none; cursor: pointer;
-      width: 36px; height: 36px; align-items: center; justify-content: center;
+      display: none;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      width: 36px;
+      height: 36px;
+      align-items: center;
+      justify-content: center;
     }
     .nav-mobile-toggle svg { width: 22px; height: 22px; color: var(--text-primary); }
-    .section { max-width: var(--max-w); margin: 0 auto; padding: 2.5rem 1.25rem; }
     .breadcrumbs {
       max-width: var(--max-w);
       margin: 0 auto;
-      padding: 0.9rem 1.25rem 0;
-      font-size: 0.8rem;
+      padding: 0.95rem 1.25rem 0;
+      font-size: 0.82rem;
       color: var(--text-tertiary);
     }
     .breadcrumbs ol {
       list-style: none;
       display: flex;
-      flex-wrap: wrap;
       gap: 0.35rem;
-      padding: 0;
-      margin: 0;
+      flex-wrap: wrap;
       align-items: center;
     }
     .breadcrumbs li {
       display: inline-flex;
-      align-items: center;
       gap: 0.35rem;
+      align-items: center;
     }
     .breadcrumbs li:not(:last-child)::after {
       content: "/";
       color: var(--text-tertiary);
     }
     .breadcrumbs a {
-      color: var(--text-secondary);
       text-decoration: none;
+      color: var(--text-secondary);
     }
-    .breadcrumbs a:hover {
-      color: var(--accent);
+    .breadcrumbs a:hover { color: var(--accent); }
+    .section {
+      max-width: var(--max-w);
+      margin: 0 auto;
+      padding: 2.5rem 1.25rem;
     }
-    .section h1, .section h2, .section h3 { font-family: var(--font-display); font-weight: 500; letter-spacing: -0.02em; line-height: 1.25; }
-    .section h1 { font-size: clamp(1.75rem, 4vw, 2.5rem); margin-bottom: 0.75rem; }
-    .section h2 { font-size: 1.55rem; margin-bottom: 0.6rem; }
-    .section h3 { font-size: 1.15rem; margin-bottom: 0.45rem; }
-    .section p { color: var(--text-secondary); margin-bottom: 0.85rem; }
     .badge {
       display: inline-flex; align-items: center; gap: 0.4rem;
       background: var(--accent-light); color: var(--accent);
@@ -197,86 +214,142 @@
       border-radius: 999px; letter-spacing: 0.04em; text-transform: uppercase;
       margin-bottom: 1rem;
     }
-    .badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+    .badge::before {
+      content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
+    }
     .card {
       background: var(--surface); border: 1px solid var(--border);
       border-radius: var(--radius); box-shadow: var(--shadow-sm);
     }
-    .pill-grid { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+    .pill-grid {
+      display: flex; flex-wrap: wrap; gap: 0.45rem;
+    }
     .pill {
       font-size: 0.8rem; font-weight: 500; color: var(--text-secondary);
       text-decoration: none; padding: 0.4rem 0.85rem;
       border: 1px solid var(--border); border-radius: 999px;
-      background: var(--surface); transition: all var(--transition);
+      background: var(--surface);
+      transition: all var(--transition);
     }
-    .pill:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
-    .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.75rem; }
+    .pill:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-light);
+    }
+    .grid-3 {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.75rem;
+    }
     .tool-card {
       background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
       padding: 1.25rem; text-decoration: none; color: var(--text-primary); transition: all var(--transition);
     }
-    .tool-card:hover { border-color: var(--accent); box-shadow: var(--shadow-md); transform: translateY(-1px); }
-    .tool-card h3 { font-size: 1rem; margin-bottom: 0.25rem; }
-    .tool-card p { font-size: 0.87rem; color: var(--text-secondary); margin-bottom: 0.6rem; }
-    .tool-tag { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent); }
-    .faq-list { margin-top: 1.25rem; }
+    .tool-card:hover {
+      border-color: var(--accent); box-shadow: var(--shadow-md); transform: translateY(-1px);
+    }
+    .tool-card h3 {
+      font-size: 1rem; margin-bottom: 0.25rem;
+    }
+    .tool-card p {
+      font-size: 0.87rem; color: var(--text-secondary); margin-bottom: 0.6rem;
+    }
+    .tool-tag {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent);
+    }
+    .faq-list { margin-top: 1rem; }
     .faq-item { border-bottom: 1px solid var(--border); }
     .faq-item summary {
-      list-style: none; cursor: pointer; padding: 0.95rem 0;
-      display: flex; justify-content: space-between; align-items: center; font-weight: 600;
+      list-style: none;
+      cursor: pointer;
+      padding: 1rem 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      font-weight: 600;
     }
-    .faq-item summary::after { content: '+'; color: var(--text-tertiary); font-size: 1.2rem; }
-    .faq-item[open] summary::after { content: '−'; }
-    .faq-answer { color: var(--text-secondary); padding: 0 0 1rem; }
-    .cross-link { max-width: var(--max-w); margin: 0 auto; padding: 0 1.25rem 0.75rem; }
-    .cross-link-inner {
-      background: var(--surface); border: 1.5px solid var(--border-strong);
-      border-top: 3px solid var(--accent);
-      border-radius: var(--radius); padding: 1rem 1.25rem;
-      display: grid; grid-template-columns: minmax(0, 1fr) auto;
-      align-items: center; gap: 1rem;
-      transition: box-shadow var(--transition);
+    .faq-item summary::after {
+      content: "+";
+      color: var(--text-tertiary);
+      font-size: 1.2rem;
     }
-    .cross-link-inner:hover { box-shadow: var(--shadow-md); }
-    .cross-link-inner p {
-      margin: 0; color: var(--text-secondary);
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-      font-size: 0.87rem;
+    .faq-item[open] summary::after { content: "−"; }
+    .faq-answer {
+      color: var(--text-secondary);
+      padding: 0 0 1rem;
     }
-    .cross-link-inner strong { color: var(--text-primary); }
-    .cross-link-inner a {
-      font-size: 0.82rem; font-weight: 700; color: var(--accent); text-decoration: none;
-      padding: 0.42rem 1rem; border-radius: 999px; border: 1.5px solid var(--accent);
-      white-space: nowrap; flex-shrink: 0; transition: all var(--transition);
+    /* ── FOOTER ── */
+    .footer {
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      padding: 2.5rem 1.25rem 2rem;
+      margin-top: 2.5rem;
     }
-    .cross-link-inner a:hover { background: var(--accent); color: white; }
-    .footer { border-top: 1px solid var(--border); background: var(--surface); padding: 2.5rem 1.25rem 2rem; margin-top: 2rem; }
-    .footer-inner { max-width: var(--max-w); margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1.6rem; }
-    .footer h4 { font-size: 0.75rem; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.7rem; }
-    .footer a { display: block; font-size: 0.86rem; color: var(--text-secondary); text-decoration: none; padding: 0.16rem 0; }
-    .footer a:hover { color: var(--accent); }
+    .footer-inner {
+      max-width: var(--max-w);
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 2rem;
+    }
+    .footer-col h4 {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.7rem;
+    }
+    .footer-col a {
+      display: block;
+      font-size: 0.84rem;
+      color: var(--text-secondary);
+      text-decoration: none;
+      padding: 0.18rem 0;
+      transition: color var(--transition);
+    }
+    .footer-col a:hover { color: var(--accent); }
+    .footer-suite a {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      font-size: 0.84rem;
+      color: var(--text-secondary);
+      text-decoration: none;
+      padding: 0.28rem 0;
+      transition: color var(--transition);
+    }
+    .footer-suite a:hover { color: var(--accent); }
+    .footer-suite .suite-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--border-strong); flex-shrink: 0;
+      transition: background var(--transition);
+    }
+    .footer-suite a:hover .suite-dot { background: var(--accent); }
+    .footer-suite a.suite-current {
+      color: var(--accent); font-weight: 600;
+    }
+    .footer-suite a.suite-current .suite-dot { background: var(--accent); }
     .footer-bottom {
-      max-width: var(--max-w); margin: 1.2rem auto 0;
-      padding-top: 1rem; border-top: 1px solid var(--border);
-      font-size: 0.8rem; color: var(--text-tertiary);
+      max-width: var(--max-w);
+      margin: 1.5rem auto 0;
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.78rem;
+      color: var(--text-tertiary);
+      line-height: 1.7;
     }
+    .footer-bottom a { color: var(--text-tertiary); text-decoration: underline; }
+    .footer-bottom a:hover { color: var(--accent); }
     @media (max-width: 860px) {
       .nav-mobile-toggle { display: flex; }
       .nav-links {
-        display: none; position: absolute; top: 56px; left: 0; right: 0; z-index: 101;
+        display: none;
+        position: absolute; top: 56px; left: 0; right: 0; z-index: 101;
         background: var(--surface); border-bottom: 1px solid var(--border);
         flex-direction: column; padding: 0.6rem 1rem;
       }
       .nav-links.open { display: flex; }
-      .cross-link-inner {
-        grid-template-columns: 1fr;
-        gap: 0.6rem;
-      }
-      .cross-link-inner p {
-        white-space: normal;
-        overflow: visible;
-        text-overflow: clip;
-      }
+      .footer-inner { gap: 1.5rem; }
     }
   </style>
   {% block head_extra %}{% endblock %}
@@ -284,14 +357,14 @@
   {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    "name": "EmployerCalculator.co.uk",
+    "name": "UK Benefits Calculator",
     "url": "{{ site_url }}",
-    "description": "Free UK employer cost calculator. Calculate employer NI, pension contributions and total hiring costs for {{ tax_year }}.",
+    "description": "Free UK benefits calculator for {{ tax_year }}. Check Universal Credit, Child Benefit, PIP, Pension Credit and housing support using current published rates.",
     "inLanguage": "en-GB",
     "potentialAction": {
       "@type": "SearchAction",
-      "target": "{{ site_url }}/cost/{salary}",
-      "query-input": "required name=salary"
+      "target": "{{ site_url }}/universal-credit-calculator?earnings={earnings}",
+      "query-input": "required name=earnings"
     }
   }
   </script>
@@ -299,7 +372,7 @@
   {
     "@context": "https://schema.org",
     "@type": "Organization",
-    "name": "EmployerCalculator.co.uk",
+    "name": "UK Benefits Calculator",
     "url": "{{ site_url }}",
     "logo": {
       "@type": "ImageObject",
@@ -307,12 +380,13 @@
       "width": 512,
       "height": 512
     },
-    "description": "UK employer cost calculator hub. Calculate employer NI at 15%, pension and total hiring costs for {{ tax_year }}.",
+    "description": "Independent UK benefits estimator and guide site covering Universal Credit, Child Benefit, Pension Credit, PIP and housing support for {{ tax_year }}.",
     "areaServed": {"@type": "Country", "name": "United Kingdom"},
-    "knowsAbout": ["Employer National Insurance", "UK payroll", "Auto-enrolment pensions", "Employment Allowance", "UK employment costs"],
+    "knowsAbout": ["Universal Credit", "Child Benefit", "Pension Credit", "PIP disability benefit", "Housing Benefit", "UC taper rate", "Work allowance", "UC standard allowance"],
     "sameAs": [
-      "https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2025-to-2026",
-      "https://www.thepensionsregulator.gov.uk/en/employers"
+      "https://www.gov.uk/universal-credit",
+      "https://www.gov.uk/child-benefit",
+      "https://www.gov.uk/pension-credit"
     ]
   }
   </script>
@@ -323,30 +397,21 @@
     "@type": "BreadcrumbList",
     "itemListElement": [
       {% for crumb in breadcrumbs %}
-      {
-        "@type": "ListItem",
-        "position": {{ loop.index }},
-        "name": "{{ crumb.name }}",
-        "item": "{{ crumb.url }}"
-      }{% if not loop.last %},{% endif %}
+      {"@type": "ListItem", "position": {{ loop.index }}, "name": "{{ crumb.name }}", "item": "{{ crumb.url }}"}{% if not loop.last %},{% endif %}
       {% endfor %}
     ]
   }
   </script>
   {% endif %}
   {% block jsonld %}
-  {% if faq_items and not skip_faq_schema %}
+  {% if faq_items %}
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "FAQPage",
     "mainEntity": [
       {% for item in faq_items %}
-      {
-        "@type": "Question",
-        "name": {{ item.q|tojson }},
-        "acceptedAnswer": {"@type": "Answer", "text": {{ item.a|tojson }} }
-      }{% if not loop.last %},{% endif %}
+      {"@type": "Question", "name": {{ item.q|tojson }}, "acceptedAnswer": {"@type": "Answer", "text": {{ item.a|tojson }} }}{% if not loop.last %},{% endif %}
       {% endfor %}
     ]
   }
@@ -357,14 +422,12 @@
 <body>
   <nav class="nav">
     <div class="nav-inner">
-      <a href="/" class="nav-brand">Employer<span>Calculator</span></a>
+      <a href="/" class="nav-brand">Benefits<span>Calculator</span></a>
       <div class="nav-links" id="navLinks">
-        <a href="/calculator">Calculator</a>
-        <a href="/team-cost-planner">Team Planner</a>
-        <a href="/calculators">All Tools</a>
-        <a href="/cost-of-hiring">By Role</a>
-        <a href="/cost-of-employing">Cost Pages</a>
+        <a href="/universal-credit-calculator">Universal Credit</a>
+        <a href="/calculators">All calculators</a>
         <a href="/guides">Guides</a>
+        <a href="/guides/what-benefits-can-i-claim">What can I claim?</a>
         <a href="/methodology">Methodology</a>
       </div>
       <button class="nav-mobile-toggle" type="button" onclick="document.getElementById('navLinks').classList.toggle('open')" aria-label="Toggle menu">
@@ -391,90 +454,76 @@
 
   {% block content %}{% endblock %}
 
-  {% if show_cross_links %}
-  <div class="cross-link">
-    <div class="cross-link-inner">
-      <p><strong>Employee take-home pay?</strong> Use AfterTaxSalary for PAYE, NI and student loan deductions from the employee's perspective.</p>
-      <a href="https://aftertaxsalary.co.uk" rel="noopener" target="_blank">AfterTaxSalary.co.uk -></a>
-    </div>
-  </div>
-  <div class="cross-link">
-    <div class="cross-link-inner">
-      <p><strong>Buying a home?</strong> Estimate stamp duty, conveyancing and total cash needed before setting your offer budget.</p>
-      <a href="https://homebuyingcosts.co.uk" rel="noopener" target="_blank">HomeBuyingCosts.co.uk -></a>
-    </div>
-  </div>
-  {% endif %}
-
   <footer class="footer">
     <div class="footer-inner">
-      <div>
-        <h4>Calculators</h4>
-        <a href="/calculator">Employer NI & total cost</a>
-        <a href="/team-cost-planner">Team payroll planner</a>
-        <a href="/calculators">All calculators</a>
-        <a href="/cost-of-employing">Cost by salary</a>
-        <a href="/employer-ni">NI by salary</a>
+      <div class="footer-col">
+        <h4>Top calculators</h4>
+        <a href="/universal-credit-calculator">Universal Credit</a>
+        <a href="/child-benefit-calculator">Child Benefit</a>
+        <a href="/hicbc-calculator">HICBC</a>
+        <a href="/pension-credit-calculator">Pension Credit</a>
+        <a href="/pip-eligibility-checker">PIP checker</a>
+        <a href="/tax-free-childcare-calculator">Tax-Free Childcare</a>
       </div>
-      <div>
+      <div class="footer-col">
+        <h4>Support areas</h4>
+        <a href="/council-tax-reduction-calculator">Council tax help</a>
+        <a href="/housing-benefit-calculator">Rent support</a>
+        <a href="/ssp-calculator">Statutory Sick Pay</a>
+        <a href="/winter-fuel-payment-checker">Winter support</a>
+        <a href="/cold-weather-payment-checker">Cold Weather Payments</a>
+        <a href="/benefit-cap-calculator">Benefit Cap</a>
+      </div>
+      <div class="footer-col">
         <h4>Guides</h4>
-        <a href="/guides/employer-ni-changes-2025">Employer NI changes 2025</a>
-        <a href="/guides/true-cost-of-hiring">True cost of hiring</a>
-        <a href="/guides/employment-allowance-guide">Employment Allowance</a>
-        <a href="/guides/first-employee-cost">First employee cost</a>
-        <a href="/guides/hiring-costs-manchester">Hiring costs: Manchester</a>
-        <a href="/guides/hiring-costs-birmingham">Hiring costs: Birmingham</a>
-        <a href="/guides/hiring-costs-leeds">Hiring costs: Leeds</a>
-        <a href="/guides">All guides →</a>
+        <a href="/guides/what-benefits-can-i-claim">What benefits can I claim?</a>
+        <a href="/guides/universal-credit-explained">Universal Credit explained</a>
+        <a href="/guides/child-benefit-and-hicbc">Child Benefit &amp; HICBC</a>
+        <a href="/guides/pip-explained-simply">PIP explained</a>
+        <a href="/guides/pension-credit-explained">Pension Credit explained</a>
+        <a href="/guides/how-savings-affect-benefits">How savings affect benefits</a>
       </div>
-      <div>
-        <h4>Scenarios</h4>
-        <a href="/first-employee-cost-uk">First employee cost</a>
-        <a href="/sole-director-employer-ni">Sole director NI</a>
-        <a href="/full-time-vs-part-time-employee-cost">Full-time vs part-time</a>
-        <a href="/contractor-vs-employee-cost">Contractor vs employee</a>
-        <a href="/cost-of-hiring">Cost by role</a>
-        <a href="/cost-of-employing-someone-20-hours-a-week">20 hrs/wk cost</a>
-        <a href="/cost-of-employing-someone-37-5-hours-a-week">37.5 hrs/wk cost</a>
-        <a href="/employer-cost-at-minimum-wage-per-hour">NLW employer cost/hr</a>
-      </div>
-      <div>
-        <h4>Static</h4>
-        <a href="/methodology">Methodology</a>
-        <a href="/editorial-standards">Editorial standards</a>
-        <a href="/sources">Sources</a>
+      <div class="footer-col">
+        <h4>Site</h4>
+        <a href="/calculators">All calculators</a>
+        <a href="/guides">All guides</a>
         <a href="/about">About</a>
-      </div>
-      <div>
-        <h4>Legal</h4>
-        <a href="/privacy">Privacy</a>
-        <a href="/terms">Terms</a>
         <a href="/contact">Contact</a>
         <a href="/html-sitemap">HTML sitemap</a>
       </div>
-      <div>
-        <h4>Payroll software</h4>
-        <a href="/payroll-software-uk">Compare payroll software</a>
-        <a href="/xero-vs-sage-payroll">Xero vs Sage Payroll</a>
-        <a href="/xero-vs-quickbooks-payroll">Xero vs QuickBooks</a>
-        <a href="/best-payroll-software-1-employee">Best for 1 employee</a>
-        <a href="/apprenticeship-levy-calculator">Apprenticeship Levy</a>
+      <div class="footer-col">
+        <h4>Legal</h4>
+        <a href="/methodology">Methodology</a>
+        <a href="/editorial-standards">Editorial standards</a>
+        <a href="/sources">Sources</a>
+        <a href="/privacy">Privacy</a>
+        <a href="/cookie-policy">Cookie policy</a>
+        <a href="/terms">Terms</a>
       </div>
-      <div>
+      <div class="footer-col footer-suite">
         <h4>Calculator suite</h4>
-        <a href="https://aftertaxsalary.co.uk" target="_blank" rel="noopener">AfterTaxSalary.co.uk</a>
-        <a href="https://homebuyingcosts.co.uk" target="_blank" rel="noopener">HomeBuyingCosts.co.uk</a>
-        <a href="https://employercalculator.co.uk" style="color:var(--accent);font-weight:600;">EmployerCalculator.co.uk</a>
+        <a href="https://aftertaxsalary.co.uk" target="_blank" rel="noopener">
+          <span class="suite-dot"></span>AfterTaxSalary.co.uk
+        </a>
+        <a href="https://homebuyingcosts.co.uk" target="_blank" rel="noopener">
+          <span class="suite-dot"></span>HomeBuyingCosts.co.uk
+        </a>
+        <a href="https://employercalculator.co.uk" target="_blank" rel="noopener">
+          <span class="suite-dot"></span>EmployerCalculator.co.uk
+        </a>
+        <a href="https://ukbenefitscalculator.co.uk" class="suite-current">
+          <span class="suite-dot"></span>UKBenefitsCalculator.co.uk
+        </a>
       </div>
     </div>
     <div class="footer-bottom">
-      &copy; {{ now.year }} EmployerCalculator.co.uk · Tax year {{ tax_year }} · Estimates only — not financial or legal advice.<br>
-      Sources: <a href="https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2025-to-2026">HMRC Rates &amp; Thresholds</a> · <a href="https://www.gov.uk/national-insurance-rates-letters">NI Rates &amp; Letters</a> · <a href="https://www.gov.uk/employment-allowance">Employment Allowance</a><br>
-      Some links on this site are affiliate links. If you sign up through them we may receive a commission at no extra cost to you. This does not affect our editorial assessment.
+      &copy; {{ now.year }} UK Benefits Calculator &mdash; Independent estimator. Not part of GOV.UK or any government department.<br>
+      Estimates only. Verify with official GOV.UK services or a specialist adviser before acting on any result.<br>
+      See our <a href="/editorial-standards">editorial standards</a>, <a href="/methodology">methodology</a>, <a href="/privacy">privacy policy</a> and <a href="/cookie-policy">cookie policy</a>. Updated for 2026/27.
     </div>
   </footer>
 
   {% block scripts %}{% endblock %}
-<a href="/trap" style="display:none;visibility:hidden;" aria-hidden="true" tabindex="-1" rel="nofollow"></a>
+  <a href="/trap" style="display:none;visibility:hidden;" aria-hidden="true" tabindex="-1" rel="nofollow"></a>
 </body>
 </html>

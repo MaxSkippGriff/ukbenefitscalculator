@@ -3,28 +3,209 @@
 {% block content %}
 <section class="section">
   <div class="badge">Calculators</div>
-  <h1>UK employer calculators ({{ tax_year }})</h1>
-  <p>{{ tools|length }} free employer calculator tools covering National Insurance, total hiring cost, payroll and HR obligations for the {{ tax_year }} tax year. All are aligned to the April 2025 NI changes: 15% rate and £5,000 secondary threshold.</p>
+  <h1 style="font-size:clamp(2rem,4vw,2.8rem);">Free UK benefits calculators and checker tools</h1>
+  <p style="color:var(--text-secondary); max-width:66ch;">Use {{ tools|length }} free UK benefits calculators and checkers to compare Universal Credit, Child Benefit, PIP, Pension Credit, rent help, childcare support and savings rules for {{ tax_year }}.</p>
 
-  <div class="card" style="padding:1rem 1.1rem; margin-top:0.9rem;">
-    <h2 style="font-size:1.05rem; margin-bottom:0.55rem;">Popular calculator pages</h2>
+  <div class="card" style="padding:1rem 1.1rem; margin-top:1rem;">
+    <h2 style="font-size:1.08rem; margin-bottom:0.55rem;">Most searched tools</h2>
     <div class="pill-grid">
-      <a class="pill" href="/employer-total-cost-calculator">Employer total cost calculator</a>
-      <a class="pill" href="/employer-cost-calculator-uk">Employer cost calculator UK</a>
-      <a class="pill" href="/total-cost-to-employer-calculator-uk">Total cost to employer calculator UK</a>
-      <a class="pill" href="/ni-change-calculator">NI change calculator</a>
-      <a class="pill" href="/employer-ni-calculator-2025-26">Employer NI calculator {{ tax_year }}</a>
-      <a class="pill" href="/auto-enrolment-payroll-costs">Auto-enrolment payroll costs</a>
+      <a class="pill" href="/universal-credit-calculator">Universal Credit calculator</a>
+      <a class="pill" href="/child-benefit-calculator">Child Benefit calculator</a>
+      <a class="pill" href="/hicbc-calculator">HICBC calculator</a>
+      <a class="pill" href="/pension-credit-calculator">Pension Credit calculator</a>
+      <a class="pill" href="/pip-eligibility-checker">PIP checker</a>
+      <a class="pill" href="/council-tax-reduction-calculator">Council tax help</a>
     </div>
   </div>
 
-  <div class="grid-3" style="margin-top:1rem;">
-    {% for tool in tools %}
-    <a class="tool-card{% if tool.tag == 'Live' %} tool-live{% endif %}" href="{{ tool.url }}">
-      <h3>{{ tool.title }}</h3>
-      <p>{{ tool.description }}</p>
-    </a>
-    {% endfor %}
+  <div class="card" style="padding:1rem 1.1rem; margin-top:1rem;">
+    <h2 style="font-size:1.08rem; margin-bottom:0.45rem;">Popular routes through the site</h2>
+    <p style="color:var(--text-secondary); font-size:0.9rem; margin-bottom:0.75rem;">Most users do not stop at one calculator. These linked routes help move from a quick estimate into the next question that usually matters.</p>
+    <div class="grid-3">
+      <a class="tool-card" href="/hub/universal-credit">
+        <div class="tool-tag">Hub</div>
+        <h3>Universal Credit hub</h3>
+        <p>Estimator, savings rules, partner changes, rent changes and worked examples in one place.</p>
+      </a>
+      <a class="tool-card" href="/hub/family-support">
+        <div class="tool-tag">Hub</div>
+        <h3>Family and childcare support hub</h3>
+        <p>Child Benefit, HICBC, Tax-Free Childcare, Free School Meals and maternity support.</p>
+      </a>
+      <a class="tool-card" href="/hub/rent-and-council-tax">
+        <div class="tool-tag">Hub</div>
+        <h3>Rent and council tax support hub</h3>
+        <p>Housing costs, Housing Benefit, Council Tax Reduction and Benefit Cap checks.</p>
+      </a>
+    </div>
   </div>
+
+  <!-- CORE BENEFITS -->
+  <div style="margin-top:2.25rem;">
+    <div class="badge" style="margin-bottom:0.5rem;">Core benefits</div>
+    <h2 style="font-size:1.2rem; margin-bottom:0.4rem;">Universal Credit, Child Benefit and main support</h2>
+    <p style="color:var(--text-secondary); font-size:0.9rem; margin-bottom:0.85rem;">The headline benefits that most working-age and pension-age households need to check first.</p>
+    <div class="grid-3">
+      {% for slug in ["universal-credit-calculator", "child-benefit-calculator", "hicbc-calculator", "pension-credit-calculator", "housing-benefit-calculator", "benefit-cap-calculator"] %}
+        {% set tool = tools | selectattr("slug", "equalto", slug) | first %}
+        {% if tool %}
+        <a class="tool-card" href="{{ tool.url }}">
+          <div class="tool-tag">Calculator</div>
+          <h3>{{ tool.title }}</h3>
+          <p>{{ tool.description }}</p>
+        </a>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- FAMILY AND CHILDCARE -->
+  <div style="margin-top:2rem;">
+    <div class="badge" style="margin-bottom:0.5rem;">Family and childcare</div>
+    <h2 style="font-size:1.2rem; margin-bottom:0.4rem;">Children, maternity and childcare support</h2>
+    <p style="color:var(--text-secondary); font-size:0.9rem; margin-bottom:0.85rem;">Childcare top-ups, school meals, maternity pay and family grants.</p>
+    <div class="grid-3">
+      {% for slug in ["tax-free-childcare-calculator", "tax-free-childcare-monthly-calculator", "maternity-pay-calculator", "maternity-pay-comparison", "free-school-meals-checker", "healthy-start-checker", "sure-start-maternity-grant-checker"] %}
+        {% set tool = tools | selectattr("slug", "equalto", slug) | first %}
+        {% if tool %}
+        <a class="tool-card" href="{{ tool.url }}">
+          <div class="tool-tag">Calculator</div>
+          <h3>{{ tool.title }}</h3>
+          <p>{{ tool.description }}</p>
+        </a>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- DISABILITY AND HEALTH -->
+  <div style="margin-top:2rem;">
+    <div class="badge" style="margin-bottom:0.5rem;">Disability and health</div>
+    <h2 style="font-size:1.2rem; margin-bottom:0.4rem;">PIP, ESA and sick pay</h2>
+    <p style="color:var(--text-secondary); font-size:0.9rem; margin-bottom:0.85rem;">Support for people who cannot work or who live with a long-term condition.</p>
+    <div class="grid-3">
+      {% for slug in ["pip-eligibility-checker", "esa-calculator", "ssp-calculator", "jsa-calculator"] %}
+        {% set tool = tools | selectattr("slug", "equalto", slug) | first %}
+        {% if tool %}
+        <a class="tool-card" href="{{ tool.url }}">
+          <div class="tool-tag">Calculator</div>
+          <h3>{{ tool.title }}</h3>
+          <p>{{ tool.description }}</p>
+        </a>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- COUNCIL TAX AND RENT -->
+  <div style="margin-top:2rem;">
+    <div class="badge" style="margin-bottom:0.5rem;">Council tax and rent</div>
+    <h2 style="font-size:1.2rem; margin-bottom:0.4rem;">Housing and council tax support</h2>
+    <p style="color:var(--text-secondary); font-size:0.9rem; margin-bottom:0.85rem;">Help with rent, council tax bills and housing benefit for legacy claimants.</p>
+    <div class="grid-3">
+      {% for slug in ["council-tax-reduction-calculator", "housing-benefit-calculator"] %}
+        {% set tool = tools | selectattr("slug", "equalto", slug) | first %}
+        {% if tool %}
+        <a class="tool-card" href="{{ tool.url }}">
+          <div class="tool-tag">Calculator</div>
+          <h3>{{ tool.title }}</h3>
+          <p>{{ tool.description }}</p>
+        </a>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- SEASONAL SUPPORT -->
+  <div style="margin-top:2rem;">
+    <div class="badge" style="margin-bottom:0.5rem;">Seasonal support</div>
+    <h2 style="font-size:1.2rem; margin-bottom:0.4rem;">Winter and heating payments</h2>
+    <p style="color:var(--text-secondary); font-size:0.9rem; margin-bottom:0.85rem;">Winter Fuel Payment and Cold Weather Payments for eligible households.</p>
+    <div class="grid-3">
+      {% for slug in ["winter-fuel-payment-checker", "cold-weather-payment-checker"] %}
+        {% set tool = tools | selectattr("slug", "equalto", slug) | first %}
+        {% if tool %}
+        <a class="tool-card" href="{{ tool.url }}">
+          <div class="tool-tag">Checker</div>
+          <h3>{{ tool.title }}</h3>
+          <p>{{ tool.description }}</p>
+        </a>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- SCENARIO TOOLS -->
+  <div style="margin-top:2rem;">
+    <div class="badge" style="margin-bottom:0.5rem;">Scenario tools</div>
+    <h2 style="font-size:1.2rem; margin-bottom:0.4rem;">How changes affect your award</h2>
+    <p style="color:var(--text-secondary); font-size:0.9rem; margin-bottom:0.85rem;">See exactly how savings, earnings changes or new childcare costs alter what you receive.</p>
+    <div class="grid-3">
+      {% for slug in ["savings-impact-calculator", "earnings-impact-calculator", "benefit-cap-calculator"] %}
+        {% set tool = tools | selectattr("slug", "equalto", slug) | first %}
+        {% if tool %}
+        <a class="tool-card" href="{{ tool.url }}">
+          <div class="tool-tag">Calculator</div>
+          <h3>{{ tool.title }}</h3>
+          <p>{{ tool.description }}</p>
+        </a>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+
+  {% if scenario_pages %}
+  <div style="margin-top:2rem;">
+    <div class="badge" style="margin-bottom:0.5rem;">What happens if…</div>
+    <h2 style="font-size:1.2rem; margin-bottom:0.4rem;">Pages that explain the change behind the number</h2>
+    <p style="color:var(--text-secondary); font-size:0.9rem; margin-bottom:0.85rem;">Useful when the calculator answer looks different from last month and you want to know exactly why.</p>
+    <div class="grid-3">
+      {% for page in scenario_pages %}
+      <a class="tool-card" href="/what-if/{{ page.slug }}">
+        <div class="tool-tag">Scenario</div>
+        <h3>{{ page.title }}</h3>
+        <p>{{ page.description }}</p>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if topic_hubs %}
+  <div style="margin-top:2rem;">
+    <div class="badge" style="margin-bottom:0.5rem;">Topic hubs</div>
+    <h2 style="font-size:1.2rem; margin-bottom:0.4rem;">Browse by benefit cluster</h2>
+    <p style="color:var(--text-secondary); font-size:0.9rem; margin-bottom:0.85rem;">These hubs group together the calculator, explainers and next-step checks for each major area of support.</p>
+    <div class="grid-3">
+      {% for hub in topic_hubs %}
+      <a class="tool-card" href="/hub/{{ hub.slug }}">
+        <div class="tool-tag">Hub</div>
+        <h3>{{ hub.title }}</h3>
+        <p>{{ hub.description }}</p>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- LEGACY REFERENCE -->
+  <div style="margin-top:2rem;">
+    <div class="badge" style="margin-bottom:0.5rem;">Legacy reference</div>
+    <h2 style="font-size:1.2rem; margin-bottom:0.4rem;">Legacy tax credits</h2>
+    <p style="color:var(--text-secondary); font-size:0.9rem; margin-bottom:0.85rem;">Working Tax Credit and Child Tax Credit ended for new claims in April 2025 — these pages are for historic and migration-reference use only.</p>
+    <div class="grid-3">
+      {% for slug in ["working-tax-credit-calculator", "child-tax-credit-calculator"] %}
+        {% set tool = tools | selectattr("slug", "equalto", slug) | first %}
+        {% if tool %}
+        <a class="tool-card" href="{{ tool.url }}">
+          <div class="tool-tag">Legacy reference</div>
+          <h3>{{ tool.title }}</h3>
+          <p>{{ tool.description }}</p>
+        </a>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+
 </section>
 {% endblock %}

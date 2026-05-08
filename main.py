@@ -1071,9 +1071,9 @@ COMMON_SAVINGS_FIELD = {"name": "savings", "label": "Savings and investments", "
 CALCULATORS: Dict[str, Dict[str, Any]] = {
     "universal-credit-calculator": calc_page(
         "universal-credit-calculator",
-        "Universal Credit calculator 2026/27",
-        "Estimate monthly Universal Credit using household type, children, housing costs, childcare, earnings and savings. Independent UK estimator with the £6,000 and £16,000 capital rules.",
-        "Estimate what support you may get through Universal Credit using a simplified but practical monthly model with savings and tariff income effects shown early.",
+        "Free Universal Credit calculator 2026/27 UK",
+        "Free Universal Credit calculator for 2026/27. Estimate UC from earnings, rent, children and savings, including the £6,000, £16,000 and tariff income rules.",
+        "Check Universal Credit quickly using a practical monthly model with earnings, rent, childcare, savings and capital-rule effects shown early.",
         "universal_credit",
         [
             {"name": "age_band", "label": "Main claimant age", "type": "select", "default": "25_plus", "options": [{"value": "under_25", "label": "Under 25"}, {"value": "25_plus", "label": "25 or over"}]},
@@ -1101,8 +1101,8 @@ CALCULATORS: Dict[str, Dict[str, Any]] = {
     ),
     "child-benefit-calculator": calc_page(
         "child-benefit-calculator",
-        "Child Benefit calculator 2026/27",
-        "Estimate weekly, monthly and annual Child Benefit for 2026 to 2027 using the latest published UK rates for 1, 2 or more children.",
+        "Free Child Benefit calculator 2026/27 UK",
+        "Free Child Benefit calculator for 2026/27. See weekly, monthly and annual amounts for 1, 2 or more children using the latest UK rates.",
         "Work out the current Child Benefit amount for your household and compare it with the HICBC charge if income is higher.",
         "child_benefit",
         [COMMON_CHILDREN_FIELD],
@@ -1121,8 +1121,8 @@ CALCULATORS: Dict[str, Dict[str, Any]] = {
     ),
     "hicbc-calculator": calc_page(
         "hicbc-calculator",
-        "High Income Child Benefit Charge calculator 2026",
-        "Calculate the High Income Child Benefit Charge (HICBC) using adjusted net income and 2026/27 Child Benefit rates across the £60,000 to £80,000 taper band.",
+        "HICBC calculator 2026/27 UK",
+        "Calculate the High Income Child Benefit Charge for 2026/27. Check the £60,000 to £80,000 threshold band and how much Child Benefit you keep.",
         "Check how much Child Benefit a higher earner may have to repay through the HICBC in 2026/27 and how much the household may actually keep.",
         "hicbc",
         [COMMON_CHILDREN_FIELD, {"name": "adjusted_net_income", "label": "Adjusted net income", "type": "number", "default": 68000, "step": 100, "min": 0, "prefix": "£"}],
@@ -1141,8 +1141,8 @@ CALCULATORS: Dict[str, Dict[str, Any]] = {
     ),
     "pension-credit-calculator": calc_page(
         "pension-credit-calculator",
-        "Pension Credit calculator 2026/27",
-        "Estimate Guarantee Credit using weekly income, savings and key additions such as severe disability or carer status.",
+        "Free Pension Credit calculator 2026/27 UK",
+        "Free Pension Credit calculator for 2026/27. Estimate weekly top-ups using income, savings and key additions, including the £10,000 savings disregard.",
         "Check whether low retirement income could translate into Pension Credit, even with savings, and the wider passported help that often comes with it.",
         "pension_credit",
         [
@@ -1167,8 +1167,8 @@ CALCULATORS: Dict[str, Dict[str, Any]] = {
     ),
     "pip-eligibility-checker": calc_page(
         "pip-eligibility-checker",
-        "PIP eligibility checker 2026/27",
-        "Use a simplified points-based PIP checker to estimate whether a daily living or mobility award may be in range, plus the current weekly, monthly and annual amounts.",
+        "PIP rates and eligibility checker 2026/27 UK",
+        "Check likely PIP daily living and mobility awards for 2026/27 in the UK. Includes points thresholds, standard and enhanced rates, and weekly, monthly and annual amounts.",
         "Sense-check a likely PIP band by entering your likely points for daily living and mobility activities, then see the current PIP rates.",
         "pip",
         [
@@ -1499,8 +1499,8 @@ CALCULATORS: Dict[str, Dict[str, Any]] = {
     ),
     "savings-impact-calculator": calc_page(
         "savings-impact-calculator",
-        "Savings and Universal Credit calculator",
-        "See how savings between £6,000 and £16,000 reduce your Universal Credit through the tariff income rule of £4.35 a month per £250 above the lower limit.",
+        "Universal Credit savings limit calculator 2026/27 UK",
+        "Check how savings affect Universal Credit in 2026/27. See the £6,000 lower limit, £16,000 upper limit and £4.35 per £250 tariff income rule.",
         "Work out the monthly UC deduction generated by savings above the £6,000 threshold and when the £16,000 capital limit stops entitlement.",
         "savings_impact",
         [
@@ -1667,7 +1667,7 @@ GUIDES: Dict[str, Dict[str, Any]] = {
     },
     "universal-credit-explained": {
         "title": "Universal Credit explained 2026/27 — rates, capital limits and working-family rules",
-        "description": "Plain-English guide to Universal Credit 2026/27 — rates, work allowance, £6,000 and £16,000 capital limits, tariff income and what working families should check next.",
+        "description": "Universal Credit guide for 2026/27: rates, work allowance, £6,000 and £16,000 capital limits, tariff income, savings rules and what working families should check next.",
         "topic": "Universal Credit",
         "sections": [
             {"heading": "Universal Credit is one payment built from several elements", "paragraphs": [
@@ -1746,8 +1746,8 @@ GUIDES: Dict[str, Dict[str, Any]] = {
         ],
     },
     "how-savings-affect-benefits": {
-        "title": "How savings affect benefits — UC capital limits, tariff income and capital disregards",
-        "description": "How savings affect Universal Credit 2026/27: the £6,000 lower limit, £16,000 upper limit, tariff income of £4.35 per £250 and what counts as capital or capital disregards.",
+        "title": "Universal Credit capital rules 2026/27 — £6,000, £16,000, ISAs and tariff income",
+        "description": "Universal Credit capital rules for 2026/27: the £6,000 lower limit, £16,000 upper limit, tariff income of £4.35 per £250, whether ISAs count and which capital is disregarded.",
         "topic": "Savings rules",
         "sections": [
             {"heading": "There is no single savings rule for the whole benefits system", "paragraphs": [
@@ -1829,8 +1829,8 @@ GUIDES: Dict[str, Dict[str, Any]] = {
         ],
     },
     "pip-explained-simply": {
-        "title": "PIP explained simply",
-        "description": "PIP explained 2026/27 — daily living and mobility components, how the points system works, weekly rates, and what evidence strengthens a claim.",
+        "title": "PIP rates, points and eligibility 2026/27",
+        "description": "PIP explained 2026/27 — daily living and mobility components, points, weekly rates, eligibility criteria and what evidence strengthens a claim.",
         "topic": "Disability support",
         "sections": [
             {"heading": "What PIP is and who it is for", "paragraphs": [
@@ -1903,8 +1903,8 @@ GUIDES: Dict[str, Dict[str, Any]] = {
         "faq": [{"q": "Can Universal Credit replace ESA?", "a": "For some households UC becomes the main means-tested route, but New Style ESA can still matter if the NI record is there."}],
     },
     "child-benefit-and-hicbc": {
-        "title": "Child Benefit and HICBC explained",
-        "description": "Child Benefit 2026/27: £27.05/week first child. How the High Income Child Benefit Charge applies above £60,000 and why some higher earners still claim.",
+        "title": "Child Benefit and HICBC thresholds 2026/27",
+        "description": "Child Benefit 2026/27: £27.05 a week for the first child. How the High Income Child Benefit Charge applies above £60,000 and why some higher earners still claim.",
         "topic": "Family tax",
         "sections": [
             {"heading": "Child Benefit in 2026/27 — rates and who gets it", "paragraphs": [
@@ -1920,7 +1920,7 @@ GUIDES: Dict[str, Dict[str, Any]] = {
             {"heading": "Adjusted net income — the figure that actually matters", "paragraphs": [
                 "Adjusted net income is not the same as gross salary. It is your gross income minus certain deductions. The most important deductions for many higher earners are pension contributions paid into a registered pension scheme and Gift Aid donations to charity.",
                 "If you earn £65,000 and make £6,000 a year in pension contributions, your adjusted net income is £59,000 — below the £60,000 HICBC threshold. In that case, no charge applies at all.",
-                "This is why salary sacrifice pension contributions can make sense for earners close to the threshold. They reduce the adjusted net income figure dollar-for-dollar (up to the pension contribution rules), which can move a household from a partial or full HICBC position to no charge at all.",
+                "This is why salary sacrifice pension contributions can make sense for earners close to the threshold. They reduce the adjusted net income figure pound-for-pound (up to the pension contribution rules), which can move a household from a partial or full HICBC position to no charge at all.",
             ]},
             {"heading": "Why keeping the claim alive still makes sense for some families", "paragraphs": [
                 "Even when a household decides to opt out of receiving Child Benefit payments — to avoid the hassle of registering for Self Assessment and repaying the charge — it usually makes sense to keep the claim active.",
@@ -1980,8 +1980,8 @@ GUIDES: Dict[str, Dict[str, Any]] = {
         ],
     },
     "pension-credit-explained": {
-        "title": "Pension Credit explained",
-        "description": "Pension Credit 2026/27: who qualifies, Guarantee Credit rates, savings rules, and how a small award unlocks council tax, heating and NHS support.",
+        "title": "Pension Credit explained 2026/27 — savings rules, rates and eligibility",
+        "description": "Pension Credit 2026/27: who qualifies, how much savings you can have, Guarantee Credit rates, and how a small award unlocks council tax, heating and NHS support.",
         "topic": "Pension age support",
         "sections": [
             {"heading": "What Pension Credit is and who it is for", "paragraphs": [
@@ -2199,8 +2199,8 @@ GUIDES: Dict[str, Dict[str, Any]] = {
         "related_guides": ["pip-explained-simply", "pip-points-explained", "pip-daily-living-explained", "what-benefits-can-i-claim"],
     },
     "universal-credit-capital-disregards": {
-        "title": "Universal Credit capital disregards explained",
-        "description": "UC capital disregards explained 2026/27: which assets count, what is ignored, and how the £6,000 and £16,000 savings thresholds affect your award.",
+        "title": "Universal Credit capital disregards explained 2026/27",
+        "description": "UC capital disregards explained for 2026/27: which savings and assets count, whether an ISA or Help to Save counts, what is ignored, and how the £6,000 and £16,000 limits affect your award.",
         "topic": "Universal Credit",
         "sections": [
             {"heading": "What 'capital' means in Universal Credit", "paragraphs": [
@@ -2235,8 +2235,8 @@ GUIDES: Dict[str, Dict[str, Any]] = {
         "related_guides": ["how-savings-affect-benefits", "universal-credit-explained", "what-benefits-can-i-claim"],
     },
     "benefits-for-working-families": {
-        "title": "Benefits for working families 2026",
-        "description": "Benefits for working families 2026/27: UC work allowance, Child Benefit, childcare support, Free School Meals and council tax help explained.",
+        "title": "Benefits for working families 2026/27 — Universal Credit, Child Benefit and childcare",
+        "description": "Benefits for working families 2026/27: Universal Credit work allowance, Child Benefit, childcare support, Free School Meals and council tax help for working households.",
         "topic": "Families",
         "sections": [
             {"heading": "Working does not end benefit entitlement for families", "paragraphs": [
@@ -2248,7 +2248,7 @@ GUIDES: Dict[str, Dict[str, Any]] = {
                 "A working single parent earning £800 a month with no housing support keeps that £800 entirely — their work allowance is £673 and their UC is only tapered on the £127 above it, reducing the award by about £70. That is still meaningful UC income on top of their wages.",
             ]},
             {"heading": "Child Benefit for working families — always worth claiming", "paragraphs": [
-                "Child Benefit is entirely separate from UC and is not means tested at the point of claim. In 2026/27 it pays £27.05 a week for the first child and £17.90 for each subsequent child. A working family with two children receives around £2,596 a year in Child Benefit regardless of income — unless either parent earns above £60,000, at which point the High Income Child Benefit Charge starts to claw it back.",
+                "Child Benefit is entirely separate from UC and is not means tested at the point of claim. In 2026/27 it pays £27.05 a week for the first child and £17.90 for each subsequent child. A working family with two children receives around £2,337 a year in Child Benefit regardless of income — unless either parent earns above £60,000, at which point the High Income Child Benefit Charge starts to claw it back.",
                 "From April 2026, the two-child limit on UC child elements has been removed, meaning working families with three or more children also qualify for a child element for each child in Universal Credit.",
             ]},
             {"heading": "Childcare costs for working families", "paragraphs": [
@@ -2379,8 +2379,8 @@ SITUATION_PAGES: Dict[str, Dict[str, Any]] = {
     },
     "benefits-in-northern-ireland": {
         "slug": "benefits-in-northern-ireland",
-        "title": "Benefits calculator for Northern Ireland 2026/27",
-        "description": "Benefits calculator for Northern Ireland 2026/27 — Universal Credit, Child Benefit, PIP, Pension Credit and housing support. Managed by DfC with mostly GB-matching rates.",
+        "title": "Universal Credit and benefits calculator for Northern Ireland 2026/27",
+        "description": "Northern Ireland benefits calculator guide for 2026/27 — Universal Credit, Child Benefit, PIP, Pension Credit and housing support, with DfC and domestic-rates notes.",
         "intro": "The benefits system in Northern Ireland is close to Great Britain on core rates, but the administration, domestic rates system and some local schemes are different. Universal Credit in Northern Ireland is run by the Department for Communities (DfC), not DWP. The calculators on this site use the core published rates that also apply to Northern Ireland, while the guidance below flags where Northern Ireland users should expect a different route or official contact point.",
         "sections": [
             {
@@ -2431,8 +2431,8 @@ SITUATION_PAGES: Dict[str, Dict[str, Any]] = {
     },
     "benefits-for-working-families": {
         "slug": "benefits-for-working-families",
-        "title": "Benefits for working families 2026/27",
-        "description": "Benefits for working families 2026/27: Universal Credit work allowance, Child Benefit rates, childcare support, Free School Meals and council tax help.",
+        "title": "Benefits for working families 2026/27 — Universal Credit, Child Benefit and childcare",
+        "description": "Benefits for working families 2026/27: Universal Credit work allowance, Child Benefit, childcare support, Free School Meals and council tax help for working households.",
         "intro": "Working does not end benefit entitlement for families. Universal Credit tapers gradually as earnings rise, and several other schemes — Child Benefit, Free School Meals, childcare support and Council Tax Reduction — remain available well into moderate incomes. This guide is built around the search most working parents actually have: what can a working family still claim in the UK in 2026/27, and what changes first as wages rise.",
         "sections": [
             {
@@ -2441,7 +2441,7 @@ SITUATION_PAGES: Dict[str, Dict[str, Any]] = {
             },
             {
                 "heading": "Child Benefit — claim regardless of income",
-                "content": "Child Benefit is entirely separate from UC and not means tested at the point of claim. In 2026/27 it pays £27.05 a week for the first child and £17.90 for each subsequent child — around £2,596 a year for a family with two children. From April 2026, the two-child limit on UC child elements was removed: all eligible dependent children now generate a child element (£303.94 per month each). The High Income Child Benefit Charge only starts at £60,000 adjusted net income, so most working families keep the full award.",
+                "content": "Child Benefit is entirely separate from UC and not means tested at the point of claim. In 2026/27 it pays £27.05 a week for the first child and £17.90 for each subsequent child — around £2,337 a year for a family with two children. From April 2026, the two-child limit on UC child elements was removed: all eligible dependent children now generate a child element (£303.94 per month each). The High Income Child Benefit Charge only starts at £60,000 adjusted net income, so most working families keep the full award.",
             },
             {
                 "heading": "Childcare and Free School Meals",
@@ -2820,16 +2820,21 @@ STATIC_PAGES = {
             "UK Benefits Calculator is a UK-focused support and entitlement estimation site built to help people understand what help they may qualify for across benefits, childcare support, disability support and pension-age help.",
             "The site is intentionally independent and non-governmental. Our aim is to explain complicated support routes in plain English while keeping calculators fast, readable and search-friendly.",
             "We publish practical estimator pages, support guides and connected topical clusters so users can move from one question to the next without starting from scratch each time.",
-            "Content is produced by UK Benefits Calculator Editorial, an in-house publishing team focused on UK household finance, benefits, low-income support and plain-English search-first guidance.",
+            "Content is written and reviewed by UK Benefits Calculator Editorial, an in-house team focused on UK household finance, benefit policy and plain-English welfare guidance.",
         ],
         "links": [],
     },
     "editorial-standards": {
         "title": "Editorial standards",
         "content": [
-            "UK Benefits Calculator Editorial aims to publish pages that are clear, useful and honest about assumptions. We avoid presenting simplified estimates as official decisions or government-endorsed outcomes.",
-            "Pages are written in plain British English, structured for search intent and reviewed when official rates, qualifying rules or core policy changes materially affect a page.",
-            "When a topic is too complex for a definitive public calculator, we frame the page as a checker or guide, explain the limitation directly and link users to the most relevant official sources.",
+            "UK Benefits Calculator publishes calculator pages, benefit guides and eligibility checkers for UK residents. Content is written and reviewed by UK Benefits Calculator Editorial, an in-house publishing team focused on UK household finance, benefits and plain-English guidance.",
+            "Content is written and reviewed by the UK Benefits Calculator editorial team. The team reviews benefit rates, eligibility rules and calculator logic against official GOV.UK guidance before publication.",
+            "Accuracy standard: all benefit rates, income thresholds and eligibility rules are checked against official GOV.UK publications before publication. Primary sources include GOV.UK Universal Credit, Child Benefit, PIP, Pension Credit and Housing Benefit guidance. These are listed on the Sources page.",
+            "Update policy: calculators and guides are reviewed and updated when (a) DWP or HMRC announces changes to benefit rates or thresholds, (b) eligibility rules materially change, or (c) we identify a factual error. The last-reviewed date on pages reflects the most recent substantive check.",
+            "Calculator methodology: calculations apply published DWP rates and standard means-test logic. Outputs are planning estimates — not official entitlement decisions. Actual awards are determined by your local authority or DWP claim assessment.",
+            "No AI filler: we do not publish low-quality generated content designed to inflate word count. Pages are written for practical usefulness to people checking benefit entitlement.",
+            "Corrections policy: if you identify a factual error or out-of-date rate, please contact us and we will review and correct promptly.",
+            "Commercial disclosure: advertising may appear on some pages via Google AdSense. Advertising relationships do not influence editorial decisions on benefit rates, eligibility rules or calculator outputs.",
         ],
         "links": [],
     },
@@ -3299,8 +3304,8 @@ def home():
             situation_guides.append(item)
     return render_page(
         "landing.html",
-        title="UK Benefits Calculator 2026 | Working Families, Universal Credit & Entitlement Check",
-        description="Free UK benefits calculator 2026. Working families, single parents and pensioners: estimate Universal Credit, Child Benefit, Pension Credit, PIP, housing and childcare support using the latest 2026/27 rates.",
+        title="Free UK Benefits Calculator 2026/27 | Universal Credit, PIP & Child Benefit",
+        description="Free UK benefits checker and calculator for 2026/27. Check Universal Credit, PIP, Child Benefit, Pension Credit and support for working families in minutes.",
         canonical_path="/",
         breadcrumbs_data=[],
         home_calc_page=home_calc_page,
@@ -3323,8 +3328,8 @@ def home():
 def calculators_index():
     return render_page(
         "calculators_index.html",
-        title="UK benefits calculators and eligibility checkers",
-        description="Browse calculators and checkers for Universal Credit, Child Benefit, HICBC, Pension Credit, PIP, council tax help, childcare support and seasonal payments.",
+        title="Free UK benefits calculators and checkers 2026/27 | Universal Credit, PIP, Child Benefit",
+        description="Use free UK benefits calculators and checker tools for Universal Credit, PIP, Child Benefit, HICBC, Pension Credit, rent help and savings rules.",
         canonical_path="/calculators",
         breadcrumbs_data=breadcrumbs({"name": "Calculators", "url": f"{SITE_URL}/calculators"}),
         tools=[CALCULATORS[slug] for slug in CALCULATOR_ORDER],
@@ -3337,8 +3342,8 @@ def calculators_index():
 def guides_index():
     return render_page(
         "guides_index.html",
-        title="UK benefits guides",
-        description="Plain-English guides covering Universal Credit, PIP, Pension Credit, family support, rent help and how UK benefit calculations work.",
+        title="UK benefits guides 2026/27 | Universal Credit, PIP, Child Benefit & savings rules",
+        description="Plain-English UK benefits guides covering Universal Credit, PIP, Child Benefit, Pension Credit, savings rules, HICBC, rent help and working-family support.",
         canonical_path="/guides",
         breadcrumbs_data=breadcrumbs({"name": "Guides", "url": f"{SITE_URL}/guides"}),
         guide_items=GUIDES,

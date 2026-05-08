@@ -3,16 +3,145 @@
 {% block content %}
 <section class="section">
   <div class="badge">Guides</div>
-  <h1>Employer guides</h1>
-  <p>Practical UK employer guides. Written by EmployerCalculator Editorial. Reviewed against official UK sources.</p>
-  <div class="grid-3" style="margin-top:1rem;">
-    {% for slug, guide in guide_items.items() %}
-    <a class="tool-card" href="/guides/{{ slug }}">
-      <div class="tool-tag" style="margin-bottom:0.35rem; color:var(--accent-warm);">{{ guide.topic }}</div>
-      <h3>{{ guide.title }}</h3>
-      <p>{{ guide.description }}</p>
-    </a>
-    {% endfor %}
+  <h1 style="font-size:clamp(2rem,4vw,2.8rem);">UK benefits guides and explainers for {{ tax_year }}</h1>
+  <p style="color:var(--text-secondary); max-width:64ch;">Plain-English UK benefits guides covering Universal Credit, PIP, Child Benefit, Pension Credit, HICBC, savings rules, rent help and working-family support.</p>
+
+  <!-- START HERE -->
+  <div style="margin-top:2rem;">
+    <div class="badge" style="margin-bottom:0.5rem;">Start here</div>
+    <h2 style="font-size:1.2rem; margin-bottom:0.4rem;">New to the benefits system?</h2>
+    <p style="color:var(--text-secondary); font-size:0.9rem; margin-bottom:0.85rem;">These four guides give the clearest overview of how UK support works and where to begin.</p>
+    <div class="grid-3">
+      {% for slug in ["what-benefits-can-i-claim", "universal-credit-explained", "pip-explained-simply", "pension-credit-explained"] %}
+        {% if slug in guide_items %}
+        <a class="tool-card" href="/guides/{{ slug }}">
+          <div class="tool-tag">{{ guide_items[slug].topic }}</div>
+          <h3>{{ guide_items[slug].title }}</h3>
+          <p>{{ guide_items[slug].description }}</p>
+        </a>
+        {% endif %}
+      {% endfor %}
+    </div>
   </div>
+
+  <!-- BY SITUATION -->
+  <div style="margin-top:2.25rem;">
+    <div class="badge" style="margin-bottom:0.5rem;">By situation</div>
+    <h2 style="font-size:1.2rem; margin-bottom:0.4rem;">Guides for your household</h2>
+    <p style="color:var(--text-secondary); font-size:0.9rem; margin-bottom:0.85rem;">Focused guides for families, renters, people who cannot work and those approaching pension age.</p>
+    <div class="grid-3">
+      {% for slug in ["benefits-for-low-income-families", "help-with-rent-and-council-tax", "esa-vs-universal-credit", "child-benefit-and-hicbc"] %}
+        {% if slug in guide_items %}
+        <a class="tool-card" href="/guides/{{ slug }}">
+          <div class="tool-tag">{{ guide_items[slug].topic }}</div>
+          <h3>{{ guide_items[slug].title }}</h3>
+          <p>{{ guide_items[slug].description }}</p>
+        </a>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- BY TOPIC -->
+  <div style="margin-top:2.25rem;">
+    <div class="badge" style="margin-bottom:0.5rem;">By topic</div>
+    <h2 style="font-size:1.2rem; margin-bottom:0.4rem;">Deep-dive topic guides</h2>
+    <p style="color:var(--text-secondary); font-size:0.9rem; margin-bottom:0.85rem;">Detailed guides on savings rules, income treatment, childcare and the tax charges that affect higher earners.</p>
+    <div class="grid-3">
+      {% for slug in ["how-savings-affect-benefits", "what-counts-as-income-for-benefits", "tax-free-childcare-guide"] %}
+        {% if slug in guide_items %}
+        <a class="tool-card" href="/guides/{{ slug }}">
+          <div class="tool-tag">{{ guide_items[slug].topic }}</div>
+          <h3>{{ guide_items[slug].title }}</h3>
+          <p>{{ guide_items[slug].description }}</p>
+        </a>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+
+  <div style="margin-top:2.25rem;">
+    <div class="badge" style="margin-bottom:0.5rem;">Worked examples</div>
+    <h2 style="font-size:1.2rem; margin-bottom:0.4rem;">Examples and comparison pages worth reading next</h2>
+    <p style="color:var(--text-secondary); font-size:0.9rem; margin-bottom:0.85rem;">These pages are built for the searches that usually come after the main calculator: real income bands, child counts, rent changes, pension-age examples and PIP component questions.</p>
+    <div class="grid-3">
+      {% for slug in ["how-much-child-benefit-for-1-2-3-children", "child-benefit-tax-charge-examples", "tax-free-childcare-top-up-examples", "pension-credit-examples-for-single-pensioner", "pension-credit-examples-for-couple", "what-pension-credit-unlocks", "pip-daily-living-explained", "pip-mobility-explained", "universal-credit-rent-increase-explained"] %}
+        {% if slug in guide_items %}
+        <a class="tool-card" href="/guides/{{ slug }}">
+          <div class="tool-tag">{{ guide_items[slug].topic }}</div>
+          <h3>{{ guide_items[slug].title }}</h3>
+          <p>{{ guide_items[slug].description }}</p>
+        </a>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+
+  {% if scenario_pages %}
+  <div style="margin-top:2.25rem;">
+    <div class="badge" style="margin-bottom:0.5rem;">What happens if…</div>
+    <h2 style="font-size:1.2rem; margin-bottom:0.4rem;">Scenario explainers people read after using a calculator</h2>
+    <p style="color:var(--text-secondary); font-size:0.9rem; margin-bottom:0.85rem;">These pages focus on the practical changes that trigger the most anxiety: moving in with a partner, higher earnings, rent increases and savings crossing UC thresholds.</p>
+    <div class="grid-3">
+      {% for page in scenario_pages %}
+      <a class="tool-card" href="/what-if/{{ page.slug }}">
+        <div class="tool-tag">Scenario</div>
+        <h3>{{ page.title }}</h3>
+        <p>{{ page.description }}</p>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if situation_pages %}
+  <div style="margin-top:2.25rem;">
+    <div class="badge" style="margin-bottom:0.5rem;">By household type</div>
+    <h2 style="font-size:1.2rem; margin-bottom:0.4rem;">Situation-led support guides</h2>
+    <p style="color:var(--text-secondary); font-size:0.9rem; margin-bottom:0.85rem;">Use these pages when you want the support picture for a renter, pensioner, single parent or someone who cannot work, rather than one scheme in isolation.</p>
+    <div class="grid-3">
+      {% for page in situation_pages %}
+      <a class="tool-card" href="/situations/{{ page.slug }}">
+        <div class="tool-tag">Situation</div>
+        <h3>{{ page.title }}</h3>
+        <p>{{ page.description }}</p>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if topic_hubs %}
+  <div style="margin-top:2.25rem;">
+    <div class="badge" style="margin-bottom:0.5rem;">Topic hubs</div>
+    <h2 style="font-size:1.2rem; margin-bottom:0.4rem;">Clustered pathways into the main support areas</h2>
+    <p style="color:var(--text-secondary); font-size:0.9rem; margin-bottom:0.85rem;">These hubs tie calculators and guides together so users can stay within the same topic instead of jumping to unrelated pages.</p>
+    <div class="grid-3">
+      {% for hub in topic_hubs %}
+      <a class="tool-card" href="/hub/{{ hub.slug }}">
+        <div class="tool-tag">Hub</div>
+        <h3>{{ hub.title }}</h3>
+        <p>{{ hub.description }}</p>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ALL GUIDES -->
+  <div style="margin-top:2.25rem;">
+    <div class="badge" style="margin-bottom:0.5rem;">All guides</div>
+    <h2 style="font-size:1.2rem; margin-bottom:0.75rem;">Complete guide library</h2>
+    <div class="grid-3">
+      {% for slug, guide in guide_items.items() %}
+      <a class="tool-card" href="/guides/{{ slug }}">
+        <div class="tool-tag">{{ guide.topic }}</div>
+        <h3>{{ guide.title }}</h3>
+        <p>{{ guide.description }}</p>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+
 </section>
 {% endblock %}

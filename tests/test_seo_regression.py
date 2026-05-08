@@ -88,6 +88,11 @@ def test_status_endpoints_and_indexes(client):
 
 
 def test_query_aligned_copy_present(client):
+    home_html = client.get("/", base_url="https://ukbenefitscalculator.co.uk").get_data(as_text=True)
+    assert "Free UK Benefits Calculator 2026/27" in home_html
+    assert "free UK benefits checker" in home_html or "free UK benefits calculator" in home_html
+    assert "2025/26" not in home_html
+
     uc_html = client.get("/universal-credit-calculator", base_url="https://ukbenefitscalculator.co.uk").get_data(as_text=True)
     assert "£16,000" in uc_html
     assert "tariff income" in uc_html
