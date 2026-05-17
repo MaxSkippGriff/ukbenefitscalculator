@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import ipaddress
 import json
 import math
 import os
@@ -19,10 +18,7 @@ except Exception:  # pragma: no cover - local fallback
         def __init__(self, *args, **kwargs):
             pass
 
-try:
-    import geoip2.database as _geoip2db
-except Exception:  # pragma: no cover - optional at runtime
-    _geoip2db = None
+from scraper_guard import init_guard
 
 load_dotenv()
 
@@ -43,108 +39,19 @@ ADSENSE_SLOT_CALCULATOR = os.getenv("ADSENSE_SLOT_CALCULATOR", ADSENSE_SLOT_CONT
 limiter = Limiter(
     app=app,
     key_func=lambda: (request.headers.get("X-Forwarded-For", "").split(",")[0].strip() or request.remote_addr or ""),
-    default_limits=["60 per minute"],
+    default_limits=["300 per minute"],
     storage_uri="memory://",
     strategy="fixed-window",
 )
 
-_geo = None
-if _geoip2db:
-    for candidate in ("/app/dbip-country.mmdb", os.path.join(os.path.dirname(__file__), "dbip-country.mmdb")):
-        if os.path.exists(candidate):
-            try:
-                _geo = _geoip2db.Reader(candidate)
-                break
-            except Exception:
-                _geo = None
-
-_BLOCKED_COUNTRIES = {"SG"}
-_BLOCKED_SUBNETS = [
-    ipaddress.ip_network("43.172.0.0/15"),
-    ipaddress.ip_network("47.82.0.0/15"),
-    ipaddress.ip_network("47.128.0.0/16"),
-    ipaddress.ip_network("8.222.0.0/16"),
-    ipaddress.ip_network("47.245.0.0/16"),
-    ipaddress.ip_network("43.129.0.0/16"),
-    ipaddress.ip_network("43.134.0.0/16"),
-    ipaddress.ip_network("43.156.0.0/16"),
-    ipaddress.ip_network("13.212.0.0/15"),
-    ipaddress.ip_network("18.136.0.0/15"),
-    ipaddress.ip_network("18.138.0.0/15"),
-    ipaddress.ip_network("52.76.0.0/15"),
-    ipaddress.ip_network("128.199.192.0/19"),
-    ipaddress.ip_network("68.183.160.0/19"),
-    ipaddress.ip_network("139.59.192.0/18"),
-    ipaddress.ip_network("47.128.32.0/20"),
-    ipaddress.ip_network("110.249.200.0/22"),
-]
-_BLOCKED_UAS = (
-    "bytespider", "petalbot", "ccbot", "omgili", "dataforseo", "scrapy",
-    "seranking", "mj12bot", "dotbot", "blexbot", "seznambot",
-    "python-httpx", "python-requests", "go-http-client", "java/",
-    "curl/", "wget/", "libwww", "okhttp", "apache-httpclient", "aiohttp",
-    "httpx", "mechanize", "lwp-", "guzzle", "restsharp",
-    "headlesschrome", "phantomjs", "selenium",
-)
-_STATIC_PATHS = ("/static/", "/robots.txt", "/sitemap", "/ads.txt", "/favicon", "/.well-known", "/api/")
-_GOOD_BOTS = (
-    "googlebot", "google-inspectiontool", "adsbot-google", "mediapartners-google",
-    "google-display-ads-bot", "googleother", "google-read-aloud",
-    "bingbot", "slurp", "duckduckbot", "baiduspider", "yandexbot",
-    "applebot", "facebot", "linkedinbot", "twitterbot", "whatsapp",
-    "telegrambot", "ia_archiver", "ahrefsbot", "semrushbot",
-    "gptbot", "chatgpt-user", "claudebot", "anthropic-ai", "oai-searchbot",
-    "google-extended", "gemini", "perplexitybot", "youbot",
-    "meta-externalagent", "amazonbot", "cohere-ai", "diffbot",
+_PUBLIC_PATHS = (
+    "/sitemap.xml", "/robots.txt", "/ads.txt", "/favicon.ico",
+    "/favicon-16x16.png", "/favicon-32x32.png", "/apple-touch-icon.png",
+    "/site.webmanifest", "/health",
 )
 _HONEYPOT_BLOCKED: Set[str] = set()
 
-
-def _get_real_ip() -> str:
-    xff = request.headers.get("X-Forwarded-For", "")
-    return xff.split(",")[0].strip() if xff else (request.remote_addr or "")
-
-
-@app.before_request
-def block_scrapers():
-    if app.config.get("TESTING"):
-        return None
-    host = (request.host or "").split(":")[0].lower()
-    if host and host not in {CANONICAL_HOST, f"www.{CANONICAL_HOST}", "localhost", "127.0.0.1"}:
-        return None
-    ip_str = _get_real_ip()
-    if ip_str in _HONEYPOT_BLOCKED:
-        abort(403)
-
-    if _geo:
-        try:
-            country = _geo.country(ip_str).country.iso_code
-            if country in _BLOCKED_COUNTRIES:
-                abort(403)
-        except Exception:
-            pass
-
-    try:
-        ip_obj = ipaddress.ip_address(ip_str)
-        for subnet in _BLOCKED_SUBNETS:
-            if ip_obj in subnet:
-                abort(403)
-    except ValueError:
-        pass
-
-    ua = request.headers.get("User-Agent", "").lower()
-    if any(token in ua for token in _BLOCKED_UAS):
-        abort(403)
-    if any(token in ua for token in _GOOD_BOTS):
-        return None
-
-    path = request.path or ""
-    if request.method == "HEAD":
-        return None
-    if not any(path.startswith(prefix) for prefix in _STATIC_PATHS):
-        if not request.headers.get("Accept-Language"):
-            abort(403)
-    return None
+init_guard(app, _PUBLIC_PATHS, "/trap", _HONEYPOT_BLOCKED)
 
 
 @app.before_request
@@ -1746,8 +1653,8 @@ GUIDES: Dict[str, Dict[str, Any]] = {
         ],
     },
     "how-savings-affect-benefits": {
-        "title": "Universal Credit capital rules 2026/27 — £6,000, £16,000, ISAs and tariff income",
-        "description": "Universal Credit capital rules for 2026/27: the £6,000 lower limit, £16,000 upper limit, tariff income of £4.35 per £250, whether ISAs count and which capital is disregarded.",
+        "title": "How Savings Affect Benefits 2026/27 | UC, Housing Benefit & More",
+        "description": "How savings affect benefits in 2026/27: UC ignores savings below £6,000, reduces your award on £6,000–£16,000 via tariff income (£4.35 per £250), and stops entitlement at £16,000. Housing Benefit uses similar rules. PIP and Child Benefit are unaffected by savings.",
         "topic": "Savings rules",
         "sections": [
             {"heading": "There is no single savings rule for the whole benefits system", "paragraphs": [
@@ -2199,8 +2106,8 @@ GUIDES: Dict[str, Dict[str, Any]] = {
         "related_guides": ["pip-explained-simply", "pip-points-explained", "pip-daily-living-explained", "what-benefits-can-i-claim"],
     },
     "universal-credit-capital-disregards": {
-        "title": "Universal Credit capital disregards explained 2026/27",
-        "description": "UC capital disregards explained for 2026/27: which savings and assets count, whether an ISA or Help to Save counts, what is ignored, and how the £6,000 and £16,000 limits affect your award.",
+        "title": "Universal Credit Capital Disregards 2026/27 | Savings Rules Explained",
+        "description": "UC capital disregards 2026/27: savings below £6,000 are fully ignored, £6,000–£16,000 reduces your award through tariff income, and £16,000+ stops UC entitlement entirely. See which assets count and what is disregarded.",
         "topic": "Universal Credit",
         "sections": [
             {"heading": "What 'capital' means in Universal Credit", "paragraphs": [
@@ -2235,10 +2142,18 @@ GUIDES: Dict[str, Dict[str, Any]] = {
         "related_guides": ["how-savings-affect-benefits", "universal-credit-explained", "what-benefits-can-i-claim"],
     },
     "benefits-for-working-families": {
-        "title": "Benefits for working families 2026/27 — Universal Credit, Child Benefit and childcare",
-        "description": "Benefits for working families 2026/27: Universal Credit work allowance, Child Benefit, childcare support, Free School Meals and council tax help for working households.",
+        "title": "Benefits for working families in 2026/27: what can you still claim while working?",
+        "seo_title": "Benefits for Working Families 2026/27 | UK Benefits Calculator",
+        "description": "Check what benefits a working family can claim in 2026/27. Universal Credit, Child Benefit, childcare, Free School Meals and council tax help may all apply — use the free calculators to estimate your entitlement.",
         "topic": "Families",
         "sections": [
+            {"heading": "Quick answer: the key rules for working families in 2026/27", "paragraphs": [
+                "UC taper rate: 55p reduction per pound earned above the work allowance — so you keep 45p of every extra pound earned.",
+                "Work allowance: £673/month (no housing element) or £404/month (with housing element) — earnings below this do not reduce UC at all.",
+                "Child Benefit: £27.05/week first child, £17.90 each additional child. High Income Charge only starts at £60,000 adjusted net income.",
+                "UC childcare: up to 85% of registered childcare costs reimbursed (capped at £1,071.09/month for one child, £1,836.16 for two or more).",
+                "Free School Meals: available to UC households with annual take-home pay below £7,400.",
+            ]},
             {"heading": "Working does not end benefit entitlement for families", "paragraphs": [
                 "A common misconception is that taking a job or increasing hours stops all benefit support. For families, that is rarely true. Universal Credit, Child Benefit, childcare support and Council Tax Reduction can all remain in payment as earnings rise — the support tapers gradually rather than switching off sharply.",
                 "Understanding the work allowance and taper rate is the key to seeing how much support a working family actually keeps.",
@@ -2255,6 +2170,11 @@ GUIDES: Dict[str, Dict[str, Any]] = {
                 "UC childcare support reimburses up to 85% of registered childcare costs, capped at £1,071.09 a month for one child or £1,836.16 for two or more. This can make a substantial difference to the net cost of working. The childcare element must be claimed within 3 months of paying the costs.",
                 "Free childcare hours (15 or 30 depending on the child's age and eligibility) run alongside the UC childcare element and can reduce the total childcare bill further. Working families who are not on UC may prefer Tax-Free Childcare instead, which adds 20p for every 80p spent, up to £2,000 a year per child.",
             ]},
+            {"heading": "Worked examples: what different families might receive", "paragraphs": [
+                "Couple with 2 children, earnings £28,000/year, renting: UC work allowance £404/month applies; after 55% taper, meaningful UC top-up likely plus Child Benefit £2,337/year and possible Council Tax Reduction. UC childcare can reimburse up to 85% of nursery costs if children are pre-school age.",
+                "Single parent, earnings £22,000/year, no rent claimed: work allowance £673/month. UC tops up wages, Child Benefit £1,407/year for one child, Free School Meals likely qualifying. Check Council Tax Reduction separately as thresholds can be generous.",
+                "These are illustrative examples only. Use the calculators below to check your own situation with your actual figures.",
+            ]},
             {"heading": "Free School Meals, council tax help and what else to check", "paragraphs": [
                 "Working families on UC can qualify for Free School Meals if annual take-home pay is below £7,400, which is the earnings threshold for the UC household. Families should also check Council Tax Reduction — a working family on a modest income can still receive a substantial council tax reduction from their local council, applied separately from Universal Credit.",
                 "Sure Start Maternity Grant (£500 one-off payment for a first child) is available to working families on UC. Healthy Start food and vitamin support is available for pregnant people and those with children under 4 who receive qualifying benefits, including UC.",
@@ -2267,6 +2187,7 @@ GUIDES: Dict[str, Dict[str, Any]] = {
             {"q": "Does working affect Child Benefit?", "a": "Working itself does not affect Child Benefit. Only income above £60,000 triggers the High Income Child Benefit Charge, which gradually reduces the benefit between £60,000 and £80,000."},
             {"q": "What childcare support is available for working families in 2026?", "a": "UC childcare support covers up to 85% of registered childcare costs (capped at £1,071.09/month for one child). Free childcare hours can reduce costs further. Tax-Free Childcare is an alternative for those not on UC."},
             {"q": "What benefits do working families miss most?", "a": "Council Tax Reduction, Free School Meals and the UC childcare element are commonly missed by working families who assume they earn too much to qualify. The earnings thresholds are often higher than people expect."},
+            {"q": "What is the UC taper rate for working families in 2026/27?", "a": "The taper rate is 55%: for every pound earned above the work allowance, Universal Credit is reduced by 55p. You keep 45p of every extra pound earned."},
         ],
         "related_guides": ["benefits-for-low-income-families", "universal-credit-explained", "tax-free-childcare-guide"],
     },
@@ -2298,6 +2219,12 @@ SITUATION_PAGES: Dict[str, Dict[str, Any]] = {
         ],
         "related_calculators": ["universal-credit-calculator", "child-benefit-calculator", "tax-free-childcare-calculator", "council-tax-reduction-calculator", "benefit-cap-calculator"],
         "related_guides": ["what-benefits-can-i-claim", "benefits-for-low-income-families", "universal-credit-explained", "tax-free-childcare-guide"],
+        "faq": [
+            {"q": "Can a single parent still get Universal Credit while working?", "a": "Yes. Single parents on Universal Credit receive a work allowance — £673 a month if no housing element is in payment, or £404 if rent help is included. UC is only tapered at 55% on earnings above this allowance, so meaningful support continues for many working single parents."},
+            {"q": "How much Child Benefit does a single parent with two children get?", "a": "In 2026/27 Child Benefit pays £27.05 a week for the first child and £17.90 for each additional child. A single parent with two children receives £44.95 a week — around £2,337 a year."},
+            {"q": "What childcare help can single parents claim?", "a": "Universal Credit can reimburse up to 85% of registered childcare costs, capped at £1,071.09 a month for one child or £1,836.16 for two or more. Free childcare hours are also available from age 9 months for working parents."},
+            {"q": "Does a single parent qualify for a council tax discount?", "a": "Yes. Single-adult households qualify for a 25% single-person council tax discount, which can stack with means-tested Council Tax Reduction for an additional low-income reduction."},
+        ],
     },
     "benefits-if-you-cannot-work": {
         "slug": "benefits-if-you-cannot-work",
@@ -2324,6 +2251,12 @@ SITUATION_PAGES: Dict[str, Dict[str, Any]] = {
         ],
         "related_calculators": ["pip-eligibility-checker", "esa-calculator", "ssp-calculator", "universal-credit-calculator", "council-tax-reduction-calculator"],
         "related_guides": ["pip-explained-simply", "esa-vs-universal-credit", "what-benefits-can-i-claim"],
+        "faq": [
+            {"q": "What is the first benefit to claim if I cannot work due to illness?", "a": "If you are employed, Statutory Sick Pay is normally the first support — £123.25 a week or 80% of average weekly earnings (whichever is lower) for up to 28 weeks. After SSP, New Style ESA may apply if your National Insurance record qualifies. Universal Credit can run alongside or in place of ESA for broader household support."},
+            {"q": "Can I get PIP if I have a disability and am unable to work?", "a": "PIP is non-means-tested and not affected by whether you work, your income or your savings. It is assessed purely on how your condition affects daily living and mobility. You can receive PIP alongside Universal Credit, ESA or other benefits."},
+            {"q": "How much does the Universal Credit health element pay?", "a": "The Limited Capability for Work-Related Activity (LCWRA) element adds £429.80 a month to the UC award in 2026/27. This is on top of the standard allowance and any other elements."},
+            {"q": "Does receiving PIP affect Universal Credit?", "a": "PIP does not directly reduce Universal Credit. However, receiving PIP usually exempts a household from the Benefit Cap, and claiming Carer's Allowance for a PIP recipient can trigger a carer element in the carer's own UC claim."},
+        ],
     },
     "benefits-for-renters": {
         "slug": "benefits-for-renters",
@@ -2376,6 +2309,12 @@ SITUATION_PAGES: Dict[str, Dict[str, Any]] = {
         ],
         "related_calculators": ["pension-credit-calculator", "winter-fuel-payment-checker", "cold-weather-payment-checker", "council-tax-reduction-calculator"],
         "related_guides": ["pension-credit-explained", "what-benefits-can-i-claim", "how-savings-affect-benefits"],
+        "faq": [
+            {"q": "How much is Pension Credit in 2026/27?", "a": "Pension Credit tops up weekly income to at least £238.00 for a single person or £363.25 for a couple in 2026/27. Savings under £10,000 are fully disregarded, and there is no equivalent of Universal Credit's £16,000 upper savings limit."},
+            {"q": "Does Pension Credit affect the Winter Fuel Payment?", "a": "In England and Wales, Pension Credit receipt is one of the key qualifying routes for the Winter Fuel Payment under the current income-based rules. The payment is generally £200 or £300 depending on age."},
+            {"q": "Can pensioners still get Council Tax Reduction?", "a": "Yes. Pension Credit receipt can trigger maximum Council Tax Reduction in many local authority schemes. Pension-age Council Tax Reduction schemes are often more generous than working-age ones."},
+            {"q": "What is Attendance Allowance and who can claim it?", "a": "Attendance Allowance is a non-means-tested disability benefit for people over State Pension age. In 2026/27 it pays £73.90 a week at the lower rate or £110.40 at the higher rate. Income and savings have no effect on entitlement."},
+        ],
     },
     "benefits-in-northern-ireland": {
         "slug": "benefits-in-northern-ireland",
@@ -2432,7 +2371,8 @@ SITUATION_PAGES: Dict[str, Dict[str, Any]] = {
     "benefits-for-working-families": {
         "slug": "benefits-for-working-families",
         "title": "Benefits for working families 2026/27 — Universal Credit, Child Benefit and childcare",
-        "description": "Benefits for working families 2026/27: Universal Credit work allowance, Child Benefit, childcare support, Free School Meals and council tax help for working households.",
+        "seo_title": "Benefits for Working Families 2026/27 | UK Benefits Calculator",
+        "description": "Free guide and calculators for working families 2026/27. Estimate Universal Credit, Child Benefit, childcare support and more — many working families qualify for more than they expect.",
         "intro": "Working does not end benefit entitlement for families. Universal Credit tapers gradually as earnings rise, and several other schemes — Child Benefit, Free School Meals, childcare support and Council Tax Reduction — remain available well into moderate incomes. This guide is built around the search most working parents actually have: what can a working family still claim in the UK in 2026/27, and what changes first as wages rise.",
         "sections": [
             {
@@ -2454,6 +2394,13 @@ SITUATION_PAGES: Dict[str, Dict[str, Any]] = {
         ],
         "related_calculators": ["universal-credit-calculator", "child-benefit-calculator", "tax-free-childcare-calculator", "free-school-meals-checker", "council-tax-reduction-calculator", "benefit-cap-calculator"],
         "related_guides": ["benefits-for-working-families", "universal-credit-explained", "tax-free-childcare-guide"],
+        "faq": [
+            {"q": "Can a working family still get Universal Credit in 2026/27?", "a": "Yes. Working families with children receive a work allowance — in 2026/27 this is £673 a month if no housing element is included, or £404 if rent support is also in payment. UC is only reduced on earnings above this allowance, at a 55% taper rate, so meaningful support continues for many working households."},
+            {"q": "What is the UC taper rate for working families in 2026/27?", "a": "The taper rate is 55%: for every pound earned above the work allowance, Universal Credit is reduced by 55p. You keep 45p of every extra pound earned above the work allowance threshold."},
+            {"q": "Does working stop Child Benefit?", "a": "No. Child Benefit is not means tested at the point of claim. In 2026/27 it pays £27.05 a week for the first child and £17.90 for each additional child. The High Income Child Benefit Charge only starts if one person in the household has adjusted net income above £60,000."},
+            {"q": "What childcare support can working families get in 2026/27?", "a": "Universal Credit childcare support reimburses up to 85% of registered childcare costs, capped at £1,071.09 a month for one child or £1,836.16 for two or more. Tax-Free Childcare is an alternative for working families not on Universal Credit, adding a government top-up of 20p for every 80p spent on registered childcare, up to £2,000 per child per year."},
+            {"q": "Can working families get help with council tax?", "a": "Yes. Council Tax Reduction is a separate local-authority scheme and can benefit working households on modest incomes. Many working families miss it because they assume they earn too much to qualify, but the income thresholds are often higher than expected."},
+        ],
     },
 }
 
@@ -2601,8 +2548,8 @@ SCENARIO_PAGES: Dict[str, Dict[str, Any]] = {
     },
     "pip-explained": {
         "slug": "pip-explained",
-        "title": "PIP explained 2026/27 — rates, points, eligibility and how the assessment works",
-        "description": "PIP 2026/27: daily living up to £114.60/week, mobility up to £80.00/week, max £194.60/week. How the points system works and how PIP interacts with Universal Credit.",
+        "title": "PIP 2026/27 | Rates, Points, Eligibility and How the Assessment Works",
+        "description": "PIP 2026/27: daily living up to £114.60/week, mobility up to £80.00/week, max £194.60/week. See how the points system works, what each descriptor means in practice, and how PIP interacts with Universal Credit.",
         "topic": "Disability support",
         "intro": "Personal Independence Payment (PIP) is the main disability benefit for working-age adults in England, Wales and Northern Ireland. It is based on how your condition affects you — not on your diagnosis or whether you are in work. In 2026/27 it pays up to £194.60 a week if you qualify for both components at the enhanced rate. This guide explains how the points system works, what each activity and descriptor means in practice, and how PIP interacts with Universal Credit and other benefits.",
         "sections": [
@@ -2638,8 +2585,8 @@ SCENARIO_PAGES: Dict[str, Dict[str, Any]] = {
     },
     "child-benefit-guide": {
         "slug": "child-benefit-guide",
-        "title": "Child Benefit 2026/27 — rates, High Income Charge and how to claim",
-        "description": "Child Benefit 2026/27: £27.05/week first child, £17.90 each additional. High Income Child Benefit Charge starts at £60,000 and withdraws fully at £80,000.",
+        "title": "Child Benefit 2026/27 | Rates, High Income Charge and How to Claim",
+        "description": "Child Benefit 2026/27: £27.05/week first child, £17.90 each additional child. High Income Child Benefit Charge starts at £60,000 adjusted net income and withdraws fully at £80,000. Pension contributions can reduce the charge.",
         "topic": "Family support",
         "intro": "Child Benefit is a universal payment for families with children under 16 (or under 20 in approved education or training). In 2026/27 it pays £27.05 a week for the first child and £17.90 for each additional child. It is not means-tested at point of claim — but households where one person earns above £60,000 face the High Income Child Benefit Charge, which withdraws the benefit between £60,000 and £80,000 adjusted net income. This guide explains the rates, the HICBC calculation, and what to do if you are near the threshold.",
         "sections": [
@@ -3305,7 +3252,7 @@ def home():
     return render_page(
         "landing.html",
         title="Free UK Benefits Calculator 2026/27 | Universal Credit, PIP & Child Benefit",
-        description="Free UK benefits checker and calculator for 2026/27. Check Universal Credit, PIP, Child Benefit, Pension Credit and support for working families in minutes.",
+        description="Free UK benefits calculator for 2026/27. Check Universal Credit, Child Benefit, PIP, Pension Credit and childcare support based on your income and household — no login needed.",
         canonical_path="/",
         breadcrumbs_data=[],
         home_calc_page=home_calc_page,
@@ -3328,8 +3275,8 @@ def home():
 def calculators_index():
     return render_page(
         "calculators_index.html",
-        title="Free UK benefits calculators and checkers 2026/27 | Universal Credit, PIP, Child Benefit",
-        description="Use free UK benefits calculators and checker tools for Universal Credit, PIP, Child Benefit, HICBC, Pension Credit, rent help and savings rules.",
+        title="Free UK Benefits Calculators 2026/27 | Universal Credit, PIP, Child Benefit",
+        description="Free UK benefits calculators for 2026/27. Estimate Universal Credit, Child Benefit, PIP, Pension Credit, childcare and housing support — no login, no signup needed.",
         canonical_path="/calculators",
         breadcrumbs_data=breadcrumbs({"name": "Calculators", "url": f"{SITE_URL}/calculators"}),
         tools=[CALCULATORS[slug] for slug in CALCULATOR_ORDER],
@@ -3342,8 +3289,8 @@ def calculators_index():
 def guides_index():
     return render_page(
         "guides_index.html",
-        title="UK benefits guides 2026/27 | Universal Credit, PIP, Child Benefit & savings rules",
-        description="Plain-English UK benefits guides covering Universal Credit, PIP, Child Benefit, Pension Credit, savings rules, HICBC, rent help and working-family support.",
+        title="UK Benefits Guides 2026/27 | Universal Credit, PIP, Child Benefit & Pension Credit",
+        description="Plain-English UK benefits guides for 2026/27. Understand Universal Credit, Child Benefit, PIP, Pension Credit, savings rules and working-family entitlements — written for real households.",
         canonical_path="/guides",
         breadcrumbs_data=breadcrumbs({"name": "Guides", "url": f"{SITE_URL}/guides"}),
         guide_items=GUIDES,
@@ -3367,13 +3314,14 @@ def situation_page(slug: str):
             guides.append(item)
     return render_page(
         "situation_page.html",
-        title=f"{page['title']} | UK Benefits Calculator",
+        title=page.get("seo_title") or f"{page['title']} | UK Benefits Calculator",
         description=page["description"],
         canonical_path=f"/situations/{slug}",
         breadcrumbs_data=breadcrumbs({"name": "Situations", "url": f"{SITE_URL}/situations"}, {"name": page["title"], "url": f"{SITE_URL}/situations/{slug}"}),
         page=page,
         related_calculators=calcs,
         related_guides=guides,
+        faq_items=page.get("faq", []),
     )
 
 
@@ -3451,9 +3399,10 @@ def guide_page(slug: str):
             copy["slug"] = other_slug
             related_guides.append(copy)
             seen_related.add(other_slug)
+    _page_title = guide.get("seo_title") or f"{guide['title']} | UK Benefits Calculator"
     return render_page(
         "guide_page.html",
-        title=f"{guide['title']} | UK Benefits Calculator",
+        title=_page_title,
         description=guide["description"],
         canonical_path=f"/guides/{slug}",
         breadcrumbs_data=breadcrumbs({"name": "Guides", "url": f"{SITE_URL}/guides"}, {"name": guide["title"], "url": f"{SITE_URL}/guides/{slug}"}),
@@ -3533,26 +3482,26 @@ def html_sitemap():
 
 
 @app.route("/trap")
-def honeypot_trap():
-    ip_str = _get_real_ip()
-    if ip_str:
-        _HONEYPOT_BLOCKED.add(ip_str)
+def trap():
+    xff = request.headers.get("X-Forwarded-For", "")
+    _HONEYPOT_BLOCKED.add(xff.split(",")[0].strip() if xff else (request.remote_addr or ""))
     abort(403)
 
 
 @app.route("/robots.txt")
 def robots():
-    body = (
-        "User-agent: *\n"
-        "Allow: /\n"
-        "Allow: /universal-credit-calculator\n"
-        "Allow: /child-benefit-calculator\n"
-        "Allow: /guides/what-benefits-can-i-claim\n"
-        f"Sitemap: {SITE_URL}/sitemap.xml\n"
-    )
-    resp = make_response(body)
-    resp.mimetype = "text/plain"
-    return resp
+    body = "\n".join([
+        "User-agent: *",
+        "Allow: /",
+        "Disallow: /trap",
+        "Disallow: /api/",
+        "Disallow: /admin/",
+        "",
+        f"Sitemap: {SITE_URL}/sitemap.xml",
+    ])
+    r = make_response(body)
+    r.content_type = "text/plain"
+    return r
 
 
 @app.route("/ads.txt")

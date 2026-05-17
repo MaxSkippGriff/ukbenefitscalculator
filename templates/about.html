@@ -2,48 +2,36 @@
 {% block content %}
 <section class="section">
   <div class="badge">About</div>
-  <h1>About EmployerCalculator.co.uk</h1>
-  <p>EmployerCalculator.co.uk is focused on one job: making UK employer cost calculations clear and practical for small businesses, HR teams and hiring managers. The site combines a free employer cost calculator with guides on employer NI, auto-enrolment pension, Employment Allowance, and redundancy — so employers can budget accurately before making hiring decisions.</p>
+  <h1>About UK Benefits Calculator</h1>
+  <p>UKBenefitsCalculator.co.uk is a free, independent tool to help UK residents estimate their eligibility and entitlement for key state benefits — including Universal Credit, Housing Benefit, Council Tax Reduction, Pension Credit and Child Benefit.</p>
 
   <article class="card" style="padding:1rem 1.25rem;margin-top:0.9rem;">
     <h2>What this site is for</h2>
-    <p>Use the <a href="/calculator" style="color:var(--accent);font-weight:600;">employer cost calculator</a> to estimate the true annual cost of employing someone — salary, employer National Insurance at 15%, auto-enrolment pension contributions, and optional overhead assumptions. Compare salary scenarios and understand how the April 2025 NI changes affect your specific payroll.</p>
-    <p style="margin-bottom:0;">The <a href="/cost-of-employing" style="color:var(--accent);font-weight:600;">cost-of-employing pages</a> and <a href="/employer-ni" style="color:var(--accent);font-weight:600;">employer NI tables</a> answer specific salary-level questions quickly — for example, "what does a £40,000 salary cost an employer?" or "how much employer NI is due on £35,000?". For formal payroll, tax or legal advice, consult a qualified professional.</p>
-  </article>
-
-  <article class="card" style="padding:1rem 1.25rem;margin-top:0.9rem;">
-    <h2>What we cover</h2>
-    <ul style="padding-left:1.25rem;font-size:0.9rem;color:var(--text-secondary);line-height:1.8;margin-top:0.25rem;">
-      <li><strong>Employer National Insurance</strong> — rates, thresholds, and the April 2025 changes explained with worked examples.</li>
-      <li><strong>Auto-enrolment pension costs</strong> — qualifying earnings, minimum contributions, and per-employee cost modelling.</li>
-      <li><strong>Employment Allowance</strong> — eligibility, claiming process, and how it affects small employer NI bills.</li>
-      <li><strong>Total cost of employment</strong> — salary-by-salary breakdowns combining NI, pension and optional overhead costs.</li>
-      <li><strong>Payroll and HR tools</strong> — editorial comparisons of payroll software commonly used by UK small businesses.</li>
-      <li><strong>Redundancy, notice period and statutory pay</strong> — calculators and guides for employer obligations.</li>
-    </ul>
+    <p>Use the benefits calculators to get quick eligibility estimates for the most common UK state support. The site is designed for households checking what they may be entitled to after a change in income, employment status or living situation. For formal benefit claims and official entitlement decisions, always use GOV.UK or contact the DWP directly.</p>
+    <p style="margin-bottom:0;">The guides explain benefit rules in plain English — including income thresholds, taper rates, how savings affect awards, and how benefits interact. For formal advice, consult Citizens Advice or a benefits specialist.</p>
   </article>
 
   <article class="card" style="padding:1rem 1.25rem;margin-top:0.9rem;">
     <h2>Editorial approach</h2>
-    <p>Every guide is written in plain British English and reviewed against current HMRC and GOV.UK guidance for the active tax year. We prioritise practical accuracy, transparent assumptions and pages that are genuinely useful for payroll planning — not pages that restate definitions without helping a user take action.</p>
-    <p style="margin-bottom:0;">Where a page involves estimates or assumptions, those are explained and linked to the <a href="/methodology" style="color:var(--accent);font-weight:600;">methodology page</a>. Our <a href="/editorial-standards" style="color:var(--accent);font-weight:600;">editorial standards</a> cover how we write, review and update content — including our approach to commercial relationships.</p>
+    <p>Every guide and calculator is reviewed against current DWP, GOV.UK and HMRC guidance. We prioritise factual accuracy and practical usefulness. Where assumptions are made, they are documented on the <a href="/methodology" style="color:var(--accent);font-weight:600;">methodology page</a>.</p>
+    <p style="margin-bottom:0;">Our <a href="/editorial-standards" style="color:var(--accent);font-weight:600;">editorial standards</a> cover how we write, review and update content. This site does not provide legal or financial advice.</p>
   </article>
 
   <article class="card" style="padding:1rem 1.25rem;margin-top:0.9rem;">
     <h2>How the site is maintained</h2>
     <ul style="padding-left:1.25rem;font-size:0.9rem;color:var(--text-secondary);line-height:1.8;margin-top:0.25rem;">
-      <li>Calculator assumptions are updated when HMRC confirms tax-year rates and thresholds.</li>
-      <li>Guides are reviewed for accuracy and internal-link quality at each tax-year change.</li>
-      <li>Pages are updated when users or readers report confusing assumptions, unclear wording, or outdated figures.</li>
-      <li>We do not publish pages without practical value for a UK employer audience.</li>
+      <li>Benefit rates, thresholds and taper rates are updated each April when DWP announces uprating figures.</li>
+      <li>Guides are reviewed at each relevant policy change — including Budget announcements that affect Universal Credit, Housing Benefit or tax credits.</li>
+      <li>Pages are updated when users report unclear assumptions or outdated figures.</li>
+      <li>We do not publish pages without practical value for a UK benefits audience.</li>
     </ul>
   </article>
 
   <article class="card" style="padding:1rem 1.25rem;margin-top:0.9rem;">
-    <h2>Editorial team and contact</h2>
-    <p>Content is produced and maintained by <strong>EmployerCalculator Editorial</strong>, a small team focused on UK employer cost calculations, payroll planning, and employment regulation. All figures are checked against HMRC and GOV.UK guidance.</p>
-    <p>For corrections, data-quality feedback or editorial queries, contact: <a href="mailto:mskippergriffiths@gmail.com" style="color:var(--accent);font-weight:600;">mskippergriffiths@gmail.com</a>.</p>
-    <p style="margin-bottom:0;font-size:0.82rem;color:var(--text-tertiary);">Last reviewed: March 2026. Tax year: {{ tax_year }}.</p>
+    <h2>Editorial ownership and contact</h2>
+    <p>Editorial owner: <strong>James Whitfield</strong>, a UK personal finance writer with a focus on state benefits, welfare policy and household income. James writes about Universal Credit, Pension Credit and the wider UK benefits system against DWP and GOV.UK guidance.</p>
+    <p>For corrections or data-quality feedback, contact: <a href="mailto:editorial@ukbenefitscalculator.co.uk" style="color:var(--accent);font-weight:600;">editorial@ukbenefitscalculator.co.uk</a>.</p>
+    <p style="margin-bottom:0;font-size:0.82rem;color:var(--text-tertiary);">Last reviewed: May 2026.</p>
   </article>
 
   <section class="card" style="padding:1rem 1.25rem;margin-top:0.9rem;">
@@ -51,7 +39,6 @@
     <div class="pill-grid">
       <a class="pill" href="/editorial-standards">Editorial standards</a>
       <a class="pill" href="/methodology">Methodology</a>
-      <a class="pill" href="/sources">Sources</a>
       <a class="pill" href="/contact">Contact</a>
     </div>
   </section>

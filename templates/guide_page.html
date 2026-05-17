@@ -1,5 +1,177 @@
 {% extends "base.html" %}
 
+{% block head_extra %}
+<style>
+  .guide-wrap {
+    max-width: var(--max-w);
+    margin: 0 auto;
+    padding: 2rem 1.25rem 3rem;
+  }
+  .guide-top {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(240px, 300px);
+    gap: 1rem;
+    align-items: start;
+  }
+  .guide-main,
+  .guide-side-card,
+  .guide-bottom-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: var(--shadow-sm);
+  }
+  .guide-main {
+    padding: 1.45rem 1.45rem 1.55rem;
+  }
+  .guide-topic {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+  .guide-flags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin-bottom: 0.8rem;
+  }
+  .guide-flag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.72rem;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface-alt);
+    color: var(--text-secondary);
+    font-size: 0.76rem;
+    font-weight: 700;
+  }
+  .guide-flag.accent {
+    color: var(--accent);
+    background: var(--accent-light);
+    border-color: rgba(27,107,74,0.12);
+  }
+  .guide-main h1 {
+    font-size: clamp(2rem, 4vw, 2.9rem);
+    max-width: 16ch;
+    margin-bottom: 0.55rem;
+  }
+  .guide-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    color: var(--text-tertiary);
+    font-size: 0.82rem;
+    margin-bottom: 0.85rem;
+  }
+  .guide-meta .dot::before {
+    content: "•";
+    margin-right: 0.45rem;
+  }
+  .guide-intro {
+    color: var(--text-secondary);
+    max-width: 62ch;
+    font-size: 1rem;
+    margin-bottom: 1rem;
+  }
+  .guide-body h2 {
+    font-size: 1.28rem;
+    margin: 1.25rem 0 0.55rem;
+  }
+  .guide-body h2:first-of-type {
+    margin-top: 0;
+  }
+  .guide-body p {
+    color: var(--text-secondary);
+    margin-bottom: 0.82rem;
+    max-width: 68ch;
+  }
+  .guide-side {
+    position: sticky;
+    top: 74px;
+    display: grid;
+    gap: 0.9rem;
+  }
+  .guide-side-card {
+    padding: 1rem 1.05rem;
+  }
+  .guide-side-card h3 {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.7rem;
+  }
+  .guide-side-card ol,
+  .guide-side-card ul {
+    list-style: none;
+    display: grid;
+    gap: 0.45rem;
+  }
+  .guide-side-card li {
+    counter-increment: guide-toc;
+  }
+  .guide-side-card a {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    text-decoration: none;
+    color: var(--text-secondary);
+    font-size: 0.84rem;
+    line-height: 1.45;
+  }
+  .guide-side-card a:hover {
+    color: var(--accent);
+  }
+  .guide-toc ol {
+    counter-reset: guide-toc;
+  }
+  .guide-toc a::before {
+    content: counter(guide-toc);
+    color: var(--text-tertiary);
+    font-size: 0.72rem;
+    font-weight: 700;
+    min-width: 1.2em;
+  }
+  .guide-link-list a::before {
+    content: "→";
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+  .guide-bottom {
+    margin-top: 1rem;
+    display: grid;
+    gap: 1rem;
+  }
+  .guide-bottom-card {
+    padding: 1.15rem 1.2rem;
+  }
+  .guide-bottom-card h2 {
+    font-size: 1.12rem;
+    margin-bottom: 0.45rem;
+  }
+  .guide-bottom-card p {
+    color: var(--text-secondary);
+    margin-bottom: 0.75rem;
+  }
+  .guide-bottom-card.notice {
+    background: var(--surface-alt);
+  }
+  @media (max-width: 920px) {
+    .guide-top {
+      grid-template-columns: 1fr;
+    }
+    .guide-side {
+      position: static;
+    }
+  }
+</style>
+{% endblock %}
+
 {% block jsonld %}
 <script type="application/ld+json">
 {
@@ -7,116 +179,155 @@
   "@type": "Article",
   "headline": {{ guide.title|tojson }},
   "description": {{ guide.description|tojson }},
-  "datePublished": "{{ guide.date_iso if guide.date_iso else '2025-04-06' }}",
+  "datePublished": "2026-04-20",
   "dateModified": "{{ now.date().isoformat() }}",
-  "author": {
-    "@type": "Organization",
-    "name": "EmployerCalculator Editorial",
-    "url": "{{ site_url }}/about"
-  },
-  "publisher": {
-    "@type": "Organization",
-    "name": "EmployerCalculator.co.uk",
-    "url": "{{ site_url }}"
-  },
-  "mainEntityOfPage": {
-    "@type": "WebPage",
-    "@id": "{{ canonical_url }}"
-  }
+  "author": {"@type": "Organization", "name": "UK Benefits Calculator Editorial"},
+  "publisher": {"@type": "Organization", "name": "UK Benefits Calculator", "url": "{{ site_url }}"},
+  "mainEntityOfPage": {"@type": "WebPage", "@id": "{{ canonical_url }}"}
 }
 </script>
+{% if faq_items %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {% for item in faq_items %}
+    {"@type": "Question", "name": {{ item.q|tojson }}, "acceptedAnswer": {"@type": "Answer", "text": {{ item.a|tojson }} }}{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ]
+}
+</script>
+{% endif %}
+{{ super() }}
 {% endblock %}
 
 {% block content %}
-<section class="section">
-  <div class="badge">Guide</div>
-  <h1>{{ guide.title }}</h1>
-  <p style="font-size:0.875rem; color:var(--text-tertiary); margin-bottom:0.5rem;">Written by EmployerCalculator Editorial &nbsp;·&nbsp; Reviewed against official UK sources &nbsp;·&nbsp; Last updated: {{ now.strftime('%B %Y') }}</p>
-  <p style="font-size:0.95rem; color:var(--text-secondary);">{{ guide.description }}</p>
+<section class="guide-wrap">
+  <div class="guide-top">
+    <article class="guide-main">
+      <div class="guide-topic">{{ guide.topic }}</div>
+      <div class="guide-flags">
+        <span class="guide-flag accent">Updated for {{ tax_year }}</span>
+        <span class="guide-flag">Independent guide</span>
+        <span class="guide-flag">Not GOV.UK</span>
+      </div>
+      <h1>{{ guide.title }}</h1>
+      <div class="guide-meta">
+        <span>UK Benefits Calculator Editorial</span>
+        <span class="dot">Last reviewed {{ now.strftime('%-d %B %Y') if now.strftime else now.date().isoformat() }}</span>
+        <span class="dot">British English</span>
+      </div>
+      <p class="guide-intro">{{ guide.description }}</p>
 
-  {% if slug in ["auto-enrolment-pension-costs", "employer-ni-changes-2025"] %}
-  <section class="card" style="padding:1rem 1.25rem; margin-top:0.9rem;">
-    <h2 style="font-size:1.05rem; margin-bottom:0.55rem;">Best next step from this guide</h2>
-    {% if slug == "auto-enrolment-pension-costs" %}
-    <p style="font-size:0.88rem; color:var(--text-secondary); margin-bottom:0.7rem;">This guide answers <strong>auto-enrolment costs</strong> intent. If you need the full employer cost rather than pension-only cost, move next to the calculator or the salary pages.</p>
-    <div class="pill-grid">
-      <a class="pill" href="/pension-cost">Auto-enrolment pension calculator</a>
-      <a class="pill" href="/calculator">Full employer cost calculator</a>
-      <a class="pill" href="/cost-of-employing">Cost of employing by salary</a>
-      <a class="pill" href="/team-cost-planner">Payroll planner</a>
-    </div>
-    {% elif slug == "employer-ni-changes-2025" %}
-    <p style="font-size:0.88rem; color:var(--text-secondary); margin-bottom:0.7rem;">This guide answers the <strong>NI rise</strong> question. If you now need to price an actual hire, jump to the NI pages, salary pages or the full calculator.</p>
-    <div class="pill-grid">
-      <a class="pill" href="/ni-change-calculator">NI rise calculator landing page</a>
-      <a class="pill" href="/employer-ni">Employer NI by salary</a>
-      <a class="pill" href="/cost-of-employing">Cost of employing by salary</a>
-      <a class="pill" href="/calculator">Full employer cost calculator</a>
-    </div>
-    {% endif %}
-  </section>
-  {% endif %}
+      {% if slug == 'benefits-for-working-families' %}
+      <div class="card" style="margin-bottom:1.5rem;padding:1.1rem 1.2rem;border:1px solid var(--border);border-radius:12px;background:var(--surface-alt);">
+        <h2 style="margin-bottom:0.5rem;font-size:1.1rem;">Check what your family may be entitled to</h2>
+        <p style="color:var(--text-secondary);margin-bottom:0.75rem;font-size:0.95rem;">Use the free calculators to estimate what may apply to your household in 2026/27.</p>
+        <ul style="padding-left:1.25rem;line-height:2;margin:0;">
+          <li><a href="/universal-credit-calculator" style="color:var(--accent);">Universal Credit calculator</a></li>
+          <li><a href="/child-benefit-calculator" style="color:var(--accent);">Child Benefit calculator</a></li>
+          <li><a href="/what-if/child-benefit-guide" style="color:var(--accent);">Child Benefit and High Income Charge guide</a></li>
+          <li><a href="/guides/how-savings-affect-benefits" style="color:var(--accent);">How savings affect your benefits</a></li>
+          <li><a href="/tax-free-childcare-calculator" style="color:var(--accent);">Tax-Free Childcare calculator</a></li>
+        </ul>
+      </div>
+      {% endif %}
 
-  {% for sec in guide.sections %}
-  <article class="card" style="padding:1rem 1.25rem; margin-top:0.9rem;">
-    <h2 style="font-size:1.2rem; margin-bottom:0.6rem;">{{ sec.heading }}</h2>
-    {% for para in sec.paragraphs %}
-    <p>{{ para }}</p>
-    {% endfor %}
-  </article>
-  {% endfor %}
+      <div class="guide-body">
+        {% for sec in guide.sections %}
+        <h2 id="section-{{ loop.index }}">{{ sec.heading }}</h2>
+        {% for para in sec.paragraphs %}
+        <p>{{ para }}</p>
+        {% endfor %}
+        {% endfor %}
+      </div>
+    </article>
 
-  <section class="card" style="padding:1rem 1.25rem; margin-top:0.9rem;">
-    <h2 style="font-size:1.15rem;">Use the calculator</h2>
-    <p style="margin-bottom:0.6rem; font-size:0.9rem; color:var(--text-secondary);">Put the figures from this guide into practice with the live calculator tools below.</p>
-    <div class="pill-grid">
-      <a class="pill" href="/calculator">Employer NI &amp; total cost calculator</a>
-      <a class="pill" href="/cost-of-employing">Employer cost by salary</a>
-      <a class="pill" href="/employer-ni">Employer NI by salary</a>
-      <a class="pill" href="/calculators">All calculators</a>
-    </div>
-    <div class="pill-grid" style="margin-top:0.6rem;">
-      <a class="pill" href="/cost/30000">Cost — £30,000 salary</a>
-      <a class="pill" href="/cost/35000">Cost — £35,000 salary</a>
-      <a class="pill" href="/cost/50000">Cost — £50,000 salary</a>
-      <a class="pill" href="/cost/75000">Cost — £75,000 salary</a>
-    </div>
-  </section>
+    <aside class="guide-side">
+      <div class="guide-side-card guide-toc">
+        <h3>In this guide</h3>
+        <ol>
+          {% for sec in guide.sections %}
+          <li><a href="#section-{{ loop.index }}">{{ sec.heading }}</a></li>
+          {% endfor %}
+        </ol>
+      </div>
 
-  <section class="card" style="padding:1rem 1.25rem; margin-top:0.9rem;">
-    <h2 style="font-size:1.15rem;">Related guides</h2>
-    <div class="pill-grid">
-      {% for item in related_guides %}
-      <a class="pill" href="/guides/{{ item.slug }}">{{ item.title }}</a>
-      {% endfor %}
-    </div>
-  </section>
+      {% if related_calculators %}
+      <div class="guide-side-card guide-link-list">
+        <h3>Related calculators</h3>
+        <ul>
+          {% for item in related_calculators %}
+          <li><a href="{{ item.url }}">{{ item.title }}</a></li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
 
-  {% if faq_items %}
-  <section class="card" style="padding:1rem 1.25rem; margin-top:0.9rem;">
-    <h2 style="font-size:1.15rem;">Frequently asked questions</h2>
-    <div class="faq-list">
-      {% for item in faq_items %}
-      <details class="faq-item"><summary>{{ item.q }}</summary><div class="faq-answer">{{ item.a }}</div></details>
-      {% endfor %}
-    </div>
-  </section>
-  {% endif %}
-
-  {% include "partials/tools_block.html" %}
-
-  <div class="card" style="padding:1rem 1.25rem; margin-top:0.9rem; background:var(--accent-light); border-color:var(--accent);">
-    <h2 style="font-size:1rem; margin-bottom:0.5rem;">Once you know the cost — what next?</h2>
-    <p style="font-size:0.87rem; color:var(--text-secondary); margin-bottom:0.6rem;">Running payroll correctly after you have calculated employer cost is the next practical step. The tools below handle HMRC RTI submissions, auto-enrolment pension and payslip generation automatically.</p>
-    <div class="pill-grid">
-      <a class="pill" href="/payroll-software-uk">Compare UK payroll software →</a>
-      <a class="pill" href="/calculator">Open employer cost calculator</a>
-      <a class="pill" href="/guides/employment-allowance-guide">Check Employment Allowance eligibility</a>
-    </div>
+      <div class="guide-side-card guide-link-list">
+        <h3>Official sources</h3>
+        <ul>
+          {% for source in page_sources %}
+          <li><a href="{{ source.url }}" target="_blank" rel="noopener">{{ source.label }}</a></li>
+          {% endfor %}
+        </ul>
+      </div>
+    </aside>
   </div>
 
-  <div class="card" style="padding:1rem 1.25rem; margin-top:0.9rem; background:var(--surface-alt);">
-    <p style="margin-bottom:0; font-size:0.83rem; color:var(--text-tertiary);">EmployerCalculator Editorial. Content reviewed against <a href="https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2025-to-2026" rel="noopener" target="_blank" style="color:var(--accent);">HMRC guidance</a>. Estimates only — not financial or legal advice. See our <a href="/methodology" style="color:var(--accent);">methodology</a> and <a href="/sources" style="color:var(--accent);">sources</a>.</p>
+  <div class="guide-bottom">
+    <section class="guide-bottom-card">
+      <h2>Next steps</h2>
+      <p>Use this guide to understand the rule first, then move into the calculator or situation page that matches your household best.</p>
+      <div class="pill-grid">
+        {% for step in next_steps %}
+        <a class="pill" href="{{ step.url }}">{{ step.label }}</a>
+        {% endfor %}
+      </div>
+    </section>
+
+    {% if related_guides %}
+    <section class="guide-bottom-card">
+      <h2>Related guides</h2>
+      <p>These are usually the next questions people ask after reading this page.</p>
+      <div class="pill-grid">
+        {% for item in related_guides %}
+        <a class="pill" href="/guides/{{ item.slug }}">{{ item.title }}</a>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
+    {% if faq_items %}
+    <section class="guide-bottom-card">
+      <h2>Frequently asked questions</h2>
+      <div class="faq-list">
+        {% for item in faq_items %}
+        <details class="faq-item">
+          <summary>{{ item.q }}</summary>
+          <div class="faq-answer">{{ item.a }}</div>
+        </details>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
+    {% if adsense_client %}
+    <div>
+      {% include "partials/adsense_snippet.html" %}
+    </div>
+    {% endif %}
+
+    <section class="guide-bottom-card notice">
+      <h2>Independent guide only</h2>
+      <p>This page is written to make the system easier to understand, not to act like an official decision. Local rules, evidence requirements and edge cases can change the real answer, so use the official links and an adviser where decisions are important.</p>
+      <div class="pill-grid">
+        <a class="pill" href="/methodology">Methodology</a>
+        <a class="pill" href="/editorial-standards">Editorial standards</a>
+        <a class="pill" href="/sources">Sources</a>
+      </div>
+    </section>
   </div>
 </section>
 {% endblock %}

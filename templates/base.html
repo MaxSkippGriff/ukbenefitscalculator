@@ -351,6 +351,7 @@
       .nav-links.open { display: flex; }
       .footer-inner { gap: 1.5rem; }
     }
+    @media (max-width: 640px) { .footer-inner { grid-template-columns: 1fr; } }
   </style>
   {% block head_extra %}{% endblock %}
   <script type="application/ld+json">
@@ -422,7 +423,7 @@
 <body>
   <nav class="nav">
     <div class="nav-inner">
-      <a href="/" class="nav-brand">Benefits<span>Calculator</span></a>
+      <a href="/" class="nav-brand">UKBenefits<span>Calculator</span></a>
       <div class="nav-links" id="navLinks">
         <a href="/universal-credit-calculator">Universal Credit</a>
         <a href="/calculators">All calculators</a>
@@ -514,6 +515,24 @@
         <a href="https://ukbenefitscalculator.co.uk" class="suite-current">
           <span class="suite-dot"></span>UKBenefitsCalculator.co.uk
         </a>
+        <a href="https://soletradertaxcalculator.co.uk" target="_blank" rel="noopener">
+          <span class="suite-dot"></span>SoleTraderTaxCalculator.co.uk
+        </a>
+        <a href="https://limitedcompanytaxcalculator.co.uk" target="_blank" rel="noopener">
+          <span class="suite-dot"></span>LimitedCompanyTaxCalculator.co.uk
+        </a>
+        <a href="https://ukcapitalgainstaxcalculator.co.uk" target="_blank" rel="noopener">
+          <span class="suite-dot"></span>UKCapitalGainsTaxCalculator.co.uk
+        </a>
+        <a href="https://ukdividendtaxcalculator.co.uk" target="_blank" rel="noopener">
+          <span class="suite-dot"></span>UKDividendTaxCalculator.co.uk
+        </a>
+        <a href="https://pensiontaxreliefcalculator.co.uk" target="_blank" rel="noopener">
+          <span class="suite-dot"></span>PensionTaxReliefCalculator.co.uk
+        </a>
+        <a href="https://uksalarysacrificecalculator.co.uk" target="_blank" rel="noopener">
+          <span class="suite-dot"></span>UKSalarySacrificeCalculator.co.uk
+        </a>
       </div>
     </div>
     <div class="footer-bottom">
@@ -525,5 +544,32 @@
 
   {% block scripts %}{% endblock %}
   <a href="/trap" style="display:none;visibility:hidden;" aria-hidden="true" tabindex="-1" rel="nofollow"></a>
+
+  <!-- Cookie consent -->
+  <div id="cookie-consent-banner" role="dialog" aria-label="Cookie consent" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:var(--surface,#fff);border-top:1px solid var(--border,#e2e8f0);box-shadow:0 -4px 20px rgba(0,0,0,0.08);padding:1rem 1.25rem;">
+    <div style="max-width:980px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+      <p style="font-size:0.82rem;color:var(--text-secondary,#475569);line-height:1.6;margin:0;max-width:700px;">
+        We use essential cookies to keep the site working. If ads are shown, Google may also set cookies to measure performance.
+        See our <a href="/cookie-policy" style="color:var(--accent,#1B6B4A);text-decoration:underline;">cookie policy</a> and <a href="/privacy" style="color:var(--accent,#1B6B4A);text-decoration:underline;">privacy policy</a>.
+      </p>
+      <div style="display:flex;gap:0.6rem;flex-shrink:0;">
+        <button id="cookie-decline-btn" style="font-family:inherit;font-size:0.82rem;font-weight:600;padding:0.42rem 1rem;border-radius:100px;border:1.5px solid var(--border-strong,#cbd5e1);background:var(--surface,#fff);color:var(--text-secondary,#475569);cursor:pointer;">Decline optional</button>
+        <button id="cookie-accept-btn" style="font-family:inherit;font-size:0.82rem;font-weight:600;padding:0.42rem 1rem;border-radius:100px;border:none;background:var(--accent,#1B6B4A);color:#fff;cursor:pointer;">Accept all</button>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function(){
+    var b=document.getElementById('cookie-consent-banner');
+    if(b&&!localStorage.getItem('cookie_consent'))b.style.display='block';
+    ['cookie-accept-btn','cookie-decline-btn'].forEach(function(id){
+      var el=document.getElementById(id);
+      if(el)el.addEventListener('click',function(){
+        localStorage.setItem('cookie_consent',id==='cookie-accept-btn'?'accepted':'declined');
+        b.style.display='none';
+      });
+    });
+  })();
+  </script>
 </body>
 </html>

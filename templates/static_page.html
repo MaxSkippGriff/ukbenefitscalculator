@@ -2,15 +2,15 @@
 
 {% block content %}
 <section class="section">
-  <div class="badge">{{ page.title }}</div>
-  <h1>{{ page.title }}</h1>
+  <div class="badge">Information</div>
+  <h1 style="font-size:clamp(2rem,4vw,2.7rem);">{{ page.title }}</h1>
   {% for paragraph in page.content %}
-  <p>{{ paragraph }}</p>
+  <p style="color:var(--text-secondary); max-width:66ch; margin-bottom:0.9rem;">{{ paragraph }}</p>
   {% endfor %}
   {% if page.links %}
-  <div class="card" style="padding:1rem 1.1rem; margin-top:0.9rem;">
-    <h2 style="font-size:1.1rem;">Official links</h2>
-    <div class="pill-grid" style="margin-top:0.5rem;">
+  <div class="card" style="padding:1rem 1.1rem; margin-top:1rem;">
+    <h2 style="font-size:1.08rem; margin-bottom:0.55rem;">Useful links</h2>
+    <div class="pill-grid">
       {% for label, url in page.links %}
       <a class="pill" href="{{ url }}" rel="noopener" target="_blank">{{ label }}</a>
       {% endfor %}
