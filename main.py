@@ -2377,6 +2377,213 @@ GUIDES: Dict[str, Dict[str, Any]] = {
         ],
         "related_guides": ["universal-credit-explained", "benefits-for-single-parents", "housing-benefit-vs-uc-housing-cost-element-2026"],
     },
+    "universal-credit-savings-rules": {
+        "title": "Universal Credit Savings Rules — The £6,000 and £16,000 Thresholds",
+        "description": "How savings affect Universal Credit in 2026/27: the £6,000 disregard, tariff income above it, what stops UC at £16,000, and what counts as capital.",
+        "topic": "Universal Credit",
+        "sections": [
+            {"heading": "What counts as capital for Universal Credit", "paragraphs": [
+                "DWP treats 'capital' as any money or assets you could turn into cash. That includes savings accounts, current account balances above what you need day-to-day, Cash ISAs, Stocks and Shares ISAs, Premium Bonds, shares, investments and property other than the home you live in. It does not matter whether the money earns interest or not — the balance itself is what matters.",
+                "Couples are assessed on combined capital. So if you have £2,000 in savings and your partner has £5,500, your joint capital is £7,500. That takes the household into the tariff income band straight away, even though neither of you would be there individually.",
+                "Some assets are disregarded entirely. Your main home and any property you are actively trying to sell, personal possessions, the value of a life insurance policy you haven't cashed in, business assets if you're self-employed, and personal injury compensation payments are all either permanently or temporarily ignored. Money you've been awarded for a specific care need can also be disregarded while it's being used for that purpose.",
+            ]},
+            {"heading": "Below £6,000 — no effect at all", "paragraphs": [
+                "If your total capital is under £6,000, it has no effect on your Universal Credit. You don't need to report small savings changes as long as you remain below the threshold. This lower disregard is designed to encourage small amounts of savings without penalising claimants for being prudent.",
+                "The £6,000 figure applies to the combined capital of the household. It hasn't changed since Universal Credit launched and there's no indication it will rise soon.",
+            ]},
+            {"heading": "£6,000 to £16,000 — the tariff income calculation", "paragraphs": [
+                "Above £6,000, DWP applies a tariff income rule. For every complete £250 above the £6,000 threshold, DWP assumes you receive £4.35 of monthly income. This assumed income reduces your UC award even if the savings earn nothing in practice.",
+                "A worked example: savings of £9,250 means £3,250 above the threshold. That's thirteen complete £250 bands, so the tariff income is 13 × £4.35 = £56.55 a month. Your UC is reduced by £56.55 regardless of what the account actually earns.",
+                "At savings of exactly £15,750, the tariff income is £39 above the threshold — that's 39 bands × £4.35 = £169.65 a month knocked off the award. It's a significant reduction, but you're still eligible. Hit £16,000 and that changes.",
+            ]},
+            {"heading": "At £16,000 — the claim stops", "paragraphs": [
+                "Once total capital reaches £16,000, you generally can't claim Universal Credit at all. It doesn't matter how low your income is, how many children you have or how high your rent is — savings at or above £16,000 end the entitlement.",
+                "If your savings fluctuate — say, because you receive an annual bonus or sell a car — it's worth tracking the balance carefully. A claim can resume once capital drops back below £16,000. Report the change to DWP promptly.",
+                "DWP can also apply a deliberate deprivation rule if they believe you've spent or transferred savings specifically to get below a threshold. Normal spending on living costs, paying off debts and reasonable purchases are unlikely to be questioned. Large cash gifts to family members or unusual patterns of spending just before a claim are the situations that can cause problems.",
+            ]},
+        ],
+        "related": ["universal-credit-calculator", "savings-impact-calculator"],
+        "faq": [
+            {"q": "Does my main home count as savings for Universal Credit?", "a": "No. Your main home is fully disregarded and does not count as capital for UC, regardless of its value."},
+            {"q": "What is tariff income?", "a": "For every complete £250 of savings above £6,000, DWP adds £4.35 to your assumed monthly income. That assumed income reduces your UC award even if the savings earn nothing."},
+            {"q": "Does Universal Credit stop immediately at £16,000?", "a": "Yes. Capital of £16,000 or more means you are not eligible for a standard UC award. If savings subsequently fall below that level, you can make a new claim."},
+            {"q": "Do Premium Bonds count as savings for Universal Credit?", "a": "Yes. The face value of Premium Bonds counts as capital. Prize winnings that have been paid out and kept are also counted once received."},
+        ],
+        "related_guides": ["how-savings-affect-benefits", "universal-credit-explained", "universal-credit-capital-disregards"],
+    },
+    "universal-credit-work-allowance": {
+        "title": "Universal Credit Work Allowance — How Much Can You Earn?",
+        "description": "The UC work allowance in 2026/27: £673/month with no housing element, £404/month with housing. Who gets one, how it interacts with the 55% taper, and why it matters.",
+        "topic": "Universal Credit",
+        "sections": [
+            {"heading": "What the work allowance is and who gets one", "paragraphs": [
+                "The work allowance is the amount you can earn each month before the Universal Credit taper starts reducing your award. It's essentially a protected earnings band — income below the allowance doesn't reduce UC at all.",
+                "Not everyone gets a work allowance. It only applies if your household includes a child or a Limited Capability for Work element (the health-related addition). Single adults without children and couples without children who don't have a qualifying health condition get no work allowance — the 55% taper starts from the first pound of earnings.",
+                "That distinction matters a lot. Two people earning the same wage can have very different UC outcomes depending purely on whether children or a health condition bring the work allowance into play.",
+            ]},
+            {"heading": "The two rates — £673 and £404 — and why they differ", "paragraphs": [
+                "In 2026/27 there are two work allowance rates. If your UC award includes a housing costs element — meaning you get help with rent — the work allowance is £404 a month. If no housing element is in payment, the work allowance is £673 a month.",
+                "The logic is that higher housing costs already leave more room in the UC award before earnings push it to zero, so the work allowance for housing claimants is set lower. It's a structural quirk of how the award is built, not a penalty for paying rent.",
+                "Practically, this means a single parent in private rented accommodation has a work allowance of £404, while a single parent in a mortgage-free property or living with family (no UC housing element) gets £673.",
+            ]},
+            {"heading": "How earnings above the work allowance are tapered", "paragraphs": [
+                "Once earnings go above the work allowance, UC reduces by 55p for every extra £1 earned. You keep 45p of each additional pound — which sounds modest but is still a meaningful gain.",
+                "A worked example: a single parent with two children, no housing element, earns £900 a month. Work allowance is £673. Earnings above the allowance: £227. UC reduction: 55% of £227 = £124.85. So earning £900 instead of nothing reduces UC by £124.85 but puts £900 in wages — a net gain of £775.",
+                "At £1,200 a month, the same parent has £527 above the work allowance, so UC drops by £289.85. They've added £1,200 in earnings and lost £289.85 in UC — they're £910 better off overall. The taper slows the gain but never reverses it.",
+            ]},
+            {"heading": "What 'better-off working' really looks like", "paragraphs": [
+                "The common fear is that working will just cancel out in UC. That's not how it works. The taper ensures you always keep something from additional earnings — 45p in every pound above the work allowance. The question is whether that's enough to cover the costs of working (travel, childcare, uniform) and leave a meaningful improvement.",
+                "For most households with children, the combination of a work allowance and the 45p-per-pound keep rate means part-time work produces a real financial gain. The point at which UC reaches zero varies by household, but for most families with a work allowance the award doesn't hit zero until monthly earnings are well above £1,000.",
+                "Use the earnings impact calculator to run your own numbers — it shows both the UC reduction at your current earnings and how much you'd keep from each additional £100 earned.",
+            ]},
+        ],
+        "related": ["universal-credit-calculator", "earnings-impact-calculator"],
+        "faq": [
+            {"q": "Who gets a Universal Credit work allowance?", "a": "Households with a child or a Limited Capability for Work element in their UC award. Single adults and couples without either of those don't get a work allowance."},
+            {"q": "What are the 2026/27 work allowance rates?", "a": "£673 a month if no housing costs element is included in the UC award. £404 a month if housing support is part of the award."},
+            {"q": "Does the work allowance reset every month?", "a": "Yes. UC is assessed monthly in assessment periods, and the work allowance applies fresh each month based on the earnings reported in that period."},
+            {"q": "Can both partners in a couple use the work allowance?", "a": "No. There is one work allowance per household, not per person. Both partners' earnings are combined and the single work allowance applies to the household total."},
+        ],
+        "related_guides": ["universal-credit-explained", "universal-credit-if-my-wages-go-up", "benefits-for-working-families"],
+    },
+    "child-benefit-rates-2026-27": {
+        "title": "Child Benefit Rates 2026/27 — How Much Per Child?",
+        "description": "Child Benefit rates 2026/27: £27.05/week for the eldest child, £17.90 for each additional child. How HICBC affects higher earners, and why most families should still claim.",
+        "topic": "Child Benefit",
+        "sections": [
+            {"heading": "The 2026/27 rates", "paragraphs": [
+                "Child Benefit pays £27.05 a week for the eldest or only child and £17.90 a week for each additional child. Those rates have been in place since April 2026. A family with one child gets £1,406.60 a year. Two children: £2,337.40. Three children: £3,268.20. It's paid every four weeks directly into your bank account.",
+                "The benefit is available to anyone responsible for a child under 16, or under 20 if they're in approved education or training (A-levels, T-levels and similar count — university doesn't). You claim it — it doesn't appear automatically. And you can claim as soon as a child is born or moves in with you, with up to three months' backdating available.",
+                "Unlike Universal Credit, Child Benefit isn't means-tested at the point of claim. You can be a higher-rate taxpayer and still claim. Whether you then have to pay some of it back is a separate question handled through the High Income Child Benefit Charge.",
+            ]},
+            {"heading": "The High Income Child Benefit Charge", "paragraphs": [
+                "If anyone in your household has adjusted net income over £60,000, the higher earner faces a tax charge that gradually claws back the Child Benefit. The charge is 1% of the annual Child Benefit for every £200 of income above £60,000. At £70,000 it's 50% repaid. At £80,000 the charge equals 100% of the benefit — you're fully paying it back through Self Assessment.",
+                "The charge is assessed on individual income, not combined household income. So if one partner earns £75,000 and the other earns £45,000, only the £75,000 earner's income matters for the charge — not the total of £120,000. This surprises a lot of people who assume they won't be caught.",
+                "Adjusted net income isn't the same as gross salary. Pension contributions and Gift Aid donations reduce it. Someone earning £65,000 who makes £6,000 a year in personal pension contributions has an adjusted net income of £59,000 — below the threshold, no charge.",
+            ]},
+            {"heading": "Why most households should still claim", "paragraphs": [
+                "Even if you're going to face the HICBC and repay most or all of the benefit, there are strong reasons to keep the claim active. Most importantly, a live claim protects the non-working or lower-earning partner's National Insurance credits. Each year of NI credits counts toward the State Pension — at 35 years needed for a full State Pension, missing a handful of years matters over a lifetime.",
+                "A claim also ensures your child automatically gets a National Insurance number at age 16. Without it, they have to apply separately, which can delay access to work-related systems.",
+                "If you want to avoid the Self Assessment obligation but still get the NI credits, you can opt out of receiving the actual payments while keeping the claim live. That's straightforward to do via HMRC online. The claim sits there dormant but active — you can switch payments back on if income changes.",
+            ]},
+            {"heading": "When the HICBC might make it not worth receiving payments", "paragraphs": [
+                "If income is well above £80,000 and is likely to stay there, receiving Child Benefit payments just creates a Self Assessment obligation and a tax charge equal to 100% of the benefit. In that case, opting out of payments while keeping the claim for NI credits is usually the cleanest approach.",
+                "But if income fluctuates — a bonus year, overtime, varying self-employment income — check the position before each tax year rather than assuming it's the same as last year. A year where income drops below £80,000 means some of the Child Benefit is real net cash, not just a tax obligation.",
+            ]},
+        ],
+        "related": ["child-benefit-calculator", "hicbc-calculator"],
+        "faq": [
+            {"q": "How much is Child Benefit in 2026/27?", "a": "£27.05 a week for the first child, £17.90 for each additional child. A two-child family gets £44.95 a week — £2,337.40 a year."},
+            {"q": "When does the High Income Child Benefit Charge start?", "a": "When either partner's adjusted net income exceeds £60,000. The charge reaches 100% at £80,000."},
+            {"q": "Can I claim Child Benefit if I earn over £80,000?", "a": "Yes, and most advisers recommend doing so to protect National Insurance credits. You can opt out of receiving the actual money while keeping the claim active."},
+            {"q": "Does Child Benefit affect Universal Credit?", "a": "Not directly. Child Benefit doesn't reduce UC, but it counts toward the Benefit Cap calculation, which can matter for households with multiple children and high rent."},
+        ],
+        "related_guides": ["child-benefit-and-hicbc", "how-much-child-benefit-for-1-2-3-children", "universal-credit-explained"],
+    },
+    "pip-assessment-guide": {
+        "title": "PIP Assessment — What to Expect and How to Prepare",
+        "description": "How the PIP assessment process works in 2026/27 — what assessors look at, how to describe your condition, the importance of evidence and how the scoring system produces standard or enhanced rate.",
+        "topic": "Disability support",
+        "sections": [
+            {"heading": "The two stages of a PIP assessment", "paragraphs": [
+                "PIP claims go through two stages. The first is a paper-based review: DWP looks at your PIP2 form (the 'How your disability affects you' questionnaire) and any supporting evidence you've submitted. Some claims are decided at this stage if the evidence clearly supports an award — often for severe or well-evidenced conditions.",
+                "Most claims move to the second stage: a consultation with a healthcare professional working for a contracted assessment company. This used to be almost always face-to-face, but telephone and video consultations are now common and are usually offered as options. The assessor works through the PIP activities with you, asking about daily tasks and how your condition affects each one. Their report goes to a DWP decision maker, who makes the final call.",
+                "Being at the consultation stage doesn't mean you're in trouble. It's the normal process for most claims, not a sign that evidence was lacking. Having additional evidence to provide at this point, or having submitted strong evidence beforehand, makes a real difference to the outcome.",
+            ]},
+            {"heading": "What the assessor actually looks at", "paragraphs": [
+                "PIP has ten daily living activities and two mobility activities. For daily living, these cover preparing food, eating and drinking, managing treatments, washing and bathing, managing toilet needs, dressing and undressing, communicating verbally, reading and understanding written information, engaging with other people face to face, and making budgeting decisions. For mobility, the activities are planning and following a journey, and moving around.",
+                "Within each activity, there's a list of descriptors — descriptions of what someone can and can't do at different levels of difficulty. The assessor picks the descriptor that best matches your situation. Points are assigned based on the descriptor level, and the total in each component determines whether you score standard rate (8 points), enhanced rate (12 points) or nothing below 8.",
+                "The assessor doesn't just take your word for it, but that doesn't mean they're looking to catch you out. They're trying to build an accurate picture. If you tell them you struggle with something, expect follow-up questions about how often, what happens when you try, whether you need aids or someone else's help.",
+            ]},
+            {"heading": "Describing your worst day and the reliability tests", "paragraphs": [
+                "One of the most important things to understand is that the PIP assessment is not about your best day. It's about whether you can do an activity reliably — safely, to an acceptable standard, repeatedly throughout the day, and within a reasonable time. If you can do something but only unsafely, only once, only slowly or with significant pain, that can justify a higher-scoring descriptor.",
+                "Before your assessment, think about a bad day — not an exceptional crisis day, but a typical bad day. How often do those bad days happen? What can't you do on those days? Many conditions fluctuate, and assessors should take fluctuation into account. If a symptom affects you for more than 50% of days, it should inform the assessment.",
+                "Don't downplay or minimise. This is genuinely difficult for some people who are used to managing and not complaining, but the PIP form and assessment are specifically designed to capture the full impact. Being precise and honest about what you can't do, or can only do with help or with pain, is not exaggerating — it's the point of the process.",
+            ]},
+            {"heading": "Evidence, the scoring system, and what happens after", "paragraphs": [
+                "Good evidence makes a big difference. Useful sources include GP letters that describe functional impact (not just the diagnosis), letters from consultants or specialists, occupational therapy reports, care plans, physio notes, prescription records and a personal diary. The diary doesn't need to be elaborate — a few weeks of notes about what you couldn't do and why is often more persuasive than a generic letter.",
+                "The scoring threshold is 8 points in a component for standard rate and 12 points for enhanced rate. Points from different activities in the same component add up — you don't need 8 or 12 points from a single activity. Daily living and mobility are scored entirely separately, so you can get enhanced daily living and nothing for mobility, or standard mobility and nothing for daily living.",
+                "If the decision is wrong or lower than expected, mandatory reconsideration is the first step — you have one month to request it. If that doesn't change the outcome, you can appeal to an independent tribunal. Success rates at tribunal are substantial, particularly where additional evidence is provided. A refused or reduced award is not the end of the process.",
+            ]},
+        ],
+        "related": ["pip-eligibility-checker", "esa-calculator", "benefit-cap-calculator"],
+        "faq": [
+            {"q": "Does the PIP assessment always involve a face-to-face consultation?", "a": "Not always. Many claims are decided on the paper review, and consultations are frequently done by telephone or video. A face-to-face appointment can be requested if preferred."},
+            {"q": "What if I have a bad day on the day of my assessment?", "a": "Tell the assessor at the start. You can also ask to reschedule if you're significantly unwell. Don't try to push through and present yourself as better than usual."},
+            {"q": "How many points do you need for enhanced rate PIP?", "a": "12 points in a component for enhanced rate. 8 points for standard rate. The two components — daily living and mobility — are scored separately."},
+            {"q": "What happens if I disagree with the PIP decision?", "a": "Request a mandatory reconsideration within one month. If that's unsuccessful, you can appeal to an independent tribunal. Gathering additional medical evidence before an appeal significantly improves the chances."},
+        ],
+        "related_guides": ["pip-explained-simply", "pip-points-explained", "pip-daily-living-explained", "pip-mobility-explained"],
+    },
+    "benefit-cap-2026-27": {
+        "title": "Benefit Cap 2026/27 — Current Limits Explained",
+        "description": "The benefit cap in 2026/27: the four regional limits, which benefits count, who is exempt, and what happens to your UC if the cap is applied.",
+        "topic": "Universal Credit",
+        "sections": [
+            {"heading": "What the benefit cap is and which benefits count", "paragraphs": [
+                "The benefit cap sets a ceiling on the total monthly benefits a working-age household can receive. If your combined benefits exceed the cap, Universal Credit is reduced to bring the total down. The cap applies to most mainstream benefits including UC, Child Benefit, Housing Benefit, maternity-related payments and some others — but not disability benefits.",
+                "The benefits that count toward the cap total include Universal Credit (all elements), Housing Benefit, Child Benefit, Child Tax Credit, Working Tax Credit (below the earnings threshold), Bereavement Allowance, Maternity Allowance, Incapacity Benefit, Severe Disablement Allowance and similar income-replacement payments.",
+                "Benefits that don't count and also often provide a complete exemption include PIP, DLA, Attendance Allowance, Carer's Allowance, ESA in the support group and Industrial Injuries Disablement Benefit. If you or your partner receive one of those, you're usually exempt from the cap entirely — not just the payment excluded.",
+            ]},
+            {"heading": "The four cap limits in 2026/27", "paragraphs": [
+                "There are different cap levels depending on where you live and your household type. For families (couples, single parents with dependent children) outside Greater London the cap is £1,835 a month. Inside Greater London — the 33 boroughs and the City — families face a cap of £2,110 a month.",
+                "For single adults without dependent children, the caps are lower: £1,229.42 a month outside London and £1,413.92 a month inside London. The Greater London boundary is the boundary — being in Slough or Watford doesn't count as London even if rents are comparable.",
+                "Wales, Scotland and the rest of England outside Greater London all use the same non-London caps. Scotland has devolved some welfare powers but the benefit cap structure applies to UC and Housing Benefit there in the same way.",
+            ]},
+            {"heading": "Who is exempt from the benefit cap", "paragraphs": [
+                "Several groups are fully exempt. If you or your partner receive PIP (either component, either rate), DLA (any component), ESA with the support group component, Attendance Allowance, Carer's Allowance, Industrial Injuries Disablement Benefit or a War Pension, the cap does not apply to your household. The exemption kicks in from the date the qualifying benefit is in payment.",
+                "The working exemption is also significant: if you or your partner earn at or above the equivalent of the Working Tax Credit earnings threshold — roughly £722 a month in net earned income for UC purposes — you're exempt from the cap. This is specifically designed so working households don't face it.",
+                "There's also a nine-month grace period if you've been continuously employed for 12 months and then fall below the earnings threshold. That gives time to find new work before the cap applies. If you've just received a qualifying disability benefit and previously faced the cap, check whether it should be lifted retroactively to the award start date — that can trigger arrears.",
+            ]},
+            {"heading": "How the cap is applied and what to do about it", "paragraphs": [
+                "DWP applies the cap by reducing your UC. The reduction hits the housing costs element first — UC is set up to reduce housing support before cutting into the standard allowance. In some cases, this can take the housing element to zero, leaving households without any UC help toward rent even where rent is technically eligible.",
+                "If the cap seems wrong — wrong regional rate, a qualifying disability benefit not being reflected, incorrect household composition — request a mandatory reconsideration. The most common reason for a capped household to find relief is a successful PIP award that retrospectively exempts them. A benefit check with Citizens Advice or a welfare rights adviser is worth doing if your UC seems lower than expected and housing costs are high.",
+            ]},
+        ],
+        "related": ["benefit-cap-calculator", "universal-credit-calculator", "pip-eligibility-checker"],
+        "faq": [
+            {"q": "Does Child Benefit count toward the benefit cap?", "a": "Yes. Child Benefit is included in the capped benefits total, even though it's paid by HMRC rather than DWP. It can contribute to a household exceeding the cap limit."},
+            {"q": "Does receiving PIP exempt you from the cap?", "a": "Yes. If you or your partner receive PIP at any rate for either component, the cap does not apply to your household from the date PIP is in payment."},
+            {"q": "Is the cap the same in Scotland and Wales?", "a": "The same non-London cap levels apply in Scotland and Wales. Scotland has devolved some welfare powers but the benefit cap framework is applied nationally."},
+            {"q": "Can working exempt you from the cap?", "a": "Yes. Earning roughly £722 a month net or above typically triggers the working exemption, which removes the cap entirely for that assessment period."},
+        ],
+        "related_guides": ["universal-credit-explained", "benefit-cap-2026", "pip-explained-simply"],
+    },
+    "moving-from-legacy-benefits": {
+        "title": "Moving From Legacy Benefits to UC — What Changes?",
+        "description": "Managed migration from legacy benefits to Universal Credit: what it means, which benefits are being replaced, how transitional protection works and what to do before you claim.",
+        "topic": "Universal Credit",
+        "sections": [
+            {"heading": "What managed migration is and where we are now", "paragraphs": [
+                "Managed migration is the DWP process of moving people from legacy benefits — the old six-benefit system — onto Universal Credit. It's been running since 2022 and is now well advanced. If you haven't received a migration notice yet, you probably will in the next year or two unless you're already on UC or exempt for another reason.",
+                "The six legacy benefits being replaced are: income-based Jobseeker's Allowance, income-related Employment and Support Allowance, Income Support, Housing Benefit (for working-age claimants), Working Tax Credit and Child Tax Credit. If you receive any combination of these, you'll eventually receive a migration notice giving you three months to claim Universal Credit.",
+                "New Style ESA and New Style JSA are contribution-based benefits and are not part of the managed migration. You can still claim those alongside UC.",
+            ]},
+            {"heading": "What transitional protection means and how long it lasts", "paragraphs": [
+                "Many people worry they'll be worse off on Universal Credit than on legacy benefits. Transitional protection exists specifically to prevent that. When you migrate, DWP calculates your legacy benefit total and your UC entitlement on the same day. If UC would give you less, a transitional element is added to bring the UC amount up to match your legacy total.",
+                "The protection is a cash amount, not a percentage. It stays fixed in cash terms while UC continues — but it doesn't rise with inflation or benefit uprating. Over time, as UC standard allowances and elements increase, the transitional element erodes and eventually reaches zero. At that point protection ends naturally.",
+                "Transitional protection can also end earlier if there's a significant change of circumstances — a new partner moving in, a child leaving the household, a substantial change in earnings. Major changes reset the calculation without reinstating the old legacy figures.",
+            ]},
+            {"heading": "What to check and prepare before you claim UC", "paragraphs": [
+                "Switching to UC is a genuine administrative process, not just a form. A few things are worth sorting before you claim. If you pay rent, make sure you have your current tenancy agreement or landlord's details to hand — UC requires an eligible rent figure for the housing element. Your landlord may also want to update their payment arrangements since UC typically pays you directly rather than going to the landlord.",
+                "Gather records of your current income, savings, childcare costs and housing costs. The UC claim will ask for all of these, and having the figures ready speeds up the process and reduces the risk of errors that cause delays.",
+                "Think about the five-week wait. Universal Credit's first payment comes roughly five weeks after you claim, which creates a gap. You can apply for a Universal Credit advance to cover that period — it's repaid from future UC payments, but it prevents the gap leaving you without any money.",
+            ]},
+            {"heading": "Key differences when you're on Universal Credit", "paragraphs": [
+                "Universal Credit pays monthly. Legacy benefits often paid fortnightly or weekly. That change in payment frequency catches some households out, particularly if bills are set up around a different cycle.",
+                "UC also assesses you in real time each month, using HMRC data on actual earnings. That means your UC can go up and down month to month based on what you actually earned, which is more flexible than legacy annual assessments but requires you to keep track of reporting obligations.",
+                "Childcare claims under UC work differently from Working Tax Credit. UC can reimburse up to 85% of registered childcare costs in the assessment period, but you need to pay for childcare first and report it within three months. That front-payment requirement is a practical hurdle for households moving across.",
+            ]},
+        ],
+        "related": ["universal-credit-calculator", "child-benefit-calculator", "housing-benefit-calculator"],
+        "faq": [
+            {"q": "Will I lose money when I move to Universal Credit?", "a": "Not immediately, if transitional protection applies. DWP calculates the difference and adds a transitional element to keep the amount the same. That protection erodes over time as UC rates rise, but it prevents an immediate cut."},
+            {"q": "Do I have to move to UC when I get a migration notice?", "a": "You need to claim UC within three months of the migration notice or your legacy benefits will stop. If you miss the deadline, contact DWP — there can be flexibility in specific circumstances, but missing the window without contact usually ends legacy payments."},
+            {"q": "What happens to my Housing Benefit?", "a": "Housing Benefit for working-age claimants is replaced by the UC housing costs element. The actual figure may differ because LHA rates and eligible rent rules differ slightly from Housing Benefit calculations, but transitional protection is designed to cover initial losses."},
+            {"q": "Will my New Style ESA stop when I move to UC?", "a": "Not necessarily. New Style ESA is contribution-based and sits outside the managed migration. You can receive it alongside UC, though UC will be reduced by the ESA amount."},
+        ],
+        "related_guides": ["universal-credit-explained", "universal-credit-capital-disregards", "help-with-rent-and-council-tax", "what-benefits-can-i-claim"],
+    },
 }
 
 SITUATION_PAGES: Dict[str, Dict[str, Any]] = {
@@ -2805,6 +3012,136 @@ SCENARIO_PAGES: Dict[str, Dict[str, Any]] = {
         ],
         "related_calculators": ["child-benefit-calculator", "hicbc-calculator"],
         "related_guides": ["benefits-for-low-income-families", "family-support", "what-counts-as-income-for-benefits"],
+    },
+    "what-if-i-get-a-pay-rise": {
+        "slug": "what-if-i-get-a-pay-rise",
+        "title": "What happens to my benefits if I get a pay rise?",
+        "description": "How a pay rise affects Universal Credit through the 55% taper and work allowance — with a worked example showing the real net gain.",
+        "intro": "A pay rise on Universal Credit doesn't wipe out the gain — but it does reduce the award through the earnings taper. For most households with children or a health element, the 55% taper means you keep 45p of every extra pound earned above the work allowance. That's a real improvement, even after the UC reduction is applied.",
+        "sections": [
+            {
+                "heading": "The taper means you always gain — just not the full amount",
+                "content": "When your earnings go up, Universal Credit goes down by 55p for every extra £1 of net earnings above your work allowance. You keep the other 45p. So a £200-a-month pay rise reduces UC by £110, leaving you £90 better off. A £400 rise reduces UC by £220, leaving you £180 ahead. The gain gets smaller in percentage terms, but it's always positive. The fear that a pay rise makes you no better off is based on a misunderstanding of how the taper works.",
+            },
+            {
+                "heading": "The work allowance protects the first slice of earnings",
+                "content": "If your household includes children or a Limited Capability for Work element, you have a work allowance — a band of earnings that's completely ignored before the taper starts. In 2026/27 that's £673 a month if no housing element is in payment, or £404 if rent support is included. If a pay rise takes you from below the work allowance to above it, the first part of the rise is taper-free. A single parent moving from £350 to £500 a month would keep all of the £150 increase if both figures sit below their £673 work allowance.",
+            },
+            {
+                "heading": "Worked example: earnings from £900 to £1,100 a month",
+                "content": "Take a single parent with two children, housing element in payment, work allowance £404. At £900 earnings, the amount above the allowance is £496. UC reduction: 55% of £496 = £272.80. At £1,100 earnings, the amount above the allowance is £696. UC reduction: 55% of £696 = £382.80. So a £200 pay rise reduces UC by £110. The household is £90 better off in cash terms — less the costs of any extra hours worked. The calculator can show this comparison precisely with your own numbers.",
+            },
+            {
+                "heading": "Other benefits and reporting",
+                "content": "A pay rise affects UC through the monthly assessment. For employed workers, HMRC payroll data feeds UC directly so the change usually happens automatically. For self-employed claimants, you report monthly through your journal. It's also worth checking whether a higher income affects Free School Meals eligibility (the UC earnings threshold is £7,400 a year take-home), or whether a big rise in earnings could eventually change childcare support entitlement. Council Tax Reduction usually has its own annual review rather than a monthly link to earnings.",
+            },
+        ],
+        "related_calculators": ["earnings-impact-calculator", "universal-credit-calculator"],
+        "related_guides": ["universal-credit-work-allowance", "universal-credit-if-my-wages-go-up", "universal-credit-explained"],
+    },
+    "what-if-i-start-working": {
+        "slug": "what-if-i-start-working",
+        "title": "What happens to Universal Credit when I start work?",
+        "description": "How Universal Credit changes when you start a job — the first payment after starting work, how the taper and work allowance kick in, and what to report.",
+        "intro": "Starting work doesn't mean Universal Credit stops. For most claimants, especially those with children, meaningful UC support continues well into employment. The award adjusts through the earnings taper — it goes down, but you're always better off working than not. Here's how it works in practice.",
+        "sections": [
+            {
+                "heading": "UC continues and adjusts — it doesn't stop",
+                "content": "One of the most persistent myths about Universal Credit is that it cuts off when you start work. For most working-age claimants, that's not true. UC reduces gradually as earnings rise through the 55% taper. For households with children or a health condition, the work allowance means the first slice of earnings (£404 or £673 a month) doesn't reduce UC at all. The award only reaches zero once earnings are high enough that the taper has reduced it fully, which for many families is well above £1,000 a month.",
+            },
+            {
+                "heading": "The first payment after starting work",
+                "content": "UC is assessed monthly based on earnings in each assessment period. If you start work mid-assessment period, your first working month's UC will reflect your actual earnings in that period — which might be partial. The following month's payment will then reflect a full month of earnings. For employed workers, HMRC reports earnings to DWP automatically through Real Time Information (RTI), so you don't usually need to report your wages manually. Check your UC journal to confirm your employer is set up correctly.",
+            },
+            {
+                "heading": "What the work allowance means for your first months of work",
+                "content": "If your household qualifies for a work allowance (children or a health condition in the household), earnings up to £404 or £673 a month are completely ignored by UC. For part-time work especially, this can mean UC barely changes in the early months. A parent starting part-time at £500 a month with a £673 work allowance (no housing element) keeps the full £500 in earnings with no UC reduction at all — the taper only starts on the £827 not yet earned.",
+            },
+            {
+                "heading": "Reporting obligations and what changes",
+                "content": "Even if earnings are fed in automatically via HMRC, you should still update your UC journal if your job changes significantly — new employer, change of hours, starting self-employment. Childcare costs can now be claimed through UC if you're in paid work; you need to report them within three months of paying them. If your housing changes, that's a separate update. And if you're moving off legacy benefits and starting work at the same time, the managed migration and new-claim timelines can interact — worth checking with Citizens Advice if the timing is complex.",
+            },
+        ],
+        "related_calculators": ["earnings-impact-calculator", "universal-credit-calculator"],
+        "related_guides": ["universal-credit-work-allowance", "universal-credit-if-my-wages-go-up", "moving-from-legacy-benefits"],
+    },
+    "what-if-my-rent-goes-up": {
+        "slug": "what-if-my-rent-goes-up",
+        "title": "What happens to my Universal Credit if my rent goes up?",
+        "description": "How a rent increase affects Universal Credit — the LHA cap for private renters, bedroom rules for social tenants, and what to do when UC doesn't cover the full increase.",
+        "intro": "A rent increase doesn't automatically mean more Universal Credit. How much extra help you get depends on whether your rent is already near or above the Local Housing Allowance cap, whether bedroom deductions apply, and whether the Benefit Cap is constraining your overall award. This page explains the three main scenarios.",
+        "sections": [
+            {
+                "heading": "Private renters: the Local Housing Allowance cap",
+                "content": "If you rent privately and claim UC, the housing costs element is capped at the Local Housing Allowance rate for your area and bedroom entitlement. LHA is set at the 30th percentile of local rents — roughly the cheapest third of the market in your area. If your rent rises above the LHA cap, UC doesn't move above it. The extra amount falls on you. So if your LHA is £900 a month and your rent rises from £850 to £950, UC increases from £850 to £900 — and you pay the £50 gap yourself. A rise that keeps you below LHA is fully covered.",
+            },
+            {
+                "heading": "Social housing tenants: bedroom rules apply to the eligible rent",
+                "content": "For social tenants, UC uses your eligible rent rather than LHA, but the under-occupancy rules can cap it. If you have one spare bedroom the eligible rent is reduced by 14%; two or more spare rooms means 25% off. A rent increase is applied to your eligible rent and the percentage reduction then applies. So if rent rises by £60 but you have one spare bedroom, the UC housing element goes up by about £51.60 — the 14% deduction is applied to the new figure. You don't get the full £60.",
+            },
+            {
+                "heading": "When the Benefit Cap is the real limit",
+                "content": "Some households are already close to the Benefit Cap before rent rises. If the cap is already constraining total UC, a higher housing element doesn't produce more money — it just reshuffles how the award is divided internally. Housing support goes up on paper, but the cap reduction increases by the same amount. Households with multiple children, high rent and no exempting disability benefit are the most likely to hit this. If your UC seems lower than expected and rent is high, check the benefit cap calculator.",
+            },
+            {
+                "heading": "If there's still a shortfall — Discretionary Housing Payments",
+                "content": "When a rent increase creates a gap that UC can't cover, you can apply to your local council for a Discretionary Housing Payment (DHP). DHPs are specifically designed for this situation — they're short-term top-ups awarded at the council's discretion, typically for three to twelve months. Councils often prioritise households facing homelessness risk, families with children, and people with disabilities needing particular accommodation. They're not automatic and not endless, but they're worth applying for while you work out a longer-term solution.",
+            },
+        ],
+        "related_calculators": ["universal-credit-calculator", "housing-benefit-calculator", "benefit-cap-calculator"],
+        "related_guides": ["universal-credit-rent-increase-explained", "housing-benefit-vs-uc-housing-cost-element-2026", "help-with-rent-and-council-tax"],
+    },
+    "what-if-i-have-another-child": {
+        "slug": "what-if-i-have-another-child",
+        "title": "What happens if I have another child?",
+        "description": "How Universal Credit changes with an additional child from April 2026 — the child element, childcare, Benefit Cap implications and what to report.",
+        "intro": "From 6 April 2026, Universal Credit pays a child element for every eligible child, with no two-child limit. That's a significant change for larger families. But the interaction with the Benefit Cap means some households won't see the full benefit immediately. Here's what to expect.",
+        "sections": [
+            {
+                "heading": "The child element from April 2026",
+                "content": "Universal Credit includes a child element of £303.94 per child per month in 2026/27. From 6 April 2026, this applies to all eligible dependent children — the two-child limit that previously capped the element at two children has been removed. That means a family with four children now qualifies for four child elements (£1,215.76 a month in total) rather than two. For third, fourth or subsequent children born before April 2026, this is a new addition to their UC award.",
+            },
+            {
+                "heading": "The Benefit Cap can limit the gain",
+                "content": "The Benefit Cap sets a ceiling on total monthly benefits. For families outside London it's £1,835 a month, inside London £2,110. Adding a child element increases the UC award, but if the household is already at or near the cap, the increase may be swallowed by a larger cap reduction rather than adding to the amount received. Larger families with high rent are the most likely to hit this ceiling. Households with PIP, DLA or ESA (support group) are exempt from the cap, so for them the full child element passes through.",
+            },
+            {
+                "heading": "Childcare and other knock-on effects",
+                "content": "A new child can affect several other parts of the UC award. If the child triggers registered childcare costs, you can claim the childcare element (up to 85% of costs, capped at £1,836.16 a month for two or more children). Child Benefit also increases — a new additional child adds £17.90 a week. If you already receive Child Benefit for one child and add a second, total Child Benefit becomes £44.95 a week. If you receive Tax-Free Childcare and have more than one child, the annual top-up cap increases by £2,000 per additional child.",
+            },
+            {
+                "heading": "Reporting the change to DWP",
+                "content": "A new baby is a change of circumstances that must be reported to DWP as soon as possible. Report it through your UC online account. You'll need the baby's name and date of birth, and you may need to provide evidence such as a birth certificate. Also register for Child Benefit separately through HMRC — it doesn't happen automatically when you update UC. Backdating is available for both: Child Benefit by up to three months, and the UC child element from the date of birth if reported promptly.",
+            },
+        ],
+        "related_calculators": ["universal-credit-calculator", "child-benefit-calculator", "benefit-cap-calculator"],
+        "related_guides": ["universal-credit-explained", "child-benefit-rates-2026-27", "benefit-cap-2026-27"],
+    },
+    "what-if-i-inherit-money": {
+        "slug": "what-if-i-inherit-money",
+        "title": "What happens to Universal Credit if I inherit money?",
+        "description": "How inherited money affects Universal Credit — the £6,000 and £16,000 capital rules, tariff income, and what happens if the inheritance takes you over the limit.",
+        "intro": "Inheriting money while claiming Universal Credit can affect your award significantly, depending on the amount. UC treats inherited money as capital from the point it arrives. Below £6,000 it has no effect. Between £6,000 and £16,000 it generates assumed income that reduces your award. At £16,000 or above, UC stops. You must report the change.",
+        "sections": [
+            {
+                "heading": "When the inheritance arrives, it becomes capital",
+                "content": "Once inherited money lands in your account, it counts as capital for Universal Credit from the date of receipt. There's no grace period or exemption period for inheritance specifically — it's treated the same as any other lump sum. If you receive £5,000 and your existing savings are under £1,000, your combined capital is still under £6,000 and UC isn't affected. But if you already have £4,000 saved and inherit £5,000, you're now at £9,000 and the tariff income rules kick in.",
+            },
+            {
+                "heading": "The tariff income rule — what it costs between £6,000 and £16,000",
+                "content": "For every complete £250 above £6,000 in capital, DWP adds £4.35 a month to your assumed income. That assumed income reduces UC. An inheritance that takes your capital to £10,000 means £4,000 above the threshold — sixteen £250 bands — generating £69.60 a month in assumed income, which reduces your UC by that amount. An inheritance that takes you to £13,000 puts you £7,000 over: 28 bands at £4.35 = £121.80 a month off your award. The reduction applies regardless of whether the money sits in a low-interest account earning little.",
+            },
+            {
+                "heading": "If the inheritance takes you above £16,000",
+                "content": "At £16,000 or more in total capital, you're not entitled to Universal Credit. The claim stops. This isn't a reduction — it's a complete end to entitlement. If you think the money will reduce below £16,000 soon (for example, because you're using it for a planned large purchase), that matters to your planning. But spending savings purely to get under the threshold is something DWP can challenge as deliberate deprivation of capital. Ordinary spending — clearing debts, covering regular costs, essential home repairs — is unlikely to be questioned. Transferring large amounts to family members just before or after a claim tends to be the scenario that causes problems.",
+            },
+            {
+                "heading": "Reporting and getting back on UC",
+                "content": "An inheritance is a change of circumstances and must be reported via your UC journal as soon as it arrives. DWP will reassess from the date of the change. If the inheritance is above £16,000 and your claim stops, you'll need to make a new claim once capital falls below the threshold. If the inheritance takes you into the tariff income band, report it and DWP will adjust your monthly award. Don't wait — undeclared capital changes can create overpayments that DWP will recover later.",
+            },
+        ],
+        "related_calculators": ["savings-impact-calculator", "universal-credit-calculator"],
+        "related_guides": ["universal-credit-savings-rules", "how-savings-affect-benefits", "universal-credit-capital-disregards"],
     },
 }
 
