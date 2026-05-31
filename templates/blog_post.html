@@ -1,14 +1,130 @@
 {% extends "base.html" %}
-{% block title %}{{ post.title }}{% endblock %}
-{% block meta_description %}{{ post.description }}{% endblock %}
-{% block canonical %}<link rel="canonical" href="{{ site_url }}/blog/{{ post.slug }}">{% endblock %}
 
 {% block head_extra %}
-<meta property="og:type" content="article">
-<meta property="og:url" content="{{ site_url }}/blog/{{ post.slug }}">
-<meta property="og:title" content="{{ post.title }}">
-<meta property="og:description" content="{{ post.description }}">
-<meta name="twitter:card" content="summary_large_image">
+<style>
+  #read-progress {
+    position: fixed; top: 0; left: 0; width: 0; height: 3px;
+    background: var(--accent); z-index: 9999; transition: width 0.1s linear;
+  }
+
+  .bp-wrap { max-width: var(--max-w); margin: 0 auto; padding: 0 1.25rem 4rem; }
+
+  /* ── Hero ─────────────────────────────────────── */
+  .bp-hero { padding: 1.6rem 0 0; max-width: 760px; }
+  .bp-badge {
+    display: inline-flex; align-items: center;
+    font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--accent); background: var(--accent-light); border: 1px solid rgba(27,107,74,0.18);
+    border-radius: 100px; padding: 0.25rem 0.75rem; margin-bottom: 0.8rem;
+  }
+  .bp-hero h1 {
+    font-family: var(--font-body);
+    font-size: clamp(1.55rem, 3vw, 2.15rem);
+    font-weight: 700; letter-spacing: -0.022em; line-height: 1.16;
+    color: var(--text-primary); margin-bottom: 0.75rem; max-width: 24ch;
+  }
+  .bp-meta {
+    font-size: 0.79rem; color: var(--text-tertiary);
+    display: flex; flex-wrap: wrap; gap: 0 0.65rem; align-items: center;
+    margin-bottom: 1.4rem;
+  }
+  .bp-meta-dot { opacity: 0.4; }
+  .bp-intro {
+    font-size: 1.01rem; line-height: 1.72; color: var(--text-secondary);
+    max-width: 66ch; margin-bottom: 0;
+    border-left: 3px solid var(--accent);
+    padding-left: 1rem;
+  }
+
+  /* ── Layout ───────────────────────────────────── */
+  .bp-layout {
+    display: grid; grid-template-columns: minmax(0,1fr) 268px;
+    gap: 2.25rem; align-items: start; margin-top: 2rem;
+  }
+
+  /* ── Article body ─────────────────────────────── */
+  .bp-body { min-width: 0; }
+  .bp-section { padding-top: 1.75rem; }
+  .bp-section:first-child { padding-top: 0; }
+  .bp-section h2 {
+    font-family: var(--font-body); font-size: 1.1rem; font-weight: 700; letter-spacing: -0.01em;
+    color: var(--text-primary); margin-bottom: 0.7rem;
+    padding-bottom: 0.5rem; border-bottom: 1.5px solid var(--border);
+  }
+  .bp-section p {
+    font-size: 0.96rem; line-height: 1.78; color: var(--text-secondary);
+    max-width: 68ch; margin-bottom: 0.8rem;
+  }
+  .bp-section p:last-child { margin-bottom: 0; }
+
+  /* ── Sidebar ──────────────────────────────────── */
+  .bp-aside { position: sticky; top: 72px; display: flex; flex-direction: column; gap: 0.85rem; }
+  .bp-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 1.05rem 1.1rem;
+  }
+  .bp-card-label {
+    font-size: 0.67rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--text-tertiary); margin-bottom: 0.65rem;
+  }
+  .bp-side-links { display: flex; flex-direction: column; gap: 0.2rem; }
+  .bp-side-link {
+    display: flex; align-items: flex-start; gap: 0.5rem;
+    font-size: 0.83rem; color: var(--text-secondary); text-decoration: none; line-height: 1.45;
+    padding: 0.3rem 0.3rem; border-radius: 6px; transition: color 0.15s, background 0.15s;
+  }
+  .bp-side-link:hover { color: var(--accent); background: var(--accent-light); }
+  .bp-side-link::before { content: "→"; color: var(--accent); font-size: 0.75rem; flex-shrink: 0; padding-top: 0.08em; }
+
+  .bp-calc-card { background: var(--accent); border-radius: 14px; padding: 1.1rem 1.1rem; color: #fff; }
+  .bp-calc-card .bp-card-label { color: rgba(255,255,255,0.65); }
+  .bp-calc-links { display: flex; flex-direction: column; gap: 0.2rem; margin-top: 0.1rem; }
+  .bp-calc-link {
+    display: flex; align-items: center; gap: 0.5rem;
+    font-size: 0.83rem; font-weight: 500; color: rgba(255,255,255,0.92);
+    text-decoration: none; padding: 0.35rem 0.3rem; border-radius: 6px; transition: background 0.15s;
+  }
+  .bp-calc-link:hover { background: rgba(255,255,255,0.13); }
+  .bp-calc-link::before { content: "→"; color: rgba(255,255,255,0.55); font-size: 0.75rem; }
+
+  /* ── Bottom ──────────────────────────────────── */
+  .bp-bottom { margin-top: 2.25rem; display: flex; flex-direction: column; gap: 1rem; }
+  .bp-panel {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 1.3rem 1.4rem;
+  }
+  .bp-panel h2 {
+    font-family: var(--font-body); font-size: 1.05rem; font-weight: 700;
+    color: var(--text-primary); margin-bottom: 0.35rem;
+  }
+  .bp-panel > p { font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 1rem; line-height: 1.6; }
+
+  .bp-guides-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 0.65rem; }
+  .bp-guide-chip {
+    display: block; text-decoration: none;
+    background: var(--surface-alt); border: 1px solid var(--border);
+    border-radius: 10px; padding: 0.75rem 0.9rem; transition: border-color 0.15s, background 0.15s;
+  }
+  .bp-guide-chip:hover { border-color: var(--accent); background: var(--accent-light); }
+  .bp-guide-chip-tag {
+    font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--text-tertiary); margin-bottom: 0.3rem;
+  }
+  .bp-guide-chip-title { font-size: 0.86rem; font-weight: 600; color: var(--text-primary); line-height: 1.35; }
+
+  .bp-notice {
+    background: var(--surface-alt); border: 1px solid var(--border);
+    border-radius: 14px; padding: 1rem 1.25rem;
+    font-size: 0.82rem; color: var(--text-secondary); line-height: 1.68;
+  }
+  .bp-notice strong { color: var(--accent); }
+
+  @media (max-width: 860px) {
+    .bp-layout { grid-template-columns: 1fr; }
+    .bp-aside { display: none; }
+    .bp-hero h1 { max-width: none; }
+  }
+</style>
 {% endblock %}
 
 {% block jsonld %}
@@ -16,152 +132,113 @@
 {
   "@context": "https://schema.org",
   "@type": "Article",
-  "headline": "{{ post.title }}",
-  "description": "{{ post.description }}",
-  "datePublished": "{{ post.date_iso }}",
-  "author": {"@type": "Organization", "name": "EmployerCalculator Editorial", "url": "{{ site_url }}/about"},
-  "mainEntityOfPage": "{{ site_url }}/blog/{{ post.slug }}"
+  "headline": {{ post.title|tojson }},
+  "description": {{ post.description|tojson }},
+  "datePublished": "2026-05-27",
+  "dateModified": "{{ now.date().isoformat() }}",
+  "author": {"@type": "Organization", "name": "UK Benefits Calculator Editorial"},
+  "publisher": {"@type": "Organization", "name": "UK Benefits Calculator", "url": "{{ site_url }}"},
+  "mainEntityOfPage": {"@type": "WebPage", "@id": "{{ canonical_url }}"}
 }
 </script>
-{% if article_faqs %}
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  "mainEntity": [
-    {% for item in article_faqs %}
-    {
-      "@type": "Question",
-      "name": "{{ item.q }}",
-      "acceptedAnswer": {"@type": "Answer", "text": "{{ item.a|replace('"', '\\"') }}"}
-    }{% if not loop.last %},{% endif %}
-    {% endfor %}
-  ]
-}
-</script>
-{% endif %}
+{{ super() }}
 {% endblock %}
 
 {% block content %}
-<section class="max-w-3xl mx-auto px-4 sm:px-6 pt-12 pb-8">
-  <nav class="text-sm text-slate-500 mb-4"><a href="/" class="hover:text-blue-600">Home</a> / <a href="/blog" class="hover:text-blue-600">Blog</a> / <span class="text-slate-700">{{ post.title }}</span></nav>
-  <div class="text-sm text-slate-400">Last updated: {{ post.date }} · {{ post.reading_time }}</div>
-  <p class="mt-2 text-sm text-slate-500">Written by AfterTaxSalary Editorial. Reviewed against official UK guidance. <a href="/editorial-standards" class="underline hover:text-blue-600">Editorial standards</a> · <a href="/methodology" class="underline hover:text-blue-600">Methodology</a></p>
-  <h1 class="text-4xl sm:text-5xl font-extrabold text-slate-900 mt-2">{{ post.title }}</h1>
-  <p class="mt-4 text-lg text-slate-500">{{ post.description }}</p>
+<div id="read-progress"></div>
 
-  <div class="card p-5 mt-6 border-blue-200 bg-blue-50/60">
-    <h2 class="font-bold text-slate-900 mb-2">Quick examples ({{ tax_year }})</h2>
-    <p class="text-sm text-slate-700">Typical default take-home figures for fast context before reading.</p>
-    <div class="grid sm:grid-cols-3 gap-3 mt-3">
-      {% for row in examples %}
-      <a href="/salary/{{ row.salary }}/england" class="rounded-xl bg-white border border-slate-200 p-3 hover:border-blue-300">
-        <div class="text-xs text-slate-500">£{{ "{:,}".format(row.salary) }}</div>
-        <div class="font-semibold text-slate-900">{{ row.result.take_home.monthly|gbp2 }} /mo</div>
-      </a>
+<div class="bp-wrap">
+
+  <header class="bp-hero">
+    <div class="bp-badge">Blog · {{ post.category | default("UK Benefits") }}</div>
+    <h1>{{ post.title }}</h1>
+    <div class="bp-meta">
+      <span>{{ post.published }}</span>
+      <span class="bp-meta-dot">·</span>
+      <span>{{ post.reading_time }} min read</span>
+      <span class="bp-meta-dot">·</span>
+      <span>UK Benefits Calculator</span>
+    </div>
+    {% if post.intro %}
+    <p class="bp-intro">{{ post.intro }}</p>
+    {% endif %}
+  </header>
+
+  <div class="bp-layout">
+
+    <article class="bp-body">
+      {% for section in post.sections %}
+      <div class="bp-section">
+        <h2>{{ section.heading }}</h2>
+        <p>{{ section.content }}</p>
+      </div>
       {% endfor %}
+    </article>
+
+    <aside class="bp-aside">
+      {% if related_calculators %}
+      <div class="bp-calc-card">
+        <div class="bp-card-label">Free calculators</div>
+        <div class="bp-calc-links">
+          {% for calc in related_calculators %}
+          <a class="bp-calc-link" href="{{ calc.url }}">{{ calc.title }}</a>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      {% if related_guides %}
+      <div class="bp-card">
+        <div class="bp-card-label">Related guides</div>
+        <div class="bp-side-links">
+          {% for guide in related_guides %}
+          <a class="bp-side-link" href="/guides/{{ guide.slug }}">{{ guide.title }}</a>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="bp-card">
+        <div class="bp-card-label">More from the blog</div>
+        <div class="bp-side-links">
+          <a class="bp-side-link" href="/blog">All articles</a>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <div class="bp-bottom">
+    {% if related_guides %}
+    <section class="bp-panel">
+      <h2>Related guides</h2>
+      <p>Dig deeper into the rules that affect you most.</p>
+      <div class="bp-guides-grid">
+        {% for item in related_guides %}
+        <a class="bp-guide-chip" href="/guides/{{ item.slug }}">
+          <div class="bp-guide-chip-tag">Guide</div>
+          <div class="bp-guide-chip-title">{{ item.title }}</div>
+        </a>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
+    <div class="bp-notice">
+      <strong>Independent article only.</strong> Written using published {{ tax_year }} DWP and HMRC figures. Not an official government service. Use the calculators linked on this page to estimate your own position.
     </div>
   </div>
-</section>
+</div>
 
-<section class="max-w-3xl mx-auto px-4 sm:px-6 pb-20">
-  {% for section in post.sections %}
-  <h2 class="text-2xl font-bold text-slate-900 mt-10 mb-3">{{ section.heading }}</h2>
-  {% for paragraph in section.paragraphs %}
-  <p class="text-slate-600 leading-relaxed mb-4">{{ paragraph }}</p>
-  {% endfor %}
-  {% if section.bullets %}
-  <ul class="list-disc pl-6 text-slate-600 mb-4">
-    {% for bullet in section.bullets %}
-    <li>{{ bullet }}</li>
-    {% endfor %}
-  </ul>
-  {% endif %}
-  {% endfor %}
-
-  <div class="card p-5 mt-8">
-    <h3 class="font-bold text-slate-900 mb-2">Use the calculator and tools</h3>
-    <div class="flex flex-wrap gap-3 text-sm">
-      <a href="/calculator" class="text-blue-600 font-semibold hover:underline">Open salary calculator</a>
-      <a href="/salary/50000/england" class="text-blue-600 font-semibold hover:underline">Salary page: £50,000 England</a>
-      <a href="/salary/100000/england" class="text-blue-600 font-semibold hover:underline">Salary page: £100,000 England</a>
-      <a href="/compare/45000-vs-55000/england" class="text-blue-600 font-semibold hover:underline">Compare offers</a>
-      <a href="/target-take-home" class="text-blue-600 font-semibold hover:underline">Target net monthly</a>
-      <a href="/guides" class="text-blue-600 font-semibold hover:underline">Read all guides</a>
-      <a href="/city/london/take-home-pay" class="text-blue-600 font-semibold hover:underline">City salary examples</a>
-    </div>
-  </div>
-
-  <div class="card p-5 mt-8">
-    <h3 class="font-bold text-slate-900 mb-2">{{ tax_year }} factual reference points</h3>
-    <p class="text-sm text-slate-600 mb-3">Use these current tax-year figures as context while reading this article.</p>
-    <details class="rounded-xl border border-slate-200 p-4 mb-3">
-      <summary class="cursor-pointer font-semibold text-slate-800">rUK income tax bands</summary>
-      <div class="mt-3 overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead><tr class="text-slate-500 border-b border-slate-200"><th class="text-left py-2">Band</th><th class="text-left py-2">Gross salary range</th><th class="text-right py-2">Rate</th></tr></thead>
-          <tbody class="divide-y divide-slate-100">
-            {% for row in reference_facts.ruk_bands %}
-            <tr><td class="py-2">{{ row.band }}</td><td class="py-2">{{ row.gross_range }}</td><td class="py-2 text-right">{{ row.rate }}</td></tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </details>
-    <details class="rounded-xl border border-slate-200 p-4 mb-3">
-      <summary class="cursor-pointer font-semibold text-slate-800">Scottish income tax bands</summary>
-      <div class="mt-3 overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead><tr class="text-slate-500 border-b border-slate-200"><th class="text-left py-2">Band</th><th class="text-left py-2">Gross salary range</th><th class="text-right py-2">Rate</th></tr></thead>
-          <tbody class="divide-y divide-slate-100">
-            {% for row in reference_facts.scotland_bands %}
-            <tr><td class="py-2">{{ row.band }}</td><td class="py-2">{{ row.gross_range }}</td><td class="py-2 text-right">{{ row.rate }}</td></tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </details>
-    <details class="rounded-xl border border-slate-200 p-4">
-      <summary class="cursor-pointer font-semibold text-slate-800">NI and student loan thresholds</summary>
-      <ul class="mt-3 list-disc pl-5 text-sm text-slate-700 space-y-1">
-        <li>NI primary threshold: £{{ "{:,}".format(reference_facts.ni.primary_threshold) }}</li>
-        <li>NI upper earnings limit: £{{ "{:,}".format(reference_facts.ni.upper_earnings) }}</li>
-        <li>NI rates: {{ reference_facts.ni.main_rate }} then {{ reference_facts.ni.upper_rate }}</li>
-      </ul>
-      <div class="mt-3 overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead><tr class="text-slate-500 border-b border-slate-200"><th class="text-left py-2">Plan</th><th class="text-right py-2">Threshold</th><th class="text-right py-2">Rate</th></tr></thead>
-          <tbody class="divide-y divide-slate-100">
-            {% for row in reference_facts.loan_plans %}
-            <tr><td class="py-2">{{ row.plan }}</td><td class="py-2 text-right">£{{ "{:,}".format(row.threshold) }}</td><td class="py-2 text-right">{{ row.rate }}</td></tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </details>
-  </div>
-
-  {% if article_faqs %}
-  <div class="card p-6 mt-8">
-    <h3 class="text-2xl font-bold text-slate-900 mb-3">FAQ</h3>
-    <div class="space-y-3">
-      {% for item in article_faqs %}
-      <details class="rounded-xl border border-slate-200 p-4">
-        <summary class="cursor-pointer font-semibold text-slate-800">{{ item.q }}</summary>
-        <p class="mt-2 text-slate-700 leading-relaxed">{{ item.a }}</p>
-      </details>
-      {% endfor %}
-    </div>
-  </div>
-  {% endif %}
-
-  <div class="card p-5 mt-8">
-    <h3 class="font-bold text-slate-900 mb-2">Sources</h3>
-    <ul class="list-disc pl-6 text-sm text-slate-700 space-y-1">
-      {% for src in sources %}
-      <li><a class="text-blue-600 hover:underline" href="{{ src.url }}" rel="nofollow">{{ src.label }}</a></li>
-      {% endfor %}
-    </ul>
-  </div>
-</section>
+<script>
+  (function() {
+    var bar = document.getElementById('read-progress');
+    if (!bar) return;
+    function update() {
+      var s = document.documentElement, h = s.scrollHeight - s.clientHeight;
+      bar.style.width = h > 0 ? (s.scrollTop / h * 100) + '%' : '0';
+    }
+    window.addEventListener('scroll', update, { passive: true });
+    update();
+  })();
+</script>
 {% endblock %}

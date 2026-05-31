@@ -1,0 +1,337 @@
+{% extends "base.html" %}
+
+{% block jsonld %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "UK Benefits Calculator for Working Families 2026/27",
+  "description": "Check what a working family can claim in 2026/27. Universal Credit work allowance, Child Benefit, childcare support, Free School Meals and Council Tax Reduction explained with current rates.",
+  "datePublished": "2026-05-01",
+  "dateModified": "2026-05-30",
+  "author": {"@type": "Organization", "name": "UK Benefits Calculator Editorial"},
+  "publisher": {"@type": "Organization", "name": "UK Benefits Calculator", "url": "{{ site_url }}"},
+  "inLanguage": "en-GB",
+  "url": "{{ canonical_url }}"
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Can working families still claim Universal Credit in 2026/27?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. Working families with children receive a work allowance of £710 a month (or £427 with a housing element), meaning the first slice of earnings is completely ignored before the 55% taper applies. Many working families continue to receive meaningful UC on top of their wages, especially where rent and childcare costs are significant."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is the UC work allowance for a working family in 2026/27?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "£710 a month if the UC award does not include a housing element, or £427 a month if rent support is included. These are the amounts a working family with children can earn each month before Universal Credit starts to reduce at all."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How much Child Benefit does a working family get in 2026/27?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "£27.05 per week for the first child and £17.90 for each additional child. A family with two children receives £44.95 a week, around £2,337 a year. Child Benefit is not means-tested at the point of claim. The High Income Child Benefit Charge only starts if one person in the household has adjusted net income above £60,000."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How much childcare support can working families get from Universal Credit?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Universal Credit covers up to 85% of registered childcare costs, capped at £1,071.09 a month for one child or £1,836.16 for two or more. To claim it you must be in work or have a job offer. Costs must be with a registered provider. Claims must be made within 3 months of paying the costs."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Do working families qualify for Free School Meals?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes, if annual take-home income from work is below £7,400 and the household receives Universal Credit. From September 2026, the government is expanding eligibility so that all UC households qualify regardless of earnings. All children in reception, year 1 and year 2 get universal infant free school meals regardless of income."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is the UC taper rate for working families in 2026/27?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "55%. For every pound you earn above the work allowance, Universal Credit is reduced by 55p. You keep 45p of every extra pound. This taper applies to net earnings, which means working more always improves the total household income, though the gain is slower than the gross wage increase."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does the two-child limit still apply in 2026/27?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. The two-child limit on Universal Credit child elements was removed from 6 April 2026. Families with three or more children now receive a child element for every eligible child. The child element is £303.94 per child per month (or £351.88 for a first child born before 6 April 2017)."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What benefits do working families most often miss?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Council Tax Reduction is the most commonly missed. Many working families assume they earn too much, but the income thresholds are generous. The UC childcare element is also under-claimed, particularly by families returning to work after a career break. Free School Meals eligibility for school-age children is also missed by higher-earning families who may still fall below the £7,400 take-home threshold."
+      }
+    }
+  ]
+}
+</script>
+{{ super() }}
+{% endblock %}
+
+{% block content %}
+<section class="section">
+
+  <!-- BREADCRUMB -->
+  <nav aria-label="Breadcrumb" style="font-size:0.82rem; color:var(--text-tertiary); margin-bottom:1.2rem;">
+    <a href="/" style="color:var(--text-tertiary); text-decoration:none;">Home</a>
+    <span style="margin:0 0.4rem;">/</span>
+    <span>Working Families</span>
+  </nav>
+
+  <!-- HERO -->
+  <div class="badge">Working Families Guide 2026/27</div>
+  <h1 style="font-size:clamp(1.7rem,3.8vw,2.6rem); margin-bottom:0.8rem; line-height:1.2;">UK Benefits Calculator for Working Families 2026/27</h1>
+  <p style="color:var(--text-secondary); max-width:68ch; font-size:1.05rem; line-height:1.65; margin-bottom:1.8rem;">Working does not end benefit entitlement. Universal Credit tapers gradually as earnings rise, and Child Benefit, childcare support, Free School Meals and Council Tax Reduction can all continue well into moderate incomes. This guide covers every payment a working family should check, with current 2026/27 rates throughout.</p>
+
+  <!-- KEY STATS STRIP -->
+  <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(155px,1fr)); gap:0.75rem; margin-bottom:2.5rem;">
+    <div style="background:var(--accent); color:#fff; border-radius:10px; padding:1rem 1.1rem;">
+      <div style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; opacity:0.85; margin-bottom:0.3rem;">Work allowance</div>
+      <div style="font-size:1.35rem; font-weight:700; font-family:'Fraunces',serif;">£710/month</div>
+      <div style="font-size:0.78rem; opacity:0.85; margin-top:0.2rem;">earnings ignored (no housing)</div>
+    </div>
+    <div style="background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:1rem 1.1rem;">
+      <div style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-tertiary); margin-bottom:0.3rem;">Child Benefit</div>
+      <div style="font-size:1.35rem; font-weight:700; font-family:'Fraunces',serif;">£27.05/week</div>
+      <div style="font-size:0.78rem; color:var(--text-secondary); margin-top:0.2rem;">first child (all incomes)</div>
+    </div>
+    <div style="background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:1rem 1.1rem;">
+      <div style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-tertiary); margin-bottom:0.3rem;">UC taper rate</div>
+      <div style="font-size:1.35rem; font-weight:700; font-family:'Fraunces',serif;">55p per £1</div>
+      <div style="font-size:0.78rem; color:var(--text-secondary); margin-top:0.2rem;">above work allowance</div>
+    </div>
+    <div style="background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:1rem 1.1rem;">
+      <div style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-tertiary); margin-bottom:0.3rem;">Childcare cover</div>
+      <div style="font-size:1.35rem; font-weight:700; font-family:'Fraunces',serif;">Up to 85%</div>
+      <div style="font-size:0.78rem; color:var(--text-secondary); margin-top:0.2rem;">of registered costs via UC</div>
+    </div>
+  </div>
+
+  <!-- CALCULATORS -->
+  <div style="margin-bottom:2.5rem;">
+    <h2 style="font-size:1.15rem; margin-bottom:0.9rem;">Check what your family can claim</h2>
+    <div class="grid-3">
+      <a class="tool-card" href="/universal-credit-calculator">
+        <div class="tool-tag">Calculator</div>
+        <h3>Universal Credit</h3>
+        <p>Estimate your monthly UC including work allowance, child elements and childcare support.</p>
+      </a>
+      <a class="tool-card" href="/child-benefit-calculator">
+        <div class="tool-tag">Calculator</div>
+        <h3>Child Benefit</h3>
+        <p>Calculate weekly and annual Child Benefit for your children and check the HICBC position.</p>
+      </a>
+      <a class="tool-card" href="/tax-free-childcare-calculator">
+        <div class="tool-tag">Calculator</div>
+        <h3>Tax-Free Childcare</h3>
+        <p>Estimate the government top-up on childcare costs if you are not on Universal Credit.</p>
+      </a>
+      <a class="tool-card" href="/free-school-meals-checker">
+        <div class="tool-tag">Checker</div>
+        <h3>Free School Meals</h3>
+        <p>Check eligibility based on UC earnings threshold and other qualifying benefits.</p>
+      </a>
+      <a class="tool-card" href="/council-tax-reduction-calculator">
+        <div class="tool-tag">Calculator</div>
+        <h3>Council Tax Reduction</h3>
+        <p>Estimate council tax reduction. Often missed by working families with moderate earnings.</p>
+      </a>
+      <a class="tool-card" href="/benefit-cap-calculator">
+        <div class="tool-tag">Calculator</div>
+        <h3>Benefit Cap</h3>
+        <p>Check whether the £1,835/month cap (outside London) might limit your total award.</p>
+      </a>
+    </div>
+  </div>
+
+  <!-- WHAT WORKING FAMILIES CAN CLAIM -->
+  <div style="max-width:720px;">
+
+    <h2 style="font-size:1.3rem; margin-bottom:1.2rem;">What working families can claim in 2026/27</h2>
+
+    <!-- Universal Credit -->
+    <div style="border-left:3px solid var(--accent); padding-left:1.1rem; margin-bottom:2rem;">
+      <h3 style="font-size:1.1rem; margin-bottom:0.5rem;">Universal Credit</h3>
+      <p style="color:var(--text-secondary); font-size:0.95rem; line-height:1.7; margin-bottom:0.6rem;">Working families with children get a work allowance, a band of monthly earnings completely ignored before any taper starts. In 2026/27 this is £710 a month where no housing element is in the UC award, or £427 where rent support is included.</p>
+      <p style="color:var(--text-secondary); font-size:0.95rem; line-height:1.7; margin-bottom:0.6rem;">Above the allowance, the taper rate is 55%. You keep 45p of every extra pound. For a working single parent earning £900 with a housing element, only £473 of earnings (above the £427 allowance) triggers the taper, reducing UC by around £260. UC still pays meaningfully alongside wages.</p>
+      <p style="color:var(--text-secondary); font-size:0.95rem; line-height:1.7;">The standard allowance for a single person aged 25 or over is £424.90 a month in 2026/27. Each child adds £303.94 a month (or £351.88 for a first child born before April 2017). From 6 April 2026, the two-child limit has been removed: all eligible children generate a child element.</p>
+    </div>
+
+    <!-- Child Benefit -->
+    <div style="border-left:3px solid var(--accent); padding-left:1.1rem; margin-bottom:2rem;">
+      <h3 style="font-size:1.1rem; margin-bottom:0.5rem;">Child Benefit</h3>
+      <p style="color:var(--text-secondary); font-size:0.95rem; line-height:1.7; margin-bottom:0.6rem;">Child Benefit is paid by HMRC separately from Universal Credit. It is not means-tested at the point of claim and does not reduce Universal Credit. In 2026/27 it pays £27.05 a week for the first child and £17.90 for each additional child.</p>
+      <p style="color:var(--text-secondary); font-size:0.95rem; line-height:1.7;">A family with two children receives £44.95 a week, around £2,337 a year. Three children: £62.85 a week. The High Income Child Benefit Charge only starts if one person in the household has adjusted net income above £60,000. Always claim it regardless of income, since most working families keep the full amount.</p>
+    </div>
+
+    <!-- Childcare -->
+    <div style="border-left:3px solid var(--accent); padding-left:1.1rem; margin-bottom:2rem;">
+      <h3 style="font-size:1.1rem; margin-bottom:0.5rem;">Childcare support</h3>
+      <p style="color:var(--text-secondary); font-size:0.95rem; line-height:1.7; margin-bottom:0.6rem;">If you are on Universal Credit and in work (or have a confirmed job offer), UC will reimburse up to 85% of registered childcare costs. The monthly maximum is £1,071.09 for one child or £1,836.16 for two or more. Costs must be with a registered provider. Claims must be made within 3 months of paying the costs.</p>
+      <p style="color:var(--text-secondary); font-size:0.95rem; line-height:1.7;">If you are not on UC, Tax-Free Childcare adds a government top-up of 20p for every 80p you spend on registered childcare, up to £2,000 per child per year. You cannot use UC childcare support and Tax-Free Childcare at the same time: choose the route worth more to your family.</p>
+    </div>
+
+    <!-- Free School Meals -->
+    <div style="border-left:3px solid var(--accent); padding-left:1.1rem; margin-bottom:2rem;">
+      <h3 style="font-size:1.1rem; margin-bottom:0.5rem;">Free School Meals</h3>
+      <p style="color:var(--text-secondary); font-size:0.95rem; line-height:1.7; margin-bottom:0.6rem;">Working families on Universal Credit qualify for Free School Meals in England if annual take-home income from work is below £7,400. Many part-time and lower-earning families fall inside this threshold. Reception, year 1 and year 2 pupils get universal infant free school meals regardless of income.</p>
+      <p style="color:var(--text-secondary); font-size:0.95rem; line-height:1.7;">From September 2026, the government is extending eligibility so that all UC households qualify for Free School Meals regardless of earnings. If your children are at school in the 2026/27 academic year, check now rather than waiting.</p>
+    </div>
+
+    <!-- Council Tax Reduction -->
+    <div style="border-left:3px solid var(--accent); padding-left:1.1rem; margin-bottom:2rem;">
+      <h3 style="font-size:1.1rem; margin-bottom:0.5rem;">Council Tax Reduction</h3>
+      <p style="color:var(--text-secondary); font-size:0.95rem; line-height:1.7;">Council Tax Reduction is a separate local-authority scheme that many working families miss entirely. Applications go to the local council, not DWP. The income thresholds vary by council but are often generous, covering households well into moderate earned incomes. Apply directly to your council: it does not happen automatically when you claim Universal Credit.</p>
+    </div>
+
+    <!-- HOW UC WORKS FOR WORKING FAMILIES -->
+    <h2 style="font-size:1.3rem; margin-bottom:1.2rem; margin-top:2.5rem;">How Universal Credit works as your income rises</h2>
+    <p style="color:var(--text-secondary); font-size:0.95rem; line-height:1.7; margin-bottom:1rem;">The most important thing to understand is that UC does not switch off when you start work. It tapers down gradually. The combination of the work allowance and the 55% taper means working always improves the total household position, even if the gain per pound is slower than the gross wage suggests.</p>
+
+    <div style="background:var(--surface-alt); border:1px solid var(--border); border-radius:10px; padding:1.2rem 1.4rem; margin-bottom:1.5rem;">
+      <p style="font-size:0.82rem; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-tertiary); margin-bottom:0.6rem;">How the maths works</p>
+      <ol style="color:var(--text-secondary); font-size:0.95rem; line-height:1.8; padding-left:1.2rem;">
+        <li>Monthly net earnings up to the work allowance (£710 or £427): UC unchanged</li>
+        <li>Earnings above the work allowance: UC reduces by 55p per £1</li>
+        <li>You keep 45p of every extra pound earned above the allowance</li>
+        <li>UC reaches nil once earnings have tapered it fully (typically £1,200–£1,800/month for families)</li>
+      </ol>
+    </div>
+
+    <!-- WORKED EXAMPLES -->
+    <h2 style="font-size:1.3rem; margin-bottom:1.2rem; margin-top:2.5rem;">Worked examples</h2>
+
+    <!-- Example 1 -->
+    <div style="background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:1.2rem 1.4rem; margin-bottom:1rem;">
+      <p style="font-size:0.9rem; font-weight:600; margin-bottom:0.7rem; color:var(--text-primary);">Example 1: Single parent, 1 child, part-time work</p>
+      <ul style="list-style:none; padding:0; color:var(--text-secondary); font-size:0.9rem; line-height:1.9;">
+        <li>Earnings: £700/month net &bull; No rent in UC award &bull; Work allowance: £710</li>
+        <li>Earnings below work allowance — UC not reduced at all</li>
+        <li>UC: standard allowance £424.90 + child element £303.94 = £728.84</li>
+        <li>Child Benefit: £27.05/week = £117.22/month</li>
+        <li style="font-weight:600; color:var(--text-primary);">Total monthly income: £700 + £728.84 + £117.22 = £1,546</li>
+      </ul>
+    </div>
+
+    <!-- Example 2 -->
+    <div style="background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:1.2rem 1.4rem; margin-bottom:1rem;">
+      <p style="font-size:0.9rem; font-weight:600; margin-bottom:0.7rem; color:var(--text-primary);">Example 2: Couple, 2 children, renting, one working</p>
+      <ul style="list-style:none; padding:0; color:var(--text-secondary); font-size:0.9rem; line-height:1.9;">
+        <li>Earnings: £1,200/month net &bull; Rent: £900 (within LHA) &bull; Work allowance: £427 (housing element)</li>
+        <li>Earnings above allowance: £773 &bull; Taper: £773 × 55% = £425.15</li>
+        <li>Max UC: £666.97 + 2×£303.94 + £900 = £2,174.85</li>
+        <li>UC payable: £2,174.85 − £425.15 = £1,749.70</li>
+        <li>Child Benefit: £44.95/week = £194.78/month</li>
+        <li style="font-weight:600; color:var(--text-primary);">Total monthly income: £1,200 + £1,749.70 + £194.78 = £3,144</li>
+      </ul>
+    </div>
+
+    <!-- Example 3 -->
+    <div style="background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:1.2rem 1.4rem; margin-bottom:2rem;">
+      <p style="font-size:0.9rem; font-weight:600; margin-bottom:0.7rem; color:var(--text-primary);">Example 3: Single parent, 2 children, 30 hours, childcare costs</p>
+      <ul style="list-style:none; padding:0; color:var(--text-secondary); font-size:0.9rem; line-height:1.9;">
+        <li>Earnings: £1,500/month net &bull; Rent: £750 &bull; Childcare: £800/month</li>
+        <li>Work allowance: £427 (housing element in payment)</li>
+        <li>Earnings above allowance: £1,073 &bull; Taper: £1,073 × 55% = £590.15</li>
+        <li>Max UC: £424.90 + 2×£303.94 + £750 + £680 (85% of £800) = £2,462.78</li>
+        <li>UC payable: £2,462.78 − £590.15 = £1,872.63</li>
+        <li>Child Benefit: £44.95/week = £194.78/month</li>
+        <li style="font-weight:600; color:var(--text-primary);">Total monthly income (after childcare): £1,500 + £1,872.63 + £194.78 − £800 = £2,767</li>
+      </ul>
+    </div>
+
+    <p style="color:var(--text-tertiary); font-size:0.83rem; font-style:italic; margin-bottom:2rem;">These are illustrative examples only. Use the calculators above with your own figures for an accurate estimate. Housing element values depend on Local Housing Allowance rates in your area.</p>
+
+    <!-- WHAT ELSE TO CHECK -->
+    <h2 style="font-size:1.3rem; margin-bottom:1rem; margin-top:1rem;">Other support working families often miss</h2>
+    <ul style="color:var(--text-secondary); font-size:0.95rem; line-height:1.9; padding-left:1.2rem; margin-bottom:1.5rem;">
+      <li><strong>Healthy Start</strong>: Food and vitamin support for pregnant people and those with children under 4 on qualifying benefits.</li>
+      <li><strong>Sure Start Maternity Grant</strong>: A one-off £500 payment for eligible households expecting a first child.</li>
+      <li><strong>Free childcare hours</strong>: 15 or 30 free hours per week depending on the child's age and eligibility. Sits alongside UC childcare support.</li>
+      <li><strong>Scottish Child Payment</strong>: £26.70 per week per eligible child under 16 for families in Scotland on UC. This is in addition to UC child elements.</li>
+      <li><strong>Best Start Grants and Best Start Foods</strong>: Scotland-specific payments for families with young children on UC or certain other benefits.</li>
+    </ul>
+
+  </div><!-- /max-width wrapper -->
+
+  <!-- FAQs -->
+  <div style="margin-top:2rem; max-width:720px;">
+    <h2 style="font-size:1.15rem; margin-bottom:0.75rem;">Frequently asked questions</h2>
+    <div class="faq-list">
+      {% for item in faq_items %}
+      <details class="faq-item">
+        <summary>{{ item.q }}</summary>
+        <div class="faq-answer">{{ item.a }}</div>
+      </details>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- RELATED GUIDES -->
+  <div style="margin-top:2.5rem;">
+    <h2 style="font-size:1.1rem; margin-bottom:0.75rem;">Related guides and tools</h2>
+    <div class="grid-3">
+      <a class="tool-card" href="/situations/benefits-for-single-parents">
+        <div class="tool-tag">Situation</div>
+        <h3>Benefits for single parents</h3>
+        <p>UC, Child Benefit, childcare and the single-parent work allowance explained.</p>
+      </a>
+      <a class="tool-card" href="/what-if/what-happens-to-uc-if-i-start-self-employment">
+        <div class="tool-tag">What if</div>
+        <h3>Starting self-employment on UC</h3>
+        <p>How the Minimum Income Floor works and what changes in the first 12 months.</p>
+      </a>
+      <a class="tool-card" href="/what-if/what-happens-if-i-work-more-hours">
+        <div class="tool-tag">What if</div>
+        <h3>Working more hours</h3>
+        <p>How UC changes if you increase your hours, with a worked example showing net gain.</p>
+      </a>
+      <a class="tool-card" href="/guides/universal-credit-for-self-employed-2026">
+        <div class="tool-tag">Guide</div>
+        <h3>UC for self-employed workers</h3>
+        <p>Minimum Income Floor, surplus earnings, and reporting requirements for 2026/27.</p>
+      </a>
+      <a class="tool-card" href="/blog/universal-credit-explained-2026">
+        <div class="tool-tag">Blog</div>
+        <h3>Universal Credit explained 2026/27</h3>
+        <p>Full guide to how UC is calculated, with a detailed worked example from start to finish.</p>
+      </a>
+      <a class="tool-card" href="/guides/benefits-in-scotland-2026">
+        <div class="tool-tag">Guide</div>
+        <h3>Benefits in Scotland 2026/27</h3>
+        <p>Scottish Child Payment, Best Start Grants and other top-ups available in Scotland.</p>
+      </a>
+    </div>
+  </div>
+
+  <!-- DISCLAIMER -->
+  <div class="card" style="margin-top:2.5rem; padding:1rem 1.2rem; background:var(--accent-light); border:1px solid rgba(27,107,74,0.18);">
+    <p style="font-size:0.85rem; color:var(--text-secondary); line-height:1.65;">
+      <strong style="color:var(--accent);">Independent guide:</strong> This page uses published GOV.UK rates for 2026/27. It is not an official government service. Figures in worked examples are illustrative. Use the calculators above with your own numbers. For formal advice, contact Citizens Advice or a welfare-rights service.
+    </p>
+  </div>
+
+</section>
+{% endblock %}

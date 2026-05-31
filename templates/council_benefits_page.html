@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block jsonld %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "name": {{ title|tojson }},
+  "description": {{ meta_description|tojson }},
+  "datePublished": "2026-05-30",
+  "dateModified": "{{ now.date().isoformat() }}",
+  "author": {"@type": "Organization", "name": "UK Benefits Calculator Editorial"},
+  "publisher": {"@type": "Organization", "name": "UK Benefits Calculator", "url": "{{ site_url }}"},
+  "inLanguage": "en-GB",
+  "url": "{{ canonical_url }}"
+}
+</script>
+{{ super() }}
+{% endblock %}
+
+{% block content %}
+<section class="section">
+  <div class="badge">Benefits calculator by area</div>
+  <h1 style="font-size:clamp(1.6rem,3.5vw,2.4rem); margin-bottom:0.6rem;">Benefits calculator: {{ council.name }} 2026/27</h1>
+  <p style="color:var(--text-secondary); max-width:64ch; font-size:1rem; line-height:1.6;">
+    Use the calculators below to estimate Universal Credit, Council Tax Reduction and housing benefit support in {{ council.name }}. Rates are based on 2026/27 DWP figures and local council tax band D rates.
+  </p>
+
+  <!-- KEY LOCAL FACTS -->
+  <div class="card" style="margin-top:1.75rem; padding:1.25rem 1.4rem; max-width:600px;">
+    <h2 style="font-size:1.1rem; margin-bottom:0.85rem; margin-top:0;">{{ council.name }}: key local figures for 2026/27</h2>
+    <table style="width:100%; border-collapse:collapse; font-size:0.93rem;">
+      <tr style="border-bottom:1px solid var(--border);">
+        <td style="padding:0.45rem 0; color:var(--text-secondary); width:55%;">Council Tax band D (2026/27)</td>
+        <td style="padding:0.45rem 0; font-weight:600;">{{ council.council_tax_band_d }} per year</td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border);">
+        <td style="padding:0.45rem 0; color:var(--text-secondary);">Local Housing Allowance region</td>
+        <td style="padding:0.45rem 0; font-weight:600;">{{ council.lha_region }}</td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border);">
+        <td style="padding:0.45rem 0; color:var(--text-secondary);">Region</td>
+        <td style="padding:0.45rem 0; font-weight:600;">{{ council.region }}</td>
+      </tr>
+      <tr>
+        <td style="padding:0.45rem 0; color:var(--text-secondary);">Council website</td>
+        <td style="padding:0.45rem 0;"><a href="{{ council.council_website }}" target="_blank" rel="noopener noreferrer" style="color:var(--accent);">{{ council.council_website }}</a></td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- RELATED CALCULATORS -->
+  {% if related_calculators %}
+  <div style="margin-top:2.5rem;">
+    <h2 style="font-size:1.1rem; margin-bottom:0.75rem;">Calculators for {{ council.name }} residents</h2>
+    <div class="grid-3">
+      {% for calc in related_calculators %}
+      <a class="tool-card" href="{{ calc.url }}">
+        <div class="tool-tag">Calculator</div>
+        <h3>{{ calc.title }}</h3>
+        <p>{{ calc.description }}</p>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- COUNCIL TAX REDUCTION -->
+  <div style="margin-top:2.5rem; max-width:720px;">
+    <h2 style="font-size:1.18rem; margin-bottom:0.6rem;">Council Tax Reduction in {{ council.name }}</h2>
+    <p style="color:var(--text-secondary); font-size:0.95rem; line-height:1.7;">{{ council.ctr_note }}</p>
+    <p style="color:var(--text-secondary); font-size:0.95rem; line-height:1.7;">
+      Council Tax Reduction is a separate local authority scheme. It is not part of Universal Credit and needs a separate application to {{ council.name }} directly. Many low-income households miss this discount because they assume they earn too much to qualify. Check with the council before assuming you are ineligible.
+    </p>
+    <p style="font-size:0.9rem; margin-top:0.75rem;">
+      Apply for Council Tax Reduction: <a href="{{ council.council_tax_website }}" target="_blank" rel="noopener noreferrer" style="color:var(--accent);">{{ council.council_tax_website }}</a>
+    </p>
+  </div>
+
+  <!-- LOCAL HOUSING ALLOWANCE -->
+  <div style="margin-top:2rem; max-width:720px;">
+    <h2 style="font-size:1.18rem; margin-bottom:0.6rem;">Local Housing Allowance in {{ council.name }}</h2>
+    <p style="color:var(--text-secondary); font-size:0.95rem; line-height:1.7;">
+      {{ council.name }} falls under the {{ council.lha_region }}. LHA rates determine how much Universal Credit covers in rent for private tenants. The LHA rate is set per bedroom category: shared accommodation, one bedroom, two bedrooms, three bedrooms, and four bedrooms.
+    </p>
+    <p style="color:var(--text-secondary); font-size:0.95rem; line-height:1.7;">
+      If your rent is higher than the LHA rate for your bedroom entitlement, you cover the difference yourself. Discretionary Housing Payments from {{ council.name }} Council can sometimes help with temporary shortfalls. Current LHA rates are published by the Valuation Office Agency at <a href="https://lha-direct.voa.gov.uk/" target="_blank" rel="noopener noreferrer" style="color:var(--accent);">lha-direct.voa.gov.uk</a>.
+    </p>
+  </div>
+
+  <!-- UNIVERSAL CREDIT IN THIS AREA -->
+  <div style="margin-top:2rem; max-width:720px;">
+    <h2 style="font-size:1.18rem; margin-bottom:0.6rem;">Universal Credit in {{ council.name }}</h2>
+    <p style="color:var(--text-secondary); font-size:0.95rem; line-height:1.7;">
+      Universal Credit is administered centrally by DWP and pays the same national rates regardless of which council area you live in. The standard allowance in 2026/27 is £424.90 per month for a single adult aged 25 or over, or £666.97 for a couple. Child elements, housing costs, childcare and health-related additions are calculated on top.
+    </p>
+    <p style="color:var(--text-secondary); font-size:0.95rem; line-height:1.7;">
+      The housing costs element within UC is capped at the LHA rate for the {{ council.lha_region }}. Use the Universal Credit calculator above to get a personalised estimate based on your earnings, rent and household.
+    </p>
+  </div>
+
+  <!-- OTHER SUPPORT -->
+  <div style="margin-top:2rem; max-width:720px;">
+    <h2 style="font-size:1.18rem; margin-bottom:0.6rem;">Other support available in {{ council.name }}</h2>
+    <p style="color:var(--text-secondary); font-size:0.95rem; line-height:1.7;">
+      Alongside Universal Credit and Council Tax Reduction, {{ council.name }} residents may also be eligible for Free School Meals (if UC household income is below £7,400 per year), the Household Support Fund (distributed by the local council for emergency costs) and Discretionary Housing Payments for rent shortfalls.
+    </p>
+    <p style="color:var(--text-secondary); font-size:0.95rem; line-height:1.7;">
+      Contact {{ council.name }} Council directly for the Household Support Fund and local discretionary support. National benefits such as Child Benefit, PIP, Pension Credit and Carer's Allowance are available regardless of which council area you live in.
+    </p>
+  </div>
+
+  <!-- DISCLAIMER -->
+  <div class="card" style="margin-top:2.5rem; padding:1rem 1.2rem; background:var(--accent-light); border:1px solid rgba(27,107,74,0.18);">
+    <p style="font-size:0.85rem; color:var(--text-secondary); line-height:1.65;">
+      <strong style="color:var(--accent);">Independent guide:</strong> Council tax figures are published estimates for 2026/27 band D rates. LHA region information is based on Valuation Office Agency Broad Rental Market Area assignments. Actual LHA rates and council tax bills depend on your property band and local authority decisions. Use the calculators above to estimate amounts, then confirm your position through an official claim or Citizens Advice.
+    </p>
+  </div>
+</section>
+{% endblock %}

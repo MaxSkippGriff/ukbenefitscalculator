@@ -212,15 +212,30 @@
     </div>
   </section>
 
+  {% if estimate.savings_bands %}
+  <div class="result-block">
+    <h3>Savings band</h3>
+    <div class="savings-bands">
+      {% for band in estimate.savings_bands %}
+      <div class="savings-band savings-band--{{ band.status }}{% if band.active %} savings-band--active{% endif %}">
+        <div class="savings-band-label">{{ band.label }}</div>
+        <div class="savings-band-sub">{{ band.sub }}</div>
+        {% if band.active %}<div class="savings-band-tag">Your position</div>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
   <div class="result-block">
     <h3>Breakdown</h3>
     <div id="result-breakdown" class="breakdown-list">
-      {% for label, value in estimate.breakdown %}
+      {% for item in estimate.breakdown %}{% if item is not none %}{% set label, value = item %}
       <div class="breakdown-row">
         <span>{{ label }}</span>
         <strong>{% if "percentage" in label|lower %}{{ "{:,.0f}%".format(value) }}{% else %}{{ "£{:,.2f}".format(value) }}{% endif %}</strong>
       </div>
-      {% endfor %}
+      {% endif %}{% endfor %}
     </div>
   </div>
 

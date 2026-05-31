@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+
+{% block head_extra %}
+<style>
+  .cm-wrap { max-width: var(--max-w); margin: 0 auto; padding: 0 1.25rem 4rem; }
+
+  .cm-hero { padding: 1.6rem 0 0; max-width: 760px; }
+  .cm-badge {
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em;
+    color: #fff; background: var(--accent); border-radius: 100px; padding: 0.28rem 0.85rem; margin-bottom: 0.9rem;
+  }
+  .cm-hero h1 {
+    font-family: var(--font-body); font-size: clamp(1.6rem, 3vw, 2.2rem);
+    font-weight: 700; letter-spacing: -0.022em; line-height: 1.14;
+    color: var(--text-primary); margin-bottom: 0.7rem;
+  }
+  .cm-hero-sub {
+    font-size: 1rem; line-height: 1.7; color: var(--text-secondary);
+    max-width: 60ch; margin-bottom: 1.4rem;
+  }
+
+  .cm-layout { display: grid; grid-template-columns: minmax(0,1fr) 320px; gap: 2.25rem; align-items: start; margin-top: 1.6rem; }
+
+  .cm-what h2 { font-size: 1.05rem; font-weight: 700; color: var(--text-primary); margin: 1.4rem 0 0.7rem; padding-bottom: 0.45rem; border-bottom: 1.5px solid var(--border); }
+  .cm-what p { font-size: 0.95rem; line-height: 1.75; color: var(--text-secondary); margin-bottom: 0.7rem; }
+  .cm-what p:last-child { margin-bottom: 0; }
+
+  .cm-includes { display: flex; flex-direction: column; gap: 0.55rem; margin: 0.85rem 0; }
+  .cm-include-row {
+    display: flex; align-items: flex-start; gap: 0.75rem;
+    padding: 0.75rem 0.9rem;
+    background: var(--surface-alt); border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+  .cm-include-icon { font-size: 1.1rem; flex-shrink: 0; }
+  .cm-include-text { flex: 1; }
+  .cm-include-title { font-size: 0.88rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.15rem; }
+  .cm-include-sub { font-size: 0.81rem; color: var(--text-secondary); line-height: 1.45; }
+
+  .cm-form-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 1.4rem 1.5rem;
+    position: sticky; top: 72px;
+    box-shadow: var(--shadow-sm);
+  }
+  .cm-price-row {
+    display: flex; align-items: baseline; gap: 0.4rem;
+    margin-bottom: 0.5rem;
+  }
+  .cm-price { font-size: 2rem; font-weight: 800; color: var(--text-primary); }
+  .cm-price-sub { font-size: 0.82rem; color: var(--text-tertiary); }
+  .cm-form-title { font-size: 0.97rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.3rem; }
+  .cm-form-sub { font-size: 0.82rem; color: var(--text-secondary); line-height: 1.55; margin-bottom: 1.1rem; }
+
+  .cm-field { margin-bottom: 0.85rem; }
+  .cm-label { font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 0.3rem; }
+  .cm-select, .cm-input {
+    width: 100%; padding: 0.55rem 0.7rem; font-size: 0.9rem;
+    border: 1.5px solid var(--border); border-radius: 10px;
+    background: var(--surface-alt); color: var(--text-primary);
+    box-sizing: border-box; outline: none;
+    transition: border-color 0.15s;
+  }
+  .cm-select:focus, .cm-input:focus { border-color: var(--accent); }
+
+  .cm-btn {
+    display: block; width: 100%; padding: 0.85rem 1rem;
+    background: var(--accent); color: #fff; font-size: 0.97rem; font-weight: 700;
+    border: none; border-radius: 12px; cursor: pointer; text-align: center;
+    transition: opacity 0.15s; margin-top: 1rem;
+  }
+  .cm-btn:hover { opacity: 0.88; }
+  .cm-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .cm-trust {
+    margin-top: 0.85rem; display: flex; flex-direction: column; gap: 0.35rem;
+    font-size: 0.76rem; color: var(--text-tertiary);
+  }
+  .cm-trust-row { display: flex; align-items: center; gap: 0.4rem; }
+  .cm-trust-row::before { content: "✓"; color: var(--accent); font-weight: 700; }
+
+  .cm-privacy {
+    margin-top: 1.2rem;
+    background: var(--surface-alt); border: 1px solid var(--border);
+    border-radius: 12px; padding: 0.9rem 1rem;
+    font-size: 0.8rem; color: var(--text-secondary); line-height: 1.65;
+  }
+  .cm-privacy strong { color: var(--accent); }
+
+  @media (max-width: 860px) {
+    .cm-layout { grid-template-columns: 1fr; }
+    .cm-form-card { position: static; }
+  }
+</style>
+{% endblock %}
+
+{% block jsonld %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Product",
+  "name": "Claim Maximiser Pack 2026/27",
+  "description": "Personalised UC and PIP entitlement summary, PIP descriptor evidence guide, common claim mistakes and Mandatory Reconsideration steps. Instant PDF download.",
+  "url": "{{ canonical_url }}",
+  "offers": {
+    "@type": "Offer",
+    "price": "2.99",
+    "priceCurrency": "GBP",
+    "availability": "https://schema.org/InStock",
+    "seller": {"@type": "Organization", "name": "UK Benefits Calculator"}
+  }
+}
+</script>
+{{ super() }}
+{% endblock %}
+
+{% block content %}
+<div class="cm-wrap">
+
+  <header class="cm-hero">
+    <div class="cm-badge">Instant download · £2.99</div>
+    <h1>Your personalised Claim Maximiser pack</h1>
+    <p class="cm-hero-sub">Enter a few details about your situation and get a downloadable PDF with your estimated UC and PIP entitlement, a PIP evidence guide, common mistakes to avoid, and step-by-step Mandatory Reconsideration instructions.</p>
+  </header>
+
+  <div class="cm-layout">
+
+    <div class="cm-what">
+      <h2>What's included in the pack</h2>
+      <div class="cm-includes">
+        <div class="cm-include-row">
+          <div class="cm-include-icon">📋</div>
+          <div class="cm-include-text">
+            <div class="cm-include-title">Personalised entitlement summary</div>
+            <div class="cm-include-sub">Your estimated monthly UC broken down by element — standard allowance, children, housing, health, work allowance and taper. Plus your estimated PIP weekly amount and Child Benefit if applicable.</div>
+          </div>
+        </div>
+        <div class="cm-include-row">
+          <div class="cm-include-icon">🔍</div>
+          <div class="cm-include-text">
+            <div class="cm-include-title">PIP descriptor evidence guide</div>
+            <div class="cm-include-sub">How to describe your functional impact for each daily living and mobility activity. Key evidence principles: bad days, aids used, time taken, fluctuation and repetition.</div>
+          </div>
+        </div>
+        <div class="cm-include-row">
+          <div class="cm-include-icon">⚠️</div>
+          <div class="cm-include-text">
+            <div class="cm-include-title">Common claim mistakes</div>
+            <div class="cm-include-sub">The most frequent errors that result in refused claims or lower awards than deserved — and how to avoid them on your form.</div>
+          </div>
+        </div>
+        <div class="cm-include-row">
+          <div class="cm-include-icon">📝</div>
+          <div class="cm-include-text">
+            <div class="cm-include-title">Mandatory Reconsideration and appeal steps</div>
+            <div class="cm-include-sub">Exactly what to do if your PIP or UC claim is refused or underawarded — when to request MR, what to include, and how the appeal process works.</div>
+          </div>
+        </div>
+      </div>
+
+      <h2>Who this is for</h2>
+      <p>The Claim Maximiser pack is for people who want to understand their likely entitlement in plain English before making a claim, or who have received a lower award than expected and want to know whether and how to challenge it.</p>
+      <p>It is not a replacement for specialist welfare rights advice in complex cases. For difficult situations — serious disability, complex housing, managed migration disputes — Citizens Advice or a welfare rights service will give more tailored guidance.</p>
+
+      <div class="cm-privacy">
+        <strong>Your privacy is protected.</strong> The details you enter are used only to generate your PDF. They are not stored, logged or shared. Your download link is single-use. Once you have downloaded the PDF, the file is deleted from the server. The transaction is processed securely through Stripe — we never see your card details.
+      </div>
+    </div>
+
+    <div class="cm-form-card">
+      <div class="cm-price-row">
+        <div class="cm-price">{{ price_display }}</div>
+        <div class="cm-price-sub">one-time · instant download</div>
+      </div>
+      <div class="cm-form-title">Enter your details to personalise</div>
+      <p class="cm-form-sub">A few inputs to tailor the entitlement summary in your pack.</p>
+
+      <form id="cmForm">
+        <div class="cm-field">
+          <label class="cm-label" for="cm-household">Household type</label>
+          <select class="cm-select" id="cm-household" name="household">
+            <option value="single">Single</option>
+            <option value="couple">Couple</option>
+          </select>
+        </div>
+        <div class="cm-field">
+          <label class="cm-label" for="cm-children">Children</label>
+          <input class="cm-input" type="number" id="cm-children" name="children" value="0" min="0" step="1">
+        </div>
+        <div class="cm-field">
+          <label class="cm-label" for="cm-earnings">Monthly take-home earnings (£)</label>
+          <input class="cm-input" type="number" id="cm-earnings" name="earnings" value="0" min="0" step="25" placeholder="0">
+        </div>
+        <div class="cm-field">
+          <label class="cm-label" for="cm-housing">Monthly eligible rent (£)</label>
+          <input class="cm-input" type="number" id="cm-housing" name="housing_cost" value="0" min="0" step="25" placeholder="0">
+        </div>
+        <div class="cm-field">
+          <label class="cm-label" for="cm-savings">Savings and investments (£)</label>
+          <input class="cm-input" type="number" id="cm-savings" name="savings" value="0" min="0" step="100" placeholder="0">
+        </div>
+        <div class="cm-field">
+          <label class="cm-label" for="cm-health">Health element</label>
+          <select class="cm-select" id="cm-health" name="health">
+            <option value="none">None</option>
+            <option value="standard">LCW (lower)</option>
+            <option value="severe">LCWRA (higher)</option>
+          </select>
+        </div>
+        <div class="cm-field">
+          <label class="cm-label" for="cm-pip-dl">PIP daily living points (0 if not applicable)</label>
+          <input class="cm-input" type="number" id="cm-pip-dl" name="pip_dl" value="0" min="0" max="84" step="1" placeholder="0">
+        </div>
+        <div class="cm-field">
+          <label class="cm-label" for="cm-pip-mob">PIP mobility points (0 if not applicable)</label>
+          <input class="cm-input" type="number" id="cm-pip-mob" name="pip_mob" value="0" min="0" max="12" step="1" placeholder="0">
+        </div>
+
+        <button class="cm-btn" id="cmBtn" type="button">Get my pack — {{ price_display }}</button>
+      </form>
+
+      <div class="cm-trust">
+        <div class="cm-trust-row">Secure checkout via Stripe</div>
+        <div class="cm-trust-row">Single-use download link</div>
+        <div class="cm-trust-row">Inputs deleted after download</div>
+        <div class="cm-trust-row">2026/27 DWP rates used</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+document.getElementById('cmBtn').addEventListener('click', function() {
+  var btn = this;
+  btn.disabled = true;
+  btn.textContent = 'Preparing checkout…';
+
+  var form = document.getElementById('cmForm');
+  var data = {
+    household: form.household.value,
+    children: parseInt(form.children.value) || 0,
+    earnings: parseFloat(form.earnings.value) || 0,
+    housing_cost: parseFloat(form.housing_cost.value) || 0,
+    savings: parseFloat(form.savings.value) || 0,
+    health: form.health.value,
+    pip_dl: parseInt(form.pip_dl.value) || 0,
+    pip_mob: parseInt(form.pip_mob.value) || 0,
+  };
+
+  fetch('/api/claim-maximiser/create-checkout', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(data),
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.url) {
+      window.location.href = d.url;
+    } else {
+      alert('Could not start checkout. Please try again.');
+      btn.disabled = false;
+      btn.textContent = 'Get my pack — {{ price_display }}';
+    }
+  })
+  .catch(function() {
+    alert('Network error. Please try again.');
+    btn.disabled = false;
+    btn.textContent = 'Get my pack — {{ price_display }}';
+  });
+});
+</script>
+{% endblock %}

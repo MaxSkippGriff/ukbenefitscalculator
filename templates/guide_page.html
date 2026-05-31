@@ -2,172 +2,216 @@
 
 {% block head_extra %}
 <style>
-  .guide-wrap {
-    max-width: var(--max-w);
-    margin: 0 auto;
-    padding: 2rem 1.25rem 3rem;
+  /* ── Reading progress ────────────────────────────── */
+  #read-progress {
+    position: fixed; top: 0; left: 0; width: 0; height: 3px;
+    background: var(--accent); z-index: 9999; transition: width 0.1s linear;
   }
-  .guide-top {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(240px, 300px);
-    gap: 1rem;
-    align-items: start;
+
+  .gp-wrap { max-width: var(--max-w); margin: 0 auto; padding: 0 1.25rem 4rem; }
+
+  /* ── Hero ───────────────────────────────────────── */
+  .gp-hero { padding: 1.6rem 0 0; max-width: 760px; }
+  .gp-badge {
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--accent); background: var(--accent-light); border: 1px solid rgba(27,107,74,0.18);
+    border-radius: 100px; padding: 0.25rem 0.75rem; margin-bottom: 0.8rem;
   }
-  .guide-main,
-  .guide-side-card,
-  .guide-bottom-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    box-shadow: var(--shadow-sm);
+  .gp-hero h1 {
+    font-family: var(--font-body);
+    font-size: clamp(1.55rem, 3vw, 2.15rem);
+    font-weight: 700; letter-spacing: -0.022em; line-height: 1.16;
+    color: var(--text-primary); margin-bottom: 0.75rem;
+    max-width: 22ch;
   }
-  .guide-main {
-    padding: 1.45rem 1.45rem 1.55rem;
+  .gp-meta {
+    font-size: 0.79rem; color: var(--text-tertiary);
+    display: flex; flex-wrap: wrap; gap: 0 0.65rem; align-items: center;
+    margin-bottom: 1.3rem;
   }
-  .guide-topic {
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: var(--accent);
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    margin-bottom: 0.5rem;
+  .gp-meta-dot { opacity: 0.4; }
+
+  /* ── Key facts panel (first "quick answer" section) */
+  .gp-key-panel {
+    background: var(--accent-light); border: 1px solid rgba(27,107,74,0.2);
+    border-left: 4px solid var(--accent); border-radius: 0 12px 12px 0;
+    padding: 1.1rem 1.25rem; margin-top: 0.4rem; max-width: 68ch;
   }
-  .guide-flags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.45rem;
-    margin-bottom: 0.8rem;
+  .gp-key-panel h2 { display: none; }
+  .gp-key-panel-label {
+    font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--accent); margin-bottom: 0.8rem;
   }
-  .guide-flag {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    padding: 0.3rem 0.72rem;
-    border-radius: 999px;
-    border: 1px solid var(--border);
-    background: var(--surface-alt);
-    color: var(--text-secondary);
-    font-size: 0.76rem;
-    font-weight: 700;
+  .gp-key-list { list-style: none; display: flex; flex-direction: column; gap: 0.55rem; }
+  .gp-key-list li {
+    display: flex; gap: 0.65rem; align-items: flex-start;
+    font-size: 0.9rem; line-height: 1.6; color: var(--text-primary);
   }
-  .guide-flag.accent {
-    color: var(--accent);
-    background: var(--accent-light);
-    border-color: rgba(27,107,74,0.12);
+  .gp-key-list li::before {
+    content: "✓"; color: var(--accent); font-weight: 700;
+    font-size: 0.78rem; flex-shrink: 0; padding-top: 0.22em;
   }
-  .guide-main h1 {
-    font-size: clamp(2rem, 4vw, 2.9rem);
-    max-width: 16ch;
-    margin-bottom: 0.55rem;
+
+  /* ── Mobile TOC ─────────────────────────────────── */
+  .gp-mobile-toc { display: none; margin: 0.8rem 0 0; }
+  .gp-mobile-toc summary {
+    font-size: 0.85rem; font-weight: 600; color: var(--text-secondary);
+    cursor: pointer; list-style: none;
+    display: flex; align-items: center; gap: 0.5rem;
+    padding: 0.65rem 0.9rem;
+    background: var(--surface-alt); border: 1px solid var(--border); border-radius: 10px;
   }
-  .guide-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.45rem;
-    color: var(--text-tertiary);
-    font-size: 0.82rem;
-    margin-bottom: 0.85rem;
+  .gp-mobile-toc summary::-webkit-details-marker { display: none; }
+  .gp-mobile-toc ol {
+    list-style: none; counter-reset: mob-toc; padding: 0.5rem 0.9rem 0.65rem;
+    border: 1px solid var(--border); border-top: none; border-radius: 0 0 10px 10px;
+    display: flex; flex-direction: column; gap: 0;
   }
-  .guide-meta .dot::before {
-    content: "•";
-    margin-right: 0.45rem;
+  .gp-mobile-toc li { counter-increment: mob-toc; }
+  .gp-mobile-toc a {
+    display: flex; gap: 0.5rem; align-items: flex-start;
+    font-size: 0.86rem; color: var(--text-secondary); text-decoration: none; padding: 0.28rem 0;
   }
-  .guide-intro {
-    color: var(--text-secondary);
-    max-width: 62ch;
-    font-size: 1rem;
-    margin-bottom: 1rem;
+  .gp-mobile-toc a::before {
+    content: counter(mob-toc);
+    font-size: 0.7rem; font-weight: 700; color: var(--text-tertiary); min-width: 1.2em; padding-top: 0.1em;
   }
-  .guide-body h2 {
-    font-size: 1.28rem;
-    margin: 1.25rem 0 0.55rem;
+
+  /* ── Two-column layout ──────────────────────────── */
+  .gp-layout {
+    display: grid; grid-template-columns: minmax(0,1fr) 268px;
+    gap: 2.25rem; align-items: start; margin-top: 2rem;
   }
-  .guide-body h2:first-of-type {
-    margin-top: 0;
+
+  /* ── Guide body ─────────────────────────────────── */
+  .gp-body { min-width: 0; }
+  .gp-section { padding-top: 1.75rem; }
+  .gp-section:first-child { padding-top: 0; }
+  .gp-section h2 {
+    font-family: var(--font-body); font-size: 1.1rem; font-weight: 700; letter-spacing: -0.01em;
+    color: var(--text-primary); margin-bottom: 0.7rem;
+    padding-bottom: 0.5rem; border-bottom: 1.5px solid var(--border);
   }
-  .guide-body p {
-    color: var(--text-secondary);
-    margin-bottom: 0.82rem;
-    max-width: 68ch;
+  .gp-section p {
+    font-size: 0.96rem; line-height: 1.78; color: var(--text-secondary);
+    max-width: 68ch; margin-bottom: 0.8rem;
   }
-  .guide-side {
-    position: sticky;
-    top: 74px;
-    display: grid;
-    gap: 0.9rem;
+  .gp-section p:last-child { margin-bottom: 0; }
+
+  /* ── Sidebar ────────────────────────────────────── */
+  .gp-aside { position: sticky; top: 72px; display: flex; flex-direction: column; gap: 0.85rem; }
+  .gp-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 1.05rem 1.1rem;
   }
-  .guide-side-card {
-    padding: 1rem 1.05rem;
+  .gp-card-label {
+    font-size: 0.67rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--text-tertiary); margin-bottom: 0.65rem;
   }
-  .guide-side-card h3 {
-    font-size: 0.75rem;
-    color: var(--text-tertiary);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 0.7rem;
+
+  /* TOC */
+  .gp-toc ol { list-style: none; counter-reset: toc-n; display: flex; flex-direction: column; }
+  .gp-toc li { counter-increment: toc-n; }
+  .gp-toc a {
+    display: flex; align-items: flex-start; gap: 0.55rem;
+    text-decoration: none; color: var(--text-secondary); font-size: 0.83rem; line-height: 1.45;
+    padding: 0.3rem 0.3rem; border-radius: 6px; transition: color 0.15s, background 0.15s;
   }
-  .guide-side-card ol,
-  .guide-side-card ul {
-    list-style: none;
-    display: grid;
-    gap: 0.45rem;
+  .gp-toc a:hover, .gp-toc a.active { color: var(--accent); background: var(--accent-light); }
+  .gp-toc a::before {
+    content: counter(toc-n); font-size: 0.67rem; font-weight: 700;
+    color: var(--text-tertiary); min-width: 1.4em; padding-top: 0.13em; flex-shrink: 0;
   }
-  .guide-side-card li {
-    counter-increment: guide-toc;
+  .gp-toc a.active::before { color: var(--accent); }
+
+  /* Calculator CTA card */
+  .gp-calc-card { background: var(--accent); border-radius: 14px; padding: 1.1rem 1.1rem; color: #fff; }
+  .gp-calc-card .gp-card-label { color: rgba(255,255,255,0.65); }
+  .gp-calc-links { display: flex; flex-direction: column; gap: 0.2rem; margin-top: 0.1rem; }
+  .gp-calc-link {
+    display: flex; align-items: center; gap: 0.5rem;
+    font-size: 0.83rem; font-weight: 500; color: rgba(255,255,255,0.92);
+    text-decoration: none; padding: 0.35rem 0.3rem; border-radius: 6px; transition: background 0.15s;
   }
-  .guide-side-card a {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.5rem;
-    text-decoration: none;
-    color: var(--text-secondary);
-    font-size: 0.84rem;
-    line-height: 1.45;
+  .gp-calc-link:hover { background: rgba(255,255,255,0.13); }
+  .gp-calc-link::before { content: "→"; color: rgba(255,255,255,0.55); font-size: 0.75rem; }
+
+  /* Sources card */
+  .gp-sources ul { list-style: none; display: flex; flex-direction: column; gap: 0.2rem; }
+  .gp-sources a {
+    display: flex; align-items: flex-start; gap: 0.45rem;
+    font-size: 0.79rem; color: var(--text-secondary); text-decoration: none; line-height: 1.4;
+    padding: 0.25rem 0.25rem; border-radius: 5px;
   }
-  .guide-side-card a:hover {
-    color: var(--accent);
+  .gp-sources a:hover { color: var(--accent); }
+  .gp-sources a::before { content: "↗"; font-size: 0.7rem; color: var(--text-tertiary); flex-shrink: 0; padding-top: 0.05em; }
+
+  /* ── Bottom ─────────────────────────────────────── */
+  .gp-bottom { margin-top: 2.25rem; display: flex; flex-direction: column; gap: 1rem; }
+  .gp-panel {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 1.3rem 1.4rem;
   }
-  .guide-toc ol {
-    counter-reset: guide-toc;
+  .gp-panel h2 {
+    font-family: var(--font-body); font-size: 1.05rem; font-weight: 700;
+    color: var(--text-primary); margin-bottom: 0.35rem;
   }
-  .guide-toc a::before {
-    content: counter(guide-toc);
-    color: var(--text-tertiary);
-    font-size: 0.72rem;
-    font-weight: 700;
-    min-width: 1.2em;
+  .gp-panel > p { font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 1rem; line-height: 1.6; }
+
+  /* Related guides */
+  .gp-guides-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 0.65rem; }
+  .gp-guide-chip {
+    display: block; text-decoration: none;
+    background: var(--surface-alt); border: 1px solid var(--border);
+    border-radius: 10px; padding: 0.75rem 0.9rem;
+    transition: border-color 0.15s, background 0.15s;
   }
-  .guide-link-list a::before {
-    content: "→";
-    color: var(--accent);
-    flex-shrink: 0;
+  .gp-guide-chip:hover { border-color: var(--accent); background: var(--accent-light); }
+  .gp-guide-chip-tag {
+    font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--text-tertiary); margin-bottom: 0.3rem;
   }
-  .guide-bottom {
-    margin-top: 1rem;
-    display: grid;
-    gap: 1rem;
+  .gp-guide-chip-title { font-size: 0.86rem; font-weight: 600; color: var(--text-primary); line-height: 1.35; }
+
+  /* FAQ */
+  .gp-faq { display: flex; flex-direction: column; }
+  .gp-faq details { border-bottom: 1px solid var(--border); }
+  .gp-faq details:last-child { border-bottom: none; }
+  .gp-faq summary {
+    padding: 0.85rem 0.2rem; font-size: 0.92rem; font-weight: 600; color: var(--text-primary);
+    cursor: pointer; list-style: none;
+    display: flex; justify-content: space-between; align-items: center; gap: 0.75rem;
   }
-  .guide-bottom-card {
-    padding: 1.15rem 1.2rem;
+  .gp-faq summary::-webkit-details-marker { display: none; }
+  .gp-faq summary::after { content: "+"; font-size: 1.1rem; font-weight: 300; color: var(--text-tertiary); flex-shrink: 0; }
+  .gp-faq details[open] summary::after { content: "−"; }
+  .gp-faq-answer { font-size: 0.9rem; line-height: 1.72; color: var(--text-secondary); padding: 0 0.2rem 0.9rem; max-width: 68ch; }
+
+  /* Next steps */
+  .gp-pills { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; }
+  .gp-pill {
+    display: inline-block; text-decoration: none;
+    background: var(--surface-alt); border: 1px solid var(--border);
+    border-radius: 100px; padding: 0.38rem 0.9rem;
+    font-size: 0.82rem; font-weight: 500; color: var(--text-secondary);
+    transition: border-color 0.15s, color 0.15s;
   }
-  .guide-bottom-card h2 {
-    font-size: 1.12rem;
-    margin-bottom: 0.45rem;
+  .gp-pill:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Disclaimer */
+  .gp-notice {
+    background: var(--surface-alt); border: 1px solid var(--border);
+    border-radius: 14px; padding: 1rem 1.25rem;
+    font-size: 0.82rem; color: var(--text-secondary); line-height: 1.68;
   }
-  .guide-bottom-card p {
-    color: var(--text-secondary);
-    margin-bottom: 0.75rem;
-  }
-  .guide-bottom-card.notice {
-    background: var(--surface-alt);
-  }
-  @media (max-width: 920px) {
-    .guide-top {
-      grid-template-columns: 1fr;
-    }
-    .guide-side {
-      position: static;
-    }
+  .gp-notice strong { color: var(--accent); }
+
+  @media (max-width: 860px) {
+    .gp-layout { grid-template-columns: 1fr; }
+    .gp-aside { display: none; }
+    .gp-mobile-toc { display: block; }
+    .gp-hero h1 { max-width: none; }
   }
 </style>
 {% endblock %}
@@ -203,70 +247,79 @@
 {% endblock %}
 
 {% block content %}
-<section class="guide-wrap">
-  <div class="guide-top">
-    <article class="guide-main">
-      <div class="guide-topic">{{ guide.topic }}</div>
-      <div class="guide-flags">
-        <span class="guide-flag accent">Updated for {{ tax_year }}</span>
-        <span class="guide-flag">Independent guide</span>
-        <span class="guide-flag">Not GOV.UK</span>
-      </div>
-      <h1>{{ guide.title }}</h1>
-      <div class="guide-meta">
-        <span>UK Benefits Calculator Editorial</span>
-        <span class="dot">Last reviewed {{ now.strftime('%-d %B %Y') if now.strftime else now.date().isoformat() }}</span>
-        <span class="dot">British English</span>
-      </div>
-      <p class="guide-intro">{{ guide.description }}</p>
+<div id="read-progress"></div>
 
-      {% if slug == 'benefits-for-working-families' %}
-      <div class="card" style="margin-bottom:1.5rem;padding:1.1rem 1.2rem;border:1px solid var(--border);border-radius:12px;background:var(--surface-alt);">
-        <h2 style="margin-bottom:0.5rem;font-size:1.1rem;">Check what your family may be entitled to</h2>
-        <p style="color:var(--text-secondary);margin-bottom:0.75rem;font-size:0.95rem;">Use the free calculators to estimate what may apply to your household in 2026/27.</p>
-        <ul style="padding-left:1.25rem;line-height:2;margin:0;">
-          <li><a href="/universal-credit-calculator" style="color:var(--accent);">Universal Credit calculator</a></li>
-          <li><a href="/child-benefit-calculator" style="color:var(--accent);">Child Benefit calculator</a></li>
-          <li><a href="/what-if/child-benefit-guide" style="color:var(--accent);">Child Benefit and High Income Charge guide</a></li>
-          <li><a href="/guides/how-savings-affect-benefits" style="color:var(--accent);">How savings affect your benefits</a></li>
-          <li><a href="/tax-free-childcare-calculator" style="color:var(--accent);">Tax-Free Childcare calculator</a></li>
-        </ul>
-      </div>
-      {% endif %}
+<div class="gp-wrap">
 
-      <div class="guide-body">
+  <header class="gp-hero">
+    <div class="gp-badge">{{ guide.topic }}</div>
+    <h1>{{ guide.title }}</h1>
+    <div class="gp-meta">
+      <span>Updated 2026/27</span>
+      <span class="gp-meta-dot">·</span>
+      <span>{{ guide.reading_time | default(5) }} min read</span>
+      <span class="gp-meta-dot">·</span>
+      <span>UK Benefits Calculator</span>
+    </div>
+
+    <details class="gp-mobile-toc">
+      <summary>Contents ({{ guide.sections | length }} sections)</summary>
+      <ol>
         {% for sec in guide.sections %}
-        <h2 id="section-{{ loop.index }}">{{ sec.heading }}</h2>
-        {% for para in sec.paragraphs %}
-        <p>{{ para }}</p>
+        <li><a href="#s{{ loop.index }}">{{ sec.heading }}</a></li>
         {% endfor %}
-        {% endfor %}
-      </div>
+      </ol>
+    </details>
+  </header>
+
+  <div class="gp-layout">
+
+    <article class="gp-body">
+      {% for sec in guide.sections %}
+        {% set is_key = 'quick answer' in sec.heading|lower or 'key fact' in sec.heading|lower or 'key rule' in sec.heading|lower or 'at a glance' in sec.heading|lower %}
+        {% if is_key %}
+        <div class="gp-key-panel" id="s{{ loop.index }}">
+          <div class="gp-key-panel-label">{{ sec.heading }}</div>
+          <ul class="gp-key-list">
+            {% for para in sec.paragraphs %}
+            <li>{{ para }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% else %}
+        <div class="gp-section" id="s{{ loop.index }}">
+          <h2>{{ sec.heading }}</h2>
+          {% for para in sec.paragraphs %}
+          <p>{{ para }}</p>
+          {% endfor %}
+        </div>
+        {% endif %}
+      {% endfor %}
     </article>
 
-    <aside class="guide-side">
-      <div class="guide-side-card guide-toc">
-        <h3>In this guide</h3>
+    <aside class="gp-aside" aria-label="Guide navigation">
+      <div class="gp-card gp-toc">
+        <div class="gp-card-label">In this guide</div>
         <ol>
           {% for sec in guide.sections %}
-          <li><a href="#section-{{ loop.index }}">{{ sec.heading }}</a></li>
+          <li><a href="#s{{ loop.index }}" data-toc="{{ loop.index }}">{{ sec.heading }}</a></li>
           {% endfor %}
         </ol>
       </div>
 
       {% if related_calculators %}
-      <div class="guide-side-card guide-link-list">
-        <h3>Related calculators</h3>
-        <ul>
+      <div class="gp-calc-card">
+        <div class="gp-card-label">Free calculators</div>
+        <div class="gp-calc-links">
           {% for item in related_calculators %}
-          <li><a href="{{ item.url }}">{{ item.title }}</a></li>
+          <a class="gp-calc-link" href="{{ item.url }}">{{ item.title }}</a>
           {% endfor %}
-        </ul>
+        </div>
       </div>
       {% endif %}
 
-      <div class="guide-side-card guide-link-list">
-        <h3>Official sources</h3>
+      <div class="gp-card gp-sources">
+        <div class="gp-card-label">Official sources</div>
         <ul>
           {% for source in page_sources %}
           <li><a href="{{ source.url }}" target="_blank" rel="noopener">{{ source.label }}</a></li>
@@ -276,58 +329,83 @@
     </aside>
   </div>
 
-  <div class="guide-bottom">
-    <section class="guide-bottom-card">
-      <h2>Next steps</h2>
-      <p>Use this guide to understand the rule first, then move into the calculator or situation page that matches your household best.</p>
-      <div class="pill-grid">
-        {% for step in next_steps %}
-        <a class="pill" href="{{ step.url }}">{{ step.label }}</a>
-        {% endfor %}
-      </div>
-    </section>
+  <div class="gp-bottom">
 
     {% if related_guides %}
-    <section class="guide-bottom-card">
+    <section class="gp-panel">
       <h2>Related guides</h2>
-      <p>These are usually the next questions people ask after reading this page.</p>
-      <div class="pill-grid">
+      <p>The questions most people ask after reading this.</p>
+      <div class="gp-guides-grid">
         {% for item in related_guides %}
-        <a class="pill" href="/guides/{{ item.slug }}">{{ item.title }}</a>
+        <a class="gp-guide-chip" href="/guides/{{ item.slug }}">
+          <div class="gp-guide-chip-tag">{{ item.topic }}</div>
+          <div class="gp-guide-chip-title">{{ item.title }}</div>
+        </a>
         {% endfor %}
       </div>
     </section>
     {% endif %}
 
     {% if faq_items %}
-    <section class="guide-bottom-card">
+    <section class="gp-panel">
       <h2>Frequently asked questions</h2>
-      <div class="faq-list">
+      <div class="gp-faq">
         {% for item in faq_items %}
-        <details class="faq-item">
+        <details>
           <summary>{{ item.q }}</summary>
-          <div class="faq-answer">{{ item.a }}</div>
+          <div class="gp-faq-answer">{{ item.a }}</div>
         </details>
         {% endfor %}
       </div>
     </section>
     {% endif %}
 
-    {% if adsense_client %}
-    <div>
-      {% include "partials/adsense_snippet.html" %}
-    </div>
-    {% endif %}
-
-    <section class="guide-bottom-card notice">
-      <h2>Independent guide only</h2>
-      <p>This page is written to make the system easier to understand, not to act like an official decision. Local rules, evidence requirements and edge cases can change the real answer, so use the official links and an adviser where decisions are important.</p>
-      <div class="pill-grid">
-        <a class="pill" href="/methodology">Methodology</a>
-        <a class="pill" href="/editorial-standards">Editorial standards</a>
-        <a class="pill" href="/sources">Sources</a>
+    <section class="gp-panel">
+      <h2>Try the calculators</h2>
+      <p>Check your own figures — no login, no sign-up, instant results.</p>
+      <div class="gp-pills">
+        {% for step in next_steps %}
+        <a class="gp-pill" href="{{ step.url }}">{{ step.label }}</a>
+        {% endfor %}
       </div>
     </section>
+
+    <div class="gp-notice">
+      <strong>Independent guide only.</strong> Written using published 2026/27 DWP and HMRC figures. Not an official government service. For case-specific guidance, contact Citizens Advice or a welfare-rights adviser. <a href="/methodology" style="color:var(--accent);">Methodology</a> · <a href="/editorial-standards" style="color:var(--accent);">Editorial standards</a>
+    </div>
+
   </div>
-</section>
+</div>
+
+<script>
+  (function() {
+    var bar = document.getElementById('read-progress');
+    if (!bar) return;
+    function update() {
+      var s = document.documentElement, h = s.scrollHeight - s.clientHeight;
+      bar.style.width = h > 0 ? (s.scrollTop / h * 100) + '%' : '0';
+    }
+    window.addEventListener('scroll', update, { passive: true });
+    update();
+  })();
+
+  (function() {
+    var sections = document.querySelectorAll('[id^="s"]');
+    var links = document.querySelectorAll('.gp-toc a[data-toc]');
+    if (!sections.length || !links.length) return;
+    var active = null;
+    function spy() {
+      var top = window.scrollY + 110;
+      var cur = null;
+      sections.forEach(function(s) { if (s.offsetTop <= top) cur = s.id; });
+      if (cur === active) return;
+      active = cur;
+      links.forEach(function(a) {
+        a.classList.toggle('active', a.getAttribute('href') === '#' + cur);
+      });
+    }
+    window.addEventListener('scroll', spy, { passive: true });
+    spy();
+  })();
+</script>
 {% endblock %}

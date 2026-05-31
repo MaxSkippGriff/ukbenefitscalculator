@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+
+{% block head_extra %}
+<style>
+  .sp-wrap { max-width: var(--max-w); margin: 0 auto; padding: 0 1.25rem 4rem; }
+
+  .sp-hero { padding: 1.6rem 0 0; max-width: 760px; }
+  .sp-badge {
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em;
+    color: var(--accent); background: var(--accent-light); border: 1px solid rgba(27,107,74,0.15);
+    border-radius: 100px; padding: 0.28rem 0.8rem; margin-bottom: 0.9rem;
+  }
+  .sp-hero h1 {
+    font-family: var(--font-body);
+    font-size: clamp(1.55rem, 3vw, 2.15rem);
+    font-weight: 700; letter-spacing: -0.022em; line-height: 1.16;
+    color: var(--text-primary); margin-bottom: 0.75rem; max-width: 24ch;
+  }
+  .sp-meta {
+    font-size: 0.79rem; color: var(--text-tertiary);
+    display: flex; flex-wrap: wrap; gap: 0 0.65rem; align-items: center;
+    margin-bottom: 0;
+  }
+  .sp-meta-dot { opacity: 0.4; }
+
+  .sp-layout {
+    display: grid; grid-template-columns: minmax(0,1fr) 268px;
+    gap: 2rem; align-items: start; margin-top: 0;
+  }
+  .sp-main { min-width: 0; }
+  .sp-section { padding-top: 1.5rem; }
+  .sp-section:first-child { padding-top: 0; }
+  .sp-section h2 {
+    font-family: var(--font-body);
+    font-size: 1.13rem; font-weight: 700; letter-spacing: -0.012em;
+    color: var(--text-primary); margin-bottom: 0.65rem;
+    padding-bottom: 0.55rem; border-bottom: 1.5px solid var(--border);
+  }
+  .sp-section p {
+    font-size: 0.96rem; line-height: 1.75; color: var(--text-secondary);
+    max-width: 68ch; margin-bottom: 0.75rem;
+  }
+  .sp-section p:last-child { margin-bottom: 0; }
+
+  .sp-aside {
+    position: sticky; top: 72px;
+    display: flex; flex-direction: column; gap: 0.85rem;
+  }
+  .sp-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 1.05rem 1.1rem;
+  }
+  .sp-card-label {
+    font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.07em; color: var(--text-tertiary); margin-bottom: 0.65rem;
+  }
+  .sp-calc-card {
+    background: var(--accent); border-radius: 14px; padding: 1.05rem 1.1rem; color: #fff;
+  }
+  .sp-calc-card .sp-card-label { color: rgba(255,255,255,0.7); }
+  .sp-calc-links { display: flex; flex-direction: column; gap: 0.3rem; }
+  .sp-calc-link {
+    display: flex; align-items: center; gap: 0.5rem;
+    font-size: 0.83rem; font-weight: 500; color: rgba(255,255,255,0.92);
+    text-decoration: none; padding: 0.32rem 0.3rem; border-radius: 6px;
+    transition: background 0.15s;
+  }
+  .sp-calc-link:hover { background: rgba(255,255,255,0.12); }
+  .sp-calc-link::before { content: "→"; color: rgba(255,255,255,0.6); font-size: 0.75rem; }
+
+  .sp-guide-links { display: flex; flex-direction: column; gap: 0.25rem; }
+  .sp-guide-link {
+    display: flex; align-items: flex-start; gap: 0.45rem;
+    font-size: 0.82rem; color: var(--text-secondary); text-decoration: none;
+    padding: 0.28rem 0.3rem; border-radius: 6px; line-height: 1.4;
+  }
+  .sp-guide-link:hover { color: var(--accent); background: var(--accent-light); }
+  .sp-guide-link::before { content: "→"; color: var(--accent); font-size: 0.75rem; flex-shrink: 0; padding-top: 0.1em; }
+
+  .sp-bottom { margin-top: 2rem; display: flex; flex-direction: column; gap: 1rem; }
+  .sp-panel {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 1.3rem 1.4rem;
+  }
+  .sp-panel h2 {
+    font-family: var(--font-body); font-size: 1.05rem; font-weight: 700; margin-bottom: 0.5rem;
+  }
+  .sp-panel > p { font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 1rem; line-height: 1.6; }
+
+  .sp-calcs-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.65rem;
+  }
+
+  .sp-faq { display: flex; flex-direction: column; }
+  .sp-faq details { border-bottom: 1px solid var(--border); }
+  .sp-faq details:last-child { border-bottom: none; }
+  .sp-faq summary {
+    padding: 0.85rem 0.2rem; font-size: 0.92rem; font-weight: 600; color: var(--text-primary);
+    cursor: pointer; list-style: none;
+    display: flex; justify-content: space-between; align-items: center; gap: 0.75rem;
+  }
+  .sp-faq summary::-webkit-details-marker { display: none; }
+  .sp-faq summary::after { content: "+"; font-size: 1.1rem; font-weight: 300; color: var(--text-tertiary); flex-shrink: 0; }
+  .sp-faq details[open] summary::after { content: "−"; }
+  .sp-faq-answer { font-size: 0.9rem; line-height: 1.7; color: var(--text-secondary); padding: 0 0.2rem 0.9rem; max-width: 68ch; }
+
+  .sp-notice {
+    background: var(--surface-alt); border: 1px solid var(--border);
+    border-radius: 14px; padding: 1rem 1.2rem;
+    font-size: 0.83rem; color: var(--text-secondary); line-height: 1.65;
+  }
+  .sp-notice strong { color: var(--accent); }
+
+  @media (max-width: 860px) {
+    .sp-layout { grid-template-columns: 1fr; }
+    .sp-aside { display: none; }
+    .sp-hero h1 { max-width: none; }
+  }
+</style>
+{% endblock %}
+
+{% block jsonld %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": {{ page.title|tojson }},
+  "description": {{ page.intro|tojson if page.intro else page.description|tojson }},
+  "datePublished": "2026-04-20",
+  "dateModified": "{{ now.date().isoformat() }}",
+  "author": {"@type": "Organization", "name": "UK Benefits Calculator Editorial"},
+  "publisher": {"@type": "Organization", "name": "UK Benefits Calculator", "url": "{{ site_url }}"},
+  "inLanguage": "en-GB",
+  "url": "{{ canonical_url }}"
+}
+</script>
+{% if faq_items %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {% for item in faq_items %}
+    {"@type": "Question", "name": {{ item.q|tojson }}, "acceptedAnswer": {"@type": "Answer", "text": {{ item.a|tojson }}}}{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ]
+}
+</script>
+{% endif %}
+{{ super() }}
+{% endblock %}
+
+{% block content %}
+<div class="sp-wrap">
+
+  <header class="sp-hero">
+    <div class="sp-badge">Situation guide · 2026/27</div>
+    <h1>{{ page.title }}</h1>
+    <div class="sp-meta">
+      <span>Updated 2026/27</span>
+      <span class="sp-meta-dot">·</span>
+      <span>UK Benefits Calculator</span>
+    </div>
+  </header>
+
+  <div class="sp-layout">
+    <article class="sp-main">
+      {% for sec in page.sections %}
+      <div class="sp-section">
+        <h2>{{ sec.heading }}</h2>
+        {% if sec.paragraphs is defined %}
+          {% for para in sec.paragraphs %}
+          <p>{{ para }}</p>
+          {% endfor %}
+        {% elif sec.content is defined %}
+          <p>{{ sec.content }}</p>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </article>
+
+    <aside class="sp-aside">
+      {% if related_calculators %}
+      <div class="sp-calc-card">
+        <div class="sp-card-label">Calculators</div>
+        <div class="sp-calc-links">
+          {% for item in related_calculators %}
+          <a class="sp-calc-link" href="{{ item.url }}">{{ item.title }}</a>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+      {% if related_guides %}
+      <div class="sp-card">
+        <div class="sp-card-label">Related guides</div>
+        <div class="sp-guide-links">
+          {% for item in related_guides %}
+          <a class="sp-guide-link" href="/guides/{{ item.slug }}">{{ item.title }}</a>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    </aside>
+  </div>
+
+  <div class="sp-bottom">
+    {% if related_calculators %}
+    <section class="sp-panel">
+      <h2>Calculators for this situation</h2>
+      <div class="sp-calcs-grid">
+        {% for calc in related_calculators %}
+        <a class="tool-card" href="{{ calc.url }}">
+          <div class="tool-tag">Calculator</div>
+          <h3>{{ calc.title }}</h3>
+          <p>{{ calc.description }}</p>
+        </a>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
+    {% if faq_items %}
+    <section class="sp-panel">
+      <h2>Frequently asked questions</h2>
+      <div class="sp-faq">
+        {% for item in faq_items %}
+        <details>
+          <summary>{{ item.q }}</summary>
+          <div class="sp-faq-answer">{{ item.a }}</div>
+        </details>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
+    <div class="sp-notice">
+      <strong>Independent guide only.</strong> Rates and rules are based on published 2026/27 DWP and HMRC figures. This is not an official government service. Use the calculators above to estimate amounts, then confirm your position through an official claim or Citizens Advice.
+    </div>
+  </div>
+</div>
+{% endblock %}

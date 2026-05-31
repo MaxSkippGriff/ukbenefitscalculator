@@ -596,6 +596,61 @@
   color: var(--text-secondary);
 }
 
+.savings-bands {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.55rem;
+}
+
+.savings-band {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.8rem 0.85rem;
+  position: relative;
+  background: var(--surface-alt);
+  opacity: 0.65;
+  transition: opacity 0.15s;
+}
+
+.savings-band--active {
+  opacity: 1;
+  border-width: 2px;
+}
+
+.savings-band--safe.savings-band--active { border-color: #1B6B4A; background: rgba(229,243,235,0.7); }
+.savings-band--tariff.savings-band--active { border-color: #B47D14; background: rgba(255,243,205,0.7); }
+.savings-band--stop.savings-band--active { border-color: #B91C1C; background: rgba(254,226,226,0.6); }
+
+.savings-band-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
+}
+
+.savings-band-sub {
+  font-size: 0.76rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.savings-band-tag {
+  margin-top: 0.45rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-tertiary);
+}
+
+.savings-band--safe .savings-band-tag { color: #1B6B4A; }
+.savings-band--tariff .savings-band-tag { color: #B47D14; }
+.savings-band--stop .savings-band-tag { color: #B91C1C; }
+
+@media (max-width: 480px) {
+  .savings-bands { grid-template-columns: 1fr; }
+}
+
 .note-item {
   padding: 0.82rem 0.95rem;
   border-left: 3px solid var(--accent);

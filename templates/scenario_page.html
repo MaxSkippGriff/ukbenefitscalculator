@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="section">
+  <div class="badge">What happens if…</div>
+  <h1 style="font-size:clamp(1.6rem,3.5vw,2.4rem); margin-bottom:0.6rem;">{{ page.title }}</h1>
+  <p style="color:var(--text-secondary); max-width:64ch; font-size:1rem; line-height:1.6;">{{ page.intro }}</p>
+
+  <!-- SCENARIO SECTIONS -->
+  <div style="margin-top:2rem; max-width:720px;">
+    {% for section in page.sections %}
+    <div style="margin-bottom:2rem; padding:1.25rem 1.4rem; background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:var(--radius);">
+      <h2 style="font-size:1.08rem; margin-bottom:0.5rem; color:var(--text-primary);">{{ section.heading }}</h2>
+      <p style="color:var(--text-secondary); font-size:0.94rem; line-height:1.7;">{{ section.content }}</p>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- TRY THE CALCULATOR -->
+  {% if related_calculators %}
+  <div style="margin-top:2.5rem;">
+    <h2 style="font-size:1.1rem; margin-bottom:0.75rem;">Try the calculator</h2>
+    <div class="grid-3">
+      {% for calc in related_calculators %}
+      <a class="tool-card" href="{{ calc.url }}">
+        <div class="tool-tag">Calculator</div>
+        <h3>{{ calc.title }}</h3>
+        <p>{{ calc.description }}</p>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- RELATED GUIDES -->
+  {% if related_guides %}
+  <div style="margin-top:2rem;">
+    <h2 style="font-size:1.1rem; margin-bottom:0.75rem;">Read the full guide</h2>
+    <div class="grid-3">
+      {% for guide in related_guides %}
+      <a class="tool-card" href="/guides/{{ guide.slug }}">
+        <div class="tool-tag">{{ guide.topic }}</div>
+        <h3>{{ guide.title }}</h3>
+        <p>{{ guide.description }}</p>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- DISCLAIMER -->
+  <div class="card" style="margin-top:2.5rem; padding:1rem 1.2rem; background:var(--accent-light); border:1px solid rgba(27,107,74,0.18);">
+    <p style="font-size:0.85rem; color:var(--text-secondary); line-height:1.65;">
+      <strong style="color:var(--accent);">Independent guide:</strong> This scenario explanation uses published GOV.UK rules and thresholds for {{ tax_year }}. It is not an official DWP or HMRC tool. Use the calculators linked above to estimate your specific position, and contact Citizens Advice or a welfare-rights adviser for case-specific guidance.
+    </p>
+  </div>
+</section>
+{% endblock %}

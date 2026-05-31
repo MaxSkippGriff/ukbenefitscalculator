@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="section">
+  <div class="badge">Topic hub</div>
+  <h1 style="font-size:clamp(1.6rem,3.5vw,2.4rem); margin-bottom:0.6rem;">{{ page.title }}</h1>
+  <p style="color:var(--text-secondary); max-width:64ch; font-size:1rem; line-height:1.6;">{{ page.intro }}</p>
+
+  <div class="card" style="margin-top:1rem; padding:1rem 1.15rem;">
+    <h2 style="font-size:1.02rem; margin-bottom:0.35rem;">Best place to start</h2>
+    <p style="color:var(--text-secondary); font-size:0.9rem; margin-bottom:0.75rem;">Use the main estimator first, then move into the worked examples and explainers that match the change you are trying to understand.</p>
+    <div class="pill-grid">
+      {% for calc in related_calculators[:3] %}
+      <a class="pill" href="{{ calc.url }}">{{ calc.title }}</a>
+      {% endfor %}
+      {% for guide in related_guides[:2] %}
+      <a class="pill" href="/guides/{{ guide.slug }}">{{ guide.title }}</a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- KEY FACTS -->
+  {% if page.key_facts %}
+  <div class="card" style="margin-top:1.75rem; padding:1.2rem 1.4rem;">
+    <h2 style="font-size:1rem; margin-bottom:0.75rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.06em; font-size:0.78rem; font-weight:700;">Key facts for {{ tax_year }}</h2>
+    <ul style="list-style:none; display:grid; gap:0.45rem;">
+      {% for fact in page.key_facts %}
+      <li style="display:flex; gap:0.6rem; align-items:baseline; font-size:0.92rem; color:var(--text-secondary);">
+        <span style="color:var(--accent); font-weight:700; flex-shrink:0;">›</span>
+        <span>{{ fact }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  <!-- CALCULATORS -->
+  {% if related_calculators %}
+  <div style="margin-top:2.25rem;">
+    <div class="section-label" style="font-size:0.73rem; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:0.4rem;">Calculators</div>
+    <h2 style="font-size:1.15rem; margin-bottom:0.75rem;">Tools for this topic</h2>
+    <div class="grid-3">
+      {% for calc in related_calculators %}
+      <a class="tool-card" href="{{ calc.url }}">
+        <div class="tool-tag">Calculator</div>
+        <h3>{{ calc.title }}</h3>
+        <p>{{ calc.description }}</p>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- GUIDES -->
+  {% if related_guides %}
+  <div style="margin-top:2rem;">
+    <div class="section-label" style="font-size:0.73rem; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:0.4rem;">Guides</div>
+    <h2 style="font-size:1.15rem; margin-bottom:0.75rem;">Plain-English guides</h2>
+    <div class="grid-3">
+      {% for guide in related_guides %}
+      <a class="tool-card" href="/guides/{{ guide.slug }}">
+        <div class="tool-tag">{{ guide.topic }}</div>
+        <h3>{{ guide.title }}</h3>
+        <p>{{ guide.description }}</p>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if related_guides|length > 2 %}
+  <div class="card" style="margin-top:1.25rem; padding:1rem 1.1rem;">
+    <h2 style="font-size:1.02rem; margin-bottom:0.35rem;">Best next reads</h2>
+    <p style="color:var(--text-secondary); font-size:0.9rem; margin-bottom:0.75rem;">Use these follow-up pages to move from the main estimate into worked examples, explanations and the questions that change awards most often.</p>
+    <div class="pill-grid">
+      {% for guide in related_guides[:5] %}
+      <a class="pill" href="/guides/{{ guide.slug }}">{{ guide.title }}</a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- SITUATIONS -->
+  {% if related_situations %}
+  <div style="margin-top:2rem;">
+    <div class="section-label" style="font-size:0.73rem; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:0.4rem;">By situation</div>
+    <h2 style="font-size:1.15rem; margin-bottom:0.75rem;">Relevant situation guides</h2>
+    <div class="grid-3">
+      {% for sit in related_situations %}
+      <a class="tool-card" href="/situations/{{ sit.slug }}">
+        <div class="tool-tag">Situation guide</div>
+        <h3>{{ sit.title }}</h3>
+        <p>{{ sit.description }}</p>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- SCENARIOS -->
+  {% if related_scenarios %}
+  <div style="margin-top:2rem;">
+    <div class="section-label" style="font-size:0.73rem; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:0.4rem;">What happens if…</div>
+    <h2 style="font-size:1.15rem; margin-bottom:0.75rem;">Scenario explainers</h2>
+    <div class="grid-3">
+      {% for sc in related_scenarios %}
+      <a class="tool-card" href="/what-if/{{ sc.slug }}">
+        <div class="tool-tag">Scenario</div>
+        <h3>{{ sc.title }}</h3>
+        <p>{{ sc.description }}</p>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

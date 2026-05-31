@@ -1,34 +1,28 @@
 {% extends "base.html" %}
-{% block title %}After-Tax Salary Guides UK ({{ tax_year }}) | AfterTaxSalary{% endblock %}
-{% block meta_description %}Detailed UK after-tax salary guides covering PAYE, tax codes, student loans, regional tax differences and pension planning for {{ tax_year }}.{% endblock %}
-{% block canonical %}<link rel="canonical" href="{{ site_url }}/blog">{% endblock %}
-
-{% block head_extra %}
-<meta property="og:type" content="website">
-<meta property="og:url" content="{{ site_url }}/blog">
-<meta property="og:title" content="After-Tax Salary Guides UK ({{ tax_year }})">
-<meta property="og:description" content="Authoritative UK guides on salary after tax, PAYE deductions and salary planning.">
-<meta name="twitter:card" content="summary_large_image">
-{% endblock %}
 
 {% block content %}
-<section class="max-w-6xl mx-auto px-4 sm:px-6 pt-12 pb-8">
-  <div class="text-center max-w-3xl mx-auto">
-    <h1 class="text-4xl sm:text-5xl font-extrabold text-slate-900">After-Tax Salary Guides (UK {{ tax_year }})</h1>
-    <p class="mt-4 text-lg text-slate-600">Practical UK salary and tax guidance in clear British English, built for real offer and budgeting decisions.</p>
-  </div>
-</section>
+<section class="section">
+  <div class="badge">Blog</div>
+  <h1 style="font-size:clamp(2rem,4vw,2.8rem);">UK Benefits Blog {{ tax_year }}</h1>
+  <p style="color:var(--text-secondary); max-width:64ch;">Plain-English guides on Universal Credit, PIP, Child Benefit and more. Current {{ tax_year }} rates and rules, written for real households.</p>
 
-<section class="max-w-6xl mx-auto px-4 sm:px-6 pb-20">
-  <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-    {% for post in posts %}
-    <article class="card card-hover p-6">
-      <div class="text-xs text-slate-400 mb-2">{{ post.date }} · {{ post.reading_time }}</div>
-      <h2 class="text-xl font-bold text-slate-900 mb-2">{{ post.title }}</h2>
-      <p class="text-slate-500 text-sm leading-relaxed">{{ post.description }}</p>
-      <a href="/blog/{{ post.slug }}" class="mt-4 inline-block text-sm font-semibold text-blue-600 hover:underline">Read guide →</a>
-    </article>
-    {% endfor %}
+  <div style="margin-top:2rem;">
+    <div class="grid-3">
+      {% for post in posts %}
+      <a class="tool-card" href="/blog/{{ post.slug }}">
+        <div class="tool-tag">Blog</div>
+        <div style="font-size:0.78rem; color:var(--text-tertiary); margin-bottom:0.35rem;">{{ post.published }} &middot; {{ post.reading_time }} min read</div>
+        <h2 style="font-size:1rem; font-weight:700; margin-bottom:0.4rem; line-height:1.35;">{{ post.title }}</h2>
+        <p style="font-size:0.88rem; color:var(--text-secondary); line-height:1.55;">{{ post.description }}</p>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:2.5rem; padding:1rem 1.2rem; background:var(--accent-light); border:1px solid rgba(27,107,74,0.18);">
+    <p style="font-size:0.85rem; color:var(--text-secondary); line-height:1.65;">
+      <strong style="color:var(--accent);">About this blog:</strong> Articles use published GOV.UK rates and DWP rules for {{ tax_year }}. They are independent guides, not official DWP or HMRC publications. Use the <a href="/calculators" style="color:var(--accent);">calculators</a> to estimate your specific position.
+    </p>
   </div>
 </section>
 {% endblock %}

@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block head_extra %}
+<style>
+  .cms-wrap { max-width: 640px; margin: 0 auto; padding: 2rem 1.25rem 4rem; text-align: center; }
+  .cms-icon { font-size: 3rem; margin-bottom: 0.9rem; }
+  .cms-title { font-size: 1.6rem; font-weight: 800; color: var(--text-primary); margin-bottom: 0.6rem; }
+  .cms-sub { font-size: 0.97rem; color: var(--text-secondary); line-height: 1.7; margin-bottom: 2rem; max-width: 50ch; margin-left: auto; margin-right: auto; }
+  .cms-btn {
+    display: inline-block; padding: 0.9rem 2.2rem;
+    background: var(--accent); color: #fff; font-size: 1rem; font-weight: 700;
+    text-decoration: none; border-radius: 12px; transition: opacity 0.15s;
+  }
+  .cms-btn:hover { opacity: 0.88; }
+  .cms-notice {
+    margin-top: 2rem;
+    padding: 0.9rem 1.1rem;
+    background: var(--surface-alt); border: 1px solid var(--border);
+    border-radius: 12px; font-size: 0.82rem; color: var(--text-secondary); line-height: 1.65;
+  }
+  .cms-notice strong { color: var(--accent); }
+  .cms-used { color: var(--text-tertiary); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="cms-wrap">
+  {% if already_used %}
+  <div class="cms-icon">⚠️</div>
+  <div class="cms-title">Download already used</div>
+  <p class="cms-sub">This download link has already been used. For security, each link works only once. If you need your pack again, please purchase a new copy.</p>
+  <a class="cms-btn" href="/claim-maximiser">Get a new pack</a>
+  {% else %}
+  <div class="cms-icon">✓</div>
+  <div class="cms-title">Payment confirmed — your pack is ready</div>
+  <p class="cms-sub">Your personalised Claim Maximiser PDF has been prepared. Click below to download it. This link works once only and expires in one hour.</p>
+  <a class="cms-btn" href="/claim-maximiser/download/{{ session_id }}">Download your pack (PDF)</a>
+  <div class="cms-notice">
+    <strong>Single-use link.</strong> Once downloaded, this link will no longer work. Save the PDF to your device immediately after downloading. Your input details have been used to generate the pack and will not be retained after download.
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
