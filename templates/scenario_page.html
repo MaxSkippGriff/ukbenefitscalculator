@@ -2,7 +2,7 @@
 
 {% block content %}
 <section class="section">
-  <div class="badge">What happens if…</div>
+  <div class="badge">{{ page.topic if page.topic else "What happens if…" }}</div>
   <h1 style="font-size:clamp(1.6rem,3.5vw,2.4rem); margin-bottom:0.6rem;">{{ page.title }}</h1>
   <p style="color:var(--text-secondary); max-width:64ch; font-size:1rem; line-height:1.6;">{{ page.intro }}</p>
 
@@ -19,11 +19,11 @@
   <!-- TRY THE CALCULATOR -->
   {% if related_calculators %}
   <div style="margin-top:2.5rem;">
-    <h2 style="font-size:1.1rem; margin-bottom:0.75rem;">Try the calculator</h2>
+    <h2 style="font-size:1.1rem; margin-bottom:0.75rem;">Try the free calculator</h2>
     <div class="grid-3">
       {% for calc in related_calculators %}
       <a class="tool-card" href="{{ calc.url }}">
-        <div class="tool-tag">Calculator</div>
+        <div class="tool-tag">Free calculator — no login</div>
         <h3>{{ calc.title }}</h3>
         <p>{{ calc.description }}</p>
       </a>
@@ -32,10 +32,27 @@
   </div>
   {% endif %}
 
+  <!-- FAQ -->
+  {% if page.faq %}
+  <div style="margin-top:2.5rem; max-width:720px;">
+    <h2 style="font-size:1.1rem; margin-bottom:0.75rem;">Frequently asked questions</h2>
+    <div style="border:1px solid var(--border); border-radius:12px; overflow:hidden;">
+      {% for item in page.faq %}
+      <details style="border-bottom:{% if not loop.last %}1px solid var(--border){% else %}none{% endif %};">
+        <summary style="padding:0.85rem 1.1rem; font-size:0.92rem; font-weight:600; color:var(--text-primary); cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center; gap:0.75rem;">
+          {{ item.q }}<span style="font-size:1.1rem; font-weight:300; color:var(--text-tertiary); flex-shrink:0;">+</span>
+        </summary>
+        <div style="padding:0 1.1rem 0.9rem; font-size:0.9rem; line-height:1.72; color:var(--text-secondary); max-width:64ch;">{{ item.a }}</div>
+      </details>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
   <!-- RELATED GUIDES -->
   {% if related_guides %}
   <div style="margin-top:2rem;">
-    <h2 style="font-size:1.1rem; margin-bottom:0.75rem;">Read the full guide</h2>
+    <h2 style="font-size:1.1rem; margin-bottom:0.75rem;">Related guides</h2>
     <div class="grid-3">
       {% for guide in related_guides %}
       <a class="tool-card" href="/guides/{{ guide.slug }}">
@@ -49,9 +66,9 @@
   {% endif %}
 
   <!-- DISCLAIMER -->
-  <div class="card" style="margin-top:2.5rem; padding:1rem 1.2rem; background:var(--accent-light); border:1px solid rgba(27,107,74,0.18);">
-    <p style="font-size:0.85rem; color:var(--text-secondary); line-height:1.65;">
-      <strong style="color:var(--accent);">Independent guide:</strong> This scenario explanation uses published GOV.UK rules and thresholds for {{ tax_year }}. It is not an official DWP or HMRC tool. Use the calculators linked above to estimate your specific position, and contact Citizens Advice or a welfare-rights adviser for case-specific guidance.
+  <div class="card" style="margin-top:2.5rem; padding:1rem 1.2rem; background:var(--surface-alt); border:1px solid var(--border);">
+    <p style="font-size:0.82rem; color:var(--text-secondary); line-height:1.68; margin:0;">
+      <strong style="color:var(--accent);">Independent guide only.</strong> Written using published {{ tax_year }} DWP and HMRC figures. This is not an official DWP or HMRC tool and does not constitute an entitlement decision. Figures shown are illustrative — actual awards depend on individual circumstances. For case-specific guidance, contact <a href="https://www.citizensadvice.org.uk/" target="_blank" rel="noopener" style="color:var(--accent);">Citizens Advice</a> or a welfare-rights adviser. <a href="/methodology" style="color:var(--accent);">Methodology</a> · <a href="/editorial-standards" style="color:var(--accent);">Editorial standards</a>
     </p>
   </div>
 </section>

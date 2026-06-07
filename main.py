@@ -2588,8 +2588,8 @@ GUIDES: Dict[str, Dict[str, Any]] = {
     },
     "how-savings-affect-benefits": {
         "title": "How Much Savings Can You Have on Universal Credit? 2026/27 Rules",
-        "seo_title": "How Much Savings Can You Have on Universal Credit? £6k–£16k Rules",
-        "description": "You can have up to £6,000 in savings with no effect on Universal Credit. Between £6,000 and £16,000 your award is reduced. At £16,000 or above, UC stops. Pension Credit works differently. PIP and Child Benefit are not means-tested.",
+        "seo_title": "How Much Savings Can You Have on Benefits? 2026/27 | UC £6k–£16k Rules Explained",
+        "description": "Savings rules for UK benefits 2026/27: UC ignores savings below £6,000. Between £6,000 and £16,000 your award is reduced by £4.35/month per £250 over the threshold. At £16,000+, UC stops. Pension Credit uses a more lenient £10,000 disregard. PIP and Child Benefit are unaffected by savings.",
         "topic": "Savings rules",
         "sections": [
             {"heading": "There is no single savings rule for the whole benefits system", "paragraphs": [
@@ -3044,7 +3044,7 @@ GUIDES: Dict[str, Dict[str, Any]] = {
     "universal-credit-capital-disregards": {
         "title": "Universal Credit Capital Disregards 2026/27 | What Counts as Savings",
         "seo_title": "UC Capital Disregards 2026/27 | What Counts as Savings for Benefits UK",
-        "description": "What counts as savings for benefits in 2026/27: cash, ISAs, Premium Bonds, stocks and second properties all count. Your main home does not. UC ignores savings below £6,000, tapers between £6,000–£16,000, and stops at £16,000.",
+        "description": "ISAs, Premium Bonds, cash, stocks and second properties all count as capital for UC. Your main home and personal possessions are disregarded. Below £6,000: no effect on UC. £6,000–£16,000: reduces by £4.35/month per £250. At £16,000+: UC stops completely. Pension Credit rules differ.",
         "topic": "Universal Credit",
         "sections": [
             {"heading": "What 'capital' means in Universal Credit", "paragraphs": [
@@ -3080,8 +3080,8 @@ GUIDES: Dict[str, Dict[str, Any]] = {
     },
     "benefits-for-working-families": {
         "title": "Benefits for working families in 2026/27: what can you still claim while working?",
-        "seo_title": "Benefits for Working Families 2026/27 | UC, Child Benefit & Childcare",
-        "description": "Working family benefits 2026/27: UC work allowance £710/month (earnings below this ignored), Child Benefit £27.05/week first child, up to 85% childcare costs covered via UC. Free School Meals threshold, council tax help, free calculator, no login.",
+        "seo_title": "Benefits for Working Families 2026/27 | UC Work Allowance, Child Benefit & Childcare",
+        "description": "Working family benefits 2026/27: UC work allowance £710/month tax-free before 55p taper applies. Child Benefit £27.05/week per first child. Up to 85% of childcare costs reimbursed via UC (£1,071/month cap). Two-child limit removed April 2026. Free calculator, no sign-up.",
         "topic": "Families",
         "reading_time": 9,
         "sections": [
@@ -4315,6 +4315,48 @@ GUIDES: Dict[str, Dict[str, Any]] = {
         ],
         "related_guides": ["universal-credit-explained", "benefits-for-low-income-families", "benefits-for-single-parents"],
     },
+    "wales-daf-guide-2026": {
+        "title": "Discretionary Assistance Fund Wales 2026/27 | DAF Grants Explained",
+        "seo_title": "Wales DAF 2026/27 | Discretionary Assistance Fund Payments, Eligibility and How to Apply",
+        "description": "The Wales Discretionary Assistance Fund (DAF) provides Emergency Assistance Payments and Individual Assistance Payments. This guide explains what DAF covers, how much you can get, eligibility rules and how to apply in 2026/27.",
+        "intro": "The Discretionary Assistance Fund is a Welsh Government grant scheme for people in financial difficulty. It provides two types of grant: Emergency Assistance Payments for immediate crisis needs, and Individual Assistance Payments to help people set up home or live independently. Both are grants, not loans, and do not affect your DWP benefit entitlement.",
+        "sections": [
+            {"heading": "What the DAF covers and the two payment types", "paragraphs": [
+                "Emergency Assistance Payments (EAP) are for people facing a short-term financial crisis. They cover essential needs including food, utility top-ups, essential hygiene items, fuel for travel to medical appointments, and similar urgent costs. There is no fixed amount — the award is based on your assessed need at the time of application.",
+                "Individual Assistance Payments (IAP) help people who are moving into independent accommodation or returning from hospital, residential care or the criminal justice system. They cover items like beds, bedding, basic white goods, cooking equipment and furniture that are essential to setting up a home. You typically need to have been in a situation that qualifies, such as leaving care or hospital, rather than simply moving house.",
+                "Both EAP and IAP are administered by the Welsh Government, not DWP or your local council. The application process is separate from Universal Credit or housing benefit claims.",
+            ]},
+            {"heading": "How much is a DAF payment in Wales 2026?", "paragraphs": [
+                "There is no fixed rate for DAF payments. The amount awarded depends on your assessed needs and what costs you are facing. Emergency Assistance Payments typically cover the cost of the specific essential items identified — for example the cost of a food shop or utility top-up for the period of crisis. There is no guaranteed minimum or maximum, but awards are based on realistic costs of the items needed.",
+                "Individual Assistance Payments cover the cost of essential household items as assessed in your application. If you need a bed, bedding and a cooker, the award would be based on reasonable costs for those items. Large or luxury items are not covered.",
+                "The Welsh Government publishes guidance on what qualifies, but the award decision is made by a DAF assessor based on your individual circumstances. Most decisions are made within a few working days for emergency applications.",
+            ]},
+            {"heading": "Who can apply for the DAF?", "paragraphs": [
+                "You do not need to be receiving a specific DWP benefit to apply for the DAF. The fund is open to people ordinarily resident in Wales who are in financial difficulty or facing a crisis. However, in practice many applicants are on Universal Credit, PIP or other means-tested benefits because that is where financial pressure tends to concentrate.",
+                "For Emergency Assistance Payments, you need to be facing a crisis that you cannot meet from your own resources. If you have substantial savings, the DAF is unlikely to be appropriate. For Individual Assistance Payments, the qualifying situations are more specific — typically leaving care, hospital, supported living or the criminal justice system.",
+                "There is no formal income threshold, but your circumstances are assessed as part of the decision. You can apply even if you are working, as long as you genuinely face the crisis or transition need that the fund covers.",
+            ]},
+            {"heading": "How to apply for the Wales DAF", "paragraphs": [
+                "Applications are made online at the Welsh Government website or by calling the DAF helpline. You will need to describe your situation, the specific items or costs you need help with, and your general financial position. For Individual Assistance Payments, you will also need to explain your qualifying circumstance (for example, discharge from hospital).",
+                "Emergency applications are treated as a priority and most receive a decision quickly. Successful EAP awards are usually made as a payment card or voucher for the relevant purchase, or directly to a utility provider. IAP awards are typically made as payments to specific suppliers rather than cash.",
+                "You can usually apply for the DAF once in any 12-month period for Emergency Assistance Payments, though repeat applications in genuine ongoing crisis can sometimes be considered. Check current guidance at the Welsh Government website for the most up-to-date rules.",
+            ]},
+            {"heading": "DAF and other Welsh Government support", "paragraphs": [
+                "The DAF sits alongside several other forms of Welsh Government support. Free prescriptions are available to all residents in Wales. Universal free school meals are available to all primary pupils. The Warm Homes scheme provides grants for energy efficiency improvements. Flying Start supports families with young children in designated areas.",
+                "DAF payments do not count as income for Universal Credit, Housing Benefit or other DWP benefits. You should not declare them as income on a benefits claim. They also do not affect the UC savings and capital rules.",
+                "If you are in Wales and need support beyond what the DAF covers, the benefits system (particularly Universal Credit) and local council schemes (Council Tax Reduction, local welfare assistance) are the main other routes. Citizens Advice Wales can help identify which combination of support applies to your situation.",
+            ]},
+        ],
+        "related": ["universal-credit-calculator", "council-tax-reduction-calculator", "housing-benefit-calculator"],
+        "faq": [
+            {"q": "How much is a DAF Emergency Assistance Payment?", "a": "There is no fixed amount. The payment is based on your assessed need at the time of application — typically the actual cost of the specific essential items (food, fuel top-up, hygiene items) that you need in the crisis."},
+            {"q": "Do I have to pay back a DAF grant?", "a": "No. Both Emergency Assistance Payments and Individual Assistance Payments are grants, not loans. They do not need to be repaid."},
+            {"q": "Does the DAF count as income for Universal Credit?", "a": "No. DAF payments are not treated as income or capital for Universal Credit purposes and do not reduce your UC award."},
+            {"q": "Can I get the DAF if I am working?", "a": "Yes. Employment is not a bar to applying. The assessment is based on your circumstances and the nature of your need, not whether you are in work."},
+            {"q": "How do I contact the DAF?", "a": "Apply online at the Welsh Government website or call the DAF helpline. Your local Citizens Advice Wales office can also help with the application."},
+        ],
+        "related_guides": ["benefits-in-wales-2026", "universal-credit-explained", "benefits-for-low-income-families"],
+    },
     "benefits-in-northern-ireland-2026": {
         "title": "Benefits in Northern Ireland 2026/27",
         "seo_title": "Benefits in Northern Ireland 2026/27 | SSA, Parity and Discretionary Support",
@@ -4696,6 +4738,7 @@ SITUATION_PAGES: Dict[str, Dict[str, Any]] = {
         "slug": "benefits-for-single-parents",
         "title": "Benefits for single parents",
         "description": "Single parent benefits 2026/27: Universal Credit work allowance, Child Benefit, childcare support and council tax help, calculator and guide.",
+        "seo_title": "Single Parent Benefits 2026/27 | UC Work Allowance, Child Benefit & Childcare",
         "intro": "Single parents have access to a number of specific support routes in the UK benefits system. Some are the same as for any low-income household, but the way entitlement is calculated often works differently when there is only one adult. This guide covers the main routes and explains where single parents tend to get the most meaningful support.",
         "sections": [
             {
@@ -4728,6 +4771,7 @@ SITUATION_PAGES: Dict[str, Dict[str, Any]] = {
         "slug": "benefits-if-you-cannot-work",
         "title": "Benefits if you cannot work",
         "description": "A guide to UK benefits and support routes for people who are unable to work due to illness, disability or a health condition.",
+        "seo_title": "Benefits If You Cannot Work 2026/27 | SSP, UC, ESA and LCWRA Explained",
         "intro": "If a health condition or disability prevents you from working, several separate UK support systems may apply at the same time. Understanding which ones to check, and in what order, is the most practical starting point. This guide covers the main routes for people who are off sick, living with a long-term condition or managing a disability.",
         "sections": [
             {
@@ -4760,6 +4804,7 @@ SITUATION_PAGES: Dict[str, Dict[str, Any]] = {
         "slug": "benefits-for-renters",
         "title": "Benefits for renters",
         "description": "UK rent and housing support: Universal Credit housing costs, Housing Benefit and Council Tax Reduction for private and social renters. 2026/27.",
+        "seo_title": "Benefits for Renters 2026/27 | UC Housing Costs, Housing Benefit & Council Tax",
         "intro": "Renters can access housing support through several different routes depending on their age, employment status, landlord type and income. The main system has shifted significantly since 2013, with most new working-age housing support now going through Universal Credit rather than Housing Benefit. This guide explains how the current system works and which pages to check.",
         "sections": [
             {
@@ -4786,6 +4831,7 @@ SITUATION_PAGES: Dict[str, Dict[str, Any]] = {
         "slug": "benefits-for-pensioners",
         "title": "Benefits for pensioners",
         "description": "Pensioner benefits 2026/27: Pension Credit, housing benefit, council tax help, Attendance Allowance and winter payments, calculator and guide.",
+        "seo_title": "Benefits for Pensioners 2026/27 | Pension Credit, Housing & Attendance Allowance",
         "intro": "The UK benefits system works differently once you reach State Pension age. Pension Credit replaces Universal Credit as the main means-tested top-up, and a range of additional support, from council tax reduction to heating help, can be triggered by a Pension Credit award. This guide covers the main pension-age support routes and explains why they are often under-claimed.",
         "sections": [
             {
@@ -4818,6 +4864,7 @@ SITUATION_PAGES: Dict[str, Dict[str, Any]] = {
         "slug": "benefits-in-northern-ireland",
         "title": "Universal Credit and benefits calculator for Northern Ireland 2026/27",
         "description": "Northern Ireland benefits calculator guide for 2026/27, Universal Credit, Child Benefit, PIP, Pension Credit and housing support, with DfC and domestic-rates notes.",
+        "seo_title": "Benefits Calculator Northern Ireland 2026/27 | UC, PIP & Pension Credit",
         "intro": "The benefits system in Northern Ireland is close to Great Britain on core rates, but the administration, domestic rates system and some local schemes are different. Universal Credit in Northern Ireland is run by the Department for Communities (DfC), not DWP. The calculators on this site use the core published rates that also apply to Northern Ireland, while the guidance below flags where Northern Ireland users should expect a different route or official contact point.",
         "sections": [
             {
@@ -4844,6 +4891,7 @@ SITUATION_PAGES: Dict[str, Dict[str, Any]] = {
         "slug": "benefits-for-low-income-families",
         "title": "Benefits for low-income families",
         "description": "A guide to UK support for families on a low income, Universal Credit, Child Benefit, childcare help, Free School Meals, Healthy Start and more.",
+        "seo_title": "Benefits for Low-Income Families 2026/27 | UC, Child Benefit & Childcare Support",
         "intro": "Low-income families can access several layers of UK support at the same time. The biggest is usually Universal Credit, but Child Benefit, school support, childcare help and local authority support all sit alongside it. Understanding which pieces stack together, and which are mutually exclusive, gives the clearest picture of what a household can actually receive.",
         "sections": [
             {
@@ -4904,6 +4952,7 @@ SITUATION_PAGES: Dict[str, Dict[str, Any]] = {
         "slug": "benefits-for-carers",
         "title": "Benefits for Carers 2026/27 | Carer's Allowance, UC Carer Element and Credits",
         "description": "Carers benefits 2026/27: Carer's Allowance £83.30/week for 35+ hours of care, UC carer element £198.31/month, Carer's Credit protects NI record. Overlapping benefit rules and how caring affects Universal Credit.",
+        "seo_title": "Benefits for Carers 2026/27 | Carer's Allowance, UC Carer Element & Credits",
         "intro": "If you provide substantial care for a disabled person, you may be entitled to Carer's Allowance, a UC carer element or National Insurance credits. The rules are not always obvious and the overlapping benefits rule trips many carers up. This page covers the main support routes and what to watch out for.",
         "sections": [
             {
@@ -4935,6 +4984,7 @@ SITUATION_PAGES: Dict[str, Dict[str, Any]] = {
         "slug": "benefits-for-over-state-pension-age",
         "title": "Benefits for Over State Pension Age 2026/27 | Full Guide",
         "description": "Benefits for pensioners 2026/27: State Pension £230.25/week, Pension Credit tops up to £227.10/week, Winter Fuel Payment, Cold Weather Payment, Attendance Allowance, Council Tax Reduction, free prescriptions at 60 and free bus pass.",
+        "seo_title": "Benefits for Over State Pension Age 2026/27 | Pension Credit, Housing & PIP",
         "intro": "Once you reach State Pension age, a different set of benefits and entitlements applies. Some are automatic with age. Others, especially Pension Credit, are means-tested but widely underclaimed. This guide covers the main support available to people over pension age.",
         "sections": [
             {
@@ -4970,6 +5020,7 @@ SITUATION_PAGES: Dict[str, Dict[str, Any]] = {
         "slug": "benefits-for-disabled-adults",
         "title": "Benefits for Disabled Adults 2026/27 | PIP, UC LCWRA and More",
         "description": "Benefits for disabled adults 2026/27: PIP daily living up to £114.60/week, UC LCWRA element £429.80/month, ESA, Attendance Allowance, Blue Badge, Motability. How PIP and UC interact and what to claim first.",
+        "seo_title": "Benefits for Disabled Adults 2026/27 | PIP, UC LCWRA & Attendance Allowance",
         "intro": "Disabled adults may be entitled to a combination of financial support, practical schemes and National Insurance credits depending on their condition and circumstances. The key is understanding which benefits are means-tested (income and savings matter) and which are not (only the condition matters).",
         "sections": [
             {
@@ -5005,6 +5056,7 @@ SITUATION_PAGES: Dict[str, Dict[str, Any]] = {
         "slug": "benefits-if-unemployed",
         "title": "Benefits if You Are Unemployed 2026/27 | UC, JSA and What to Claim",
         "description": "Benefits if unemployed in 2026/27: Universal Credit is the main route for most people. New-style JSA pays £84.80/week for up to 182 days if you have NI contributions. 5-week UC wait, conditionality, sanctions and NI credits explained.",
+        "seo_title": "Benefits If Unemployed 2026/27 | Universal Credit, JSA & What to Claim First",
         "intro": "Becoming unemployed can be overwhelming and confusing when it comes to benefits. Most people who lose their job will claim Universal Credit, but new-style JSA may also be available if you have enough National Insurance contributions. This guide explains what you can claim, how quickly it pays and what is expected of you.",
         "sections": [
             {
@@ -5152,6 +5204,7 @@ SCENARIO_PAGES: Dict[str, Dict[str, Any]] = {
         "slug": "carers-allowance-explained",
         "title": "Carer's Allowance explained 2026/27, rates, eligibility and how it affects other benefits",
         "description": "Carer's Allowance 2026/27: £81.90/week for 35+ hours care. Who qualifies, £151/week earnings limit and how it interacts with Universal Credit.",
+        "seo_title": "Carer's Allowance 2026/27 | £81.90/week Rates, Eligibility & UC Interaction",
         "topic": "Carer support",
         "intro": "Carer's Allowance is the main benefit for people providing substantial unpaid care. In 2026/27 it pays £81.90 a week, but the earnings limit, the interaction with other benefits and the 'underlying entitlement' rule mean it works differently from most other payments. This page explains who qualifies, what the earnings limit means in practice, and how claiming affects your Universal Credit and State Pension.",
         "sections": [
@@ -5188,8 +5241,8 @@ SCENARIO_PAGES: Dict[str, Dict[str, Any]] = {
     "pip-explained": {
         "slug": "pip-explained",
         "title": "PIP 2026/27 | Rates, Points, Eligibility and How the Assessment Works",
-        "seo_title": "PIP Calculator 2026/27 | Daily Living & Mobility Rates Explained",
-        "description": "PIP 2026/27 rates: daily living standard £76.70/week, enhanced £114.60/week; mobility standard £30.30/week, enhanced £80.00/week, max £194.60/week combined. How the points system works, what each activity descriptor means, and how PIP affects Universal Credit.",
+        "seo_title": "PIP Explained 2026/27 | Rates, Points System & How to Strengthen Your Claim",
+        "description": "PIP 2026/27: up to £194.60/week combined (daily living enhanced £114.60 + mobility enhanced £80.00). Needs 8 points per component for standard rate, 12 for enhanced. Not means-tested — earnings and savings have no effect on PIP. How assessments work and what to do if your claim is refused.",
         "topic": "Disability support",
         "intro": "Personal Independence Payment (PIP) is the main disability benefit for working-age adults in England, Wales and Northern Ireland. It is based on how your condition affects you, not on your diagnosis or whether you are in work. In 2026/27 it pays up to £194.60 a week if you qualify for both components at the enhanced rate. This guide explains how the points system works, what each activity and descriptor means in practice, and how PIP interacts with Universal Credit and other benefits.",
         "sections": [
@@ -5265,6 +5318,7 @@ SCENARIO_PAGES: Dict[str, Dict[str, Any]] = {
         "slug": "what-if-i-get-a-pay-rise",
         "title": "What happens to my benefits if I get a pay rise?",
         "description": "How a pay rise affects Universal Credit through the 55% taper and work allowance, with a worked example showing the real net gain.",
+        "seo_title": "Pay Rise and Universal Credit 2026/27 | How the 55p Taper Affects Your Award",
         "intro": "A pay rise on Universal Credit doesn't wipe out the gain, but it does reduce the award through the earnings taper. For most households with children or a health element, the 55% taper means you keep 45p of every extra pound earned above the work allowance. That's a real improvement, even after the UC reduction is applied.",
         "sections": [
             {
@@ -5291,6 +5345,7 @@ SCENARIO_PAGES: Dict[str, Dict[str, Any]] = {
         "slug": "what-if-i-start-working",
         "title": "What happens to Universal Credit when I start work?",
         "description": "How Universal Credit changes when you start a job, the first payment after starting work, how the taper and work allowance kick in, and what to report.",
+        "seo_title": "Starting Work and Universal Credit 2026/27 | Work Allowance & Taper Rate",
         "intro": "Starting work doesn't mean Universal Credit stops. For most claimants, especially those with children, meaningful UC support continues well into employment. The award adjusts through the earnings taper, it goes down, but you're always better off working than not. Here's how it works in practice.",
         "sections": [
             {
@@ -5317,6 +5372,7 @@ SCENARIO_PAGES: Dict[str, Dict[str, Any]] = {
         "slug": "what-if-my-rent-goes-up",
         "title": "What happens to my Universal Credit if my rent goes up?",
         "description": "How a rent increase affects Universal Credit, the LHA cap for private renters, bedroom rules for social tenants, and what to do when UC doesn't cover the full increase.",
+        "seo_title": "Rent Increase and Universal Credit 2026/27 | Housing Cost Element Explained",
         "intro": "A rent increase doesn't automatically mean more Universal Credit. How much extra help you get depends on whether your rent is already near or above the Local Housing Allowance cap, whether bedroom deductions apply, and whether the Benefit Cap is constraining your overall award. This page explains the three main scenarios.",
         "sections": [
             {
@@ -5343,6 +5399,7 @@ SCENARIO_PAGES: Dict[str, Dict[str, Any]] = {
         "slug": "what-if-i-have-another-child",
         "title": "What happens if I have another child?",
         "description": "How Universal Credit changes with an additional child from April 2026, the child element, childcare, Benefit Cap implications and what to report.",
+        "seo_title": "Having Another Child on Universal Credit 2026/27 | Child Element Rates",
         "intro": "From 6 April 2026, Universal Credit pays a child element for every eligible child, with no two-child limit. That's a significant change for larger families. But the interaction with the Benefit Cap means some households won't see the full benefit immediately. Here's what to expect.",
         "sections": [
             {
@@ -5369,6 +5426,7 @@ SCENARIO_PAGES: Dict[str, Dict[str, Any]] = {
         "slug": "what-if-i-inherit-money",
         "title": "What happens to Universal Credit if I inherit money?",
         "description": "How inherited money affects Universal Credit, the £6,000 and £16,000 capital rules, tariff income, and what happens if the inheritance takes you over the limit.",
+        "seo_title": "Inheriting Money and Universal Credit 2026/27 | £6,000 & £16,000 Capital Rules",
         "intro": "Inheriting money while claiming Universal Credit can affect your award significantly, depending on the amount. UC treats inherited money as capital from the point it arrives. Below £6,000 it has no effect. Between £6,000 and £16,000 it generates assumed income that reduces your award. At £16,000 or above, UC stops. You must report the change.",
         "sections": [
             {
@@ -5649,6 +5707,7 @@ BLOG_POSTS: Dict[str, Dict[str, Any]] = {
         "slug": "universal-credit-explained-2026",
         "title": "Universal Credit Explained 2026/27 | Rates, Rules and a Worked Example",
         "description": "A plain-English guide to Universal Credit 2026/27. How the standard allowance, elements and taper work, with a worked example showing a family's monthly award from start to finish.",
+        "seo_title": "Universal Credit Explained 2026/27 | Rates, Rules and a Worked Example",
         "published": "27 May 2026",
         "reading_time": 7,
         "intro": "Universal Credit is the main working-age benefit in the UK, paying a single monthly amount that combines support for living costs, housing, children, childcare and health. Around 7.5 million people claim it. This guide explains how it works, what the current rates are, and walks through a worked example so you can see what drives a real award.",
@@ -5685,6 +5744,7 @@ BLOG_POSTS: Dict[str, Dict[str, Any]] = {
         "slug": "pip-assessment-guide-2026",
         "title": "PIP Assessment Guide 2026/27 | How to Prepare and What to Expect",
         "description": "How the PIP assessment works in 2026/27, what assessors look for, how to complete the PIP2 form, and what happens at the assessment itself. Specific tips on evidencing your worst days.",
+        "seo_title": "PIP Assessment Guide 2026/27 | How to Prepare and What to Expect",
         "published": "27 May 2026",
         "reading_time": 8,
         "intro": "The PIP assessment is the process through which DWP decides how much, if any, PIP you receive. It involves a form (PIP2) and usually a health assessment by an independent assessor. Many people find the process stressful. Knowing what to expect and how to present your evidence makes a real difference to outcomes.",
@@ -5721,6 +5781,7 @@ BLOG_POSTS: Dict[str, Dict[str, Any]] = {
         "slug": "switching-from-tax-credits-to-uc",
         "title": "Moving from Tax Credits to Universal Credit | Managed Migration Guide 2026",
         "description": "DWP is moving all remaining tax credit claimants onto Universal Credit through managed migration. This guide explains what happens, how transitional protection works, and what you need to do when you receive your migration notice.",
+        "seo_title": "Moving from Tax Credits to Universal Credit 2026 | Managed Migration Guide",
         "published": "27 May 2026",
         "reading_time": 6,
         "intro": "If you are still receiving Child Tax Credit or Working Tax Credit, you will receive a migration notice telling you to move to Universal Credit by a specific deadline. This is called managed migration. Once you claim UC, tax credits stop. Transitional protection can bridge any gap in the amount you receive, but only if you claim UC before the deadline.",
@@ -5757,6 +5818,7 @@ BLOG_POSTS: Dict[str, Dict[str, Any]] = {
         "slug": "savings-and-universal-credit-explained",
         "title": "Savings and Universal Credit Explained | The £6,000 and £16,000 Rules",
         "description": "How savings affect Universal Credit in 2026/27. Under £6,000: no effect. Between £6,000 and £16,000: tariff income reduces UC. At £16,000: UC stops. Worked examples included.",
+        "seo_title": "Savings and Universal Credit 2026/27 | The £6,000 and £16,000 Rules Explained",
         "published": "27 May 2026",
         "reading_time": 5,
         "intro": "Savings affect Universal Credit through a two-threshold rule. Below £6,000 they are ignored. Between £6,000 and £16,000, a tariff income mechanism reduces your award by a small amount for each £250 band above the lower threshold. At £16,000 or above, UC stops entirely. Here is exactly how it works with numbers.",
@@ -5793,6 +5855,7 @@ BLOG_POSTS: Dict[str, Dict[str, Any]] = {
         "slug": "child-benefit-hicbc-guide-2026",
         "title": "Child Benefit and the High Income Charge 2026/27 | Full Guide",
         "description": "Child Benefit pays £27.05 per week for the first child in 2026/27. The High Income Child Benefit Charge starts at £60,000 adjusted net income and reaches 100% at £80,000. This guide explains both and when opting out makes sense.",
+        "seo_title": "Child Benefit and High Income Charge 2026/27 | £60,000–£80,000 Guide",
         "published": "27 May 2026",
         "reading_time": 6,
         "intro": "Child Benefit pays a weekly amount for each child under 16 (or under 20 in approved education). In 2026/27 the rate is £27.05 per week for the first child and £17.90 for each additional child. For households where one person earns above £60,000, the High Income Child Benefit Charge (HICBC) claws back some or all of the benefit through self-assessment tax. Here is how both work.",
@@ -5829,6 +5892,7 @@ BLOG_POSTS: Dict[str, Dict[str, Any]] = {
         "slug": "pension-credit-what-it-unlocks",
         "title": "What Pension Credit Unlocks Beyond the Weekly Top-Up",
         "description": "Pension Credit is not just a weekly cash top-up. It acts as a gateway to free TV licences, Council Tax Reduction, Housing Benefit, Cold Weather Payment, free dental treatment and more. Even a small Pension Credit award unlocks all of these.",
+        "seo_title": "What Pension Credit Unlocks 2026/27 | Free TV Licence, Council Tax & More",
         "published": "27 May 2026",
         "reading_time": 6,
         "intro": "Around 800,000 eligible pensioners do not claim Pension Credit. Many assume it is not worth it for a small weekly amount. But Pension Credit is a gateway benefit: even a £1-per-week award unlocks a package of additional support worth hundreds or thousands of pounds per year. This guide explains what that package contains.",
@@ -5865,6 +5929,7 @@ BLOG_POSTS: Dict[str, Dict[str, Any]] = {
         "slug": "benefit-cap-explained-2026",
         "title": "The Benefit Cap Explained 2026/27 | Rates, Exemptions and How to Check",
         "description": "The Benefit Cap limits total benefit income for most working-age households. Outside London the family cap is £1,835/month. Inside London it is £2,110/month. This guide covers who is exempt, how to check your position and what happens if you are capped.",
+        "seo_title": "The Benefit Cap 2026/27 | Rates, Exemptions and How to Check If You're Affected",
         "published": "27 May 2026",
         "reading_time": 5,
         "intro": "The Benefit Cap sets a limit on the total monthly benefit income most working-age households can receive. If your combined benefit income exceeds the cap, the excess is deducted from your Universal Credit. The cap is not a new benefit; it is a ceiling on what you can receive in total. Knowing whether you are capped and whether you are exempt is the starting point.",
@@ -5897,6 +5962,7 @@ BLOG_POSTS: Dict[str, Dict[str, Any]] = {
         "slug": "uc-work-allowance-explained",
         "title": "UC Work Allowance Explained 2026/27 | When It Applies and How Much You Keep",
         "description": "The Universal Credit work allowance lets you earn a set amount before the 55% taper kicks in. In 2026/27 it is £427/month (with housing support) or £710/month (without). Only households with children or a health element qualify. Here is how it works.",
+        "seo_title": "UC Work Allowance 2026/27 | £404 or £673/month — When It Applies",
         "published": "27 May 2026",
         "reading_time": 5,
         "intro": "The work allowance is the amount you can earn in a UC assessment period before the earnings taper starts reducing your award. Not everyone gets a work allowance. If you qualify, you keep the full work allowance amount plus 45p of every £1 you earn above it. This makes work pay more than it would without the allowance.",
@@ -5929,6 +5995,7 @@ BLOG_POSTS: Dict[str, Dict[str, Any]] = {
         "slug": "appeals-and-mandatory-reconsideration",
         "title": "How to Challenge a Benefit Decision | Mandatory Reconsideration and Appeals 2026",
         "description": "If you disagree with a UC, PIP or ESA decision, you can request a Mandatory Reconsideration within one month. If that fails, you can appeal to an independent tribunal. Most successful appeals result in a better award. This guide explains each step.",
+        "seo_title": "How to Challenge a Benefit Decision 2026 | Mandatory Reconsideration & Appeals",
         "published": "27 May 2026",
         "reading_time": 6,
         "intro": "Every benefit decision can be challenged. The first step is always Mandatory Reconsideration (MR), where DWP reviews the decision again. If the MR fails, you can appeal to an independent Social Security tribunal. The appeal process is free. A significant proportion of appeals are successful, particularly for PIP and ESA.",
@@ -5965,6 +6032,7 @@ BLOG_POSTS: Dict[str, Dict[str, Any]] = {
         "slug": "carers-allowance-guide-2026",
         "title": "Carer's Allowance Guide 2026/27 | Eligibility, Rates and the UC Interaction",
         "description": "Carer's Allowance pays £83.30 per week in 2026/27 to carers spending at least 35 hours per week caring for a severely disabled person. Earnings must be below £151 per week. This guide explains eligibility, the carer element in UC, and the overlapping benefit rules.",
+        "seo_title": "Carer's Allowance Guide 2026/27 | Eligibility, Rates & UC Interaction",
         "published": "27 May 2026",
         "reading_time": 6,
         "intro": "Carer's Allowance is a benefit for people who provide at least 35 hours of unpaid care per week for a person with a disability or health condition. In 2026/27 it pays £83.30 per week. It is not means-tested on capital but has an earnings limit. If you also claim Universal Credit, it interacts through the carer element rather than being added on top in full.",
@@ -6004,6 +6072,7 @@ TOPIC_HUBS: Dict[str, Dict[str, Any]] = {
         "slug": "universal-credit",
         "title": "Universal Credit hub",
         "description": "Universal Credit hub 2026/27: how it works, what drives the award, how earnings and savings affect it, and which calculators and guides to use.",
+        "seo_title": "Universal Credit 2026/27 Hub | Calculators, Guides & Rates",
         "intro": "Universal Credit is the main working-age means-tested benefit in the UK, combining housing support, child elements, childcare support, health elements and basic living costs into a single monthly payment. This hub brings together the main calculators and guides so you can move from a quick estimate to a detailed understanding.",
         "key_facts": [
             "Standard allowance: £424.90/month (single, 25+) or £666.97/month (couple, both 25+)",
@@ -6022,6 +6091,7 @@ TOPIC_HUBS: Dict[str, Dict[str, Any]] = {
         "slug": "family-support",
         "title": "Family and childcare support hub",
         "description": "Child Benefit, Tax-Free Childcare, Free School Meals, Healthy Start, Sure Start and maternity support, all the UK family benefit tools in one place.",
+        "seo_title": "Family & Childcare Benefits 2026/27 | UC Child Elements, Child Benefit & TFC",
         "intro": "UK family support comes through several separate schemes that do not always talk to each other. This hub brings together the most useful calculators and guides so families can check Child Benefit, childcare top-ups, school meal eligibility and maternity support in a single session.",
         "key_facts": [
             "Child Benefit: £27.05/week (first child), £17.90 (additional children), 2026/27 rates",
@@ -6040,6 +6110,7 @@ TOPIC_HUBS: Dict[str, Dict[str, Any]] = {
         "slug": "rent-and-council-tax",
         "title": "Rent and council tax support hub",
         "description": "UC housing costs, Housing Benefit, Council Tax Reduction and the Benefit Cap, all the tools for understanding housing support in one place.",
+        "seo_title": "Rent & Council Tax Benefits 2026/27 | UC Housing Cost, LHA & CTR Hub",
         "intro": "Help with rent and council tax comes from different parts of the UK system and often requires separate applications. This hub covers the main housing support routes, from Universal Credit housing costs and Housing Benefit through to Council Tax Reduction and the Benefit Cap.",
         "key_facts": [
             "UC housing element: capped at Local Housing Allowance for private renters",
@@ -6058,6 +6129,7 @@ TOPIC_HUBS: Dict[str, Dict[str, Any]] = {
         "slug": "disability-support",
         "title": "Disability and health support hub",
         "description": "PIP, ESA, SSP, the UC health element and the Benefit Cap disability exemption, all the disability-related benefit tools in one place.",
+        "seo_title": "Disability Benefits 2026/27 Hub | PIP, UC LCWRA & Attendance Allowance",
         "intro": "Disability and health-related support in the UK comes through several different systems. PIP, ESA, SSP and the Universal Credit health element each work differently and can sometimes be claimed at the same time. This hub brings together the main tools and explains how they connect.",
         "key_facts": [
             "PIP: not means tested, income and savings have no effect on eligibility",
@@ -6076,6 +6148,7 @@ TOPIC_HUBS: Dict[str, Dict[str, Any]] = {
         "slug": "pension-age-support",
         "title": "Pension-age support hub",
         "description": "Pension Credit, council tax help, winter payments and worked examples for pension-age households in one place.",
+        "seo_title": "Pension-Age Benefits 2026/27 Hub | Pension Credit, Housing & Winter Fuel",
         "intro": "Pension-age support works differently from working-age benefits. Pension Credit, winter support, council tax help and pension-age examples are closely linked, so this hub is designed to help older households move through them as one joined-up journey.",
         "key_facts": [
             "Guarantee Credit standard minimum: £238.00/week single, £363.25/week couple",
@@ -7578,6 +7651,179 @@ def dwp_checks_redirect():
     return redirect("/guides/dwp-bank-account-checks", 301)
 
 
+# --- Batch SEO redirect aliases (Bing query matching) ---
+_SEO_REDIRECT_MAP = {
+    # UC calculator variants (pos 11-33 on Bing)
+    "/universal-credit-calculator-2026": "/universal-credit-calculator",
+    "/universal-credit-calculator-2026-27": "/universal-credit-calculator",
+    "/uc-calculator-2026": "/universal-credit-calculator",
+    "/uc-calculator-april-2026": "/universal-credit-calculator",
+    "/uc-estimate-calculator-2026": "/universal-credit-calculator",
+    "/universal-credit-monthly-calculator": "/universal-credit-calculator",
+    "/calculate-universal-credit-2026": "/universal-credit-calculator",
+    # Benefits calculator variants (pos 12-44)
+    "/benefits-calculator-2026": "/",
+    "/benefits-calculator-2026-27": "/",
+    "/benefit-calculator-2026": "/",
+    "/uk-benefits-calculator-2026": "/",
+    "/government-benefits-calculator-2026": "/",
+    "/benefit-entitlement-calculator-2026": "/",
+    "/benefits-checker-2026": "/",
+    # Tax credits calculator variants (pos 27-36)
+    "/working-tax-credit-calculator-2026": "/working-tax-credit-calculator",
+    "/working-tax-credit-calculator-2026-27": "/working-tax-credit-calculator",
+    "/tax-credits-calculator-2026": "/working-tax-credit-calculator",
+    "/tax-credits-calculator-uk-2026": "/working-tax-credit-calculator",
+    "/child-tax-credit-calculator-2026": "/working-tax-credit-calculator",
+    "/family-income-benefit-calculator": "/working-tax-credit-calculator",
+    # PIP variants (pos 11)
+    "/pip-rates-2026-calculator": "/guides/pip-rates-2026-27-full",
+    "/pip-calculator-2026": "/guides/pip-rates-2026-27-full",
+    "/pip-rates-2026-27-calculator": "/guides/pip-rates-2026-27-full",
+    # Savings and capital rules (pos 8-65)
+    "/uk-universal-credit-savings-limit-capital-rules-2026": "/guides/universal-credit-capital-rules-2026",
+    "/universal-credit-savings-limit-capital-rules-2026": "/guides/universal-credit-capital-rules-2026",
+    "/universal-credit-savings-limit-2026": "/guides/universal-credit-capital-rules-2026",
+    "/savings-limit-for-universal-credit-2026": "/guides/universal-credit-capital-rules-2026",
+    "/uc-savings-limit-2026": "/guides/universal-credit-capital-rules-2026",
+    "/what-counts-as-savings-for-universal-credit": "/guides/what-counts-as-savings-for-benefits",
+    "/how-much-savings-allowed-on-benefits": "/guides/what-counts-as-savings-for-benefits",
+    "/how-much-savings-on-benefits-uk": "/guides/what-counts-as-savings-for-benefits",
+    "/do-isa-savings-affect-benefits": "/guides/isa-and-benefits",
+    "/isa-savings-and-universal-credit": "/guides/isa-and-benefits",
+    "/does-an-isa-count-as-savings-for-universal-credit": "/guides/isa-and-benefits",
+    # Single parent / lone parent (pos 24-44)
+    "/single-parent-universal-credit": "/single-parent-benefits-calculator",
+    "/universal-credit-single-parent-2026": "/single-parent-benefits-calculator",
+    "/lone-parent-universal-credit": "/single-parent-benefits-calculator",
+    "/universal-credit-lone-parent-2026": "/single-parent-benefits-calculator",
+    "/single-parent-benefits-uk-2026": "/single-parent-benefits-calculator",
+    # Housing benefit (pos 47-58)
+    "/housing-benefit-calculator-2026": "/housing-benefit-calculator",
+    "/housing-benefit-calculator-2026-27": "/housing-benefit-calculator",
+    "/housing-benefits-calculator-uk": "/housing-benefit-calculator",
+    # Pension credit (pos 71)
+    "/pension-credit-calculator-2026": "/pension-credit-calculator",
+    "/pension-credit-calculator-2026-27": "/pension-credit-calculator",
+    "/pension-credit-estimator-2026": "/pension-credit-calculator",
+    # Wales DAF (pos 11)
+    "/wales-daf": "/guides/wales-daf-guide-2026",
+    "/wales-daf-2026": "/guides/wales-daf-guide-2026",
+    "/daf-payment-wales": "/guides/wales-daf-guide-2026",
+    "/daf-payment-wales-2026": "/guides/wales-daf-guide-2026",
+    "/how-much-is-daf-payment-wales": "/guides/wales-daf-guide-2026",
+    "/discretionary-assistance-fund-wales": "/guides/wales-daf-guide-2026",
+    "/daf-wales-2026": "/guides/wales-daf-guide-2026",
+    # Geo housing benefit aliases (Newham query confirmed click at pos 6)
+    "/newham-housing-benefit-calculator": "/benefits-calculator/newham",
+    "/birmingham-housing-benefit-calculator": "/benefits-calculator/birmingham",
+    "/manchester-housing-benefit-calculator": "/benefits-calculator/manchester",
+    "/leeds-housing-benefit-calculator": "/benefits-calculator/leeds",
+    "/liverpool-housing-benefit-calculator": "/benefits-calculator/liverpool",
+    "/sheffield-housing-benefit-calculator": "/benefits-calculator/sheffield",
+    "/bristol-housing-benefit-calculator": "/benefits-calculator/bristol",
+    "/nottingham-housing-benefit-calculator": "/benefits-calculator/nottingham",
+    "/leicester-housing-benefit-calculator": "/benefits-calculator/leicester",
+    "/coventry-housing-benefit-calculator": "/benefits-calculator/coventry",
+    "/bradford-housing-benefit-calculator": "/benefits-calculator/bradford",
+    "/cardiff-housing-benefit-calculator": "/benefits-calculator/cardiff",
+    "/tower-hamlets-housing-benefit-calculator": "/benefits-calculator/tower-hamlets",
+    "/hackney-housing-benefit-calculator": "/benefits-calculator/hackney",
+    "/lambeth-housing-benefit-calculator": "/benefits-calculator/lambeth",
+    "/southwark-housing-benefit-calculator": "/benefits-calculator/southwark",
+    "/croydon-housing-benefit-calculator": "/benefits-calculator/croydon",
+    "/haringey-housing-benefit-calculator": "/benefits-calculator/haringey",
+    "/lewisham-housing-benefit-calculator": "/benefits-calculator/lewisham",
+    "/enfield-housing-benefit-calculator": "/benefits-calculator/enfield",
+    "/newcastle-housing-benefit-calculator": "/benefits-calculator/newcastle",
+    "/sunderland-housing-benefit-calculator": "/benefits-calculator/sunderland",
+    "/hull-housing-benefit-calculator": "/benefits-calculator/hull",
+    "/derby-housing-benefit-calculator": "/benefits-calculator/derby",
+    "/doncaster-housing-benefit-calculator": "/benefits-calculator/doncaster",
+}
+
+
+@app.route("/universal-credit-calculator-2026")
+@app.route("/universal-credit-calculator-2026-27")
+@app.route("/uc-calculator-2026")
+@app.route("/uc-calculator-april-2026")
+@app.route("/uc-estimate-calculator-2026")
+@app.route("/universal-credit-monthly-calculator")
+@app.route("/calculate-universal-credit-2026")
+@app.route("/benefits-calculator-2026")
+@app.route("/benefits-calculator-2026-27")
+@app.route("/benefit-calculator-2026")
+@app.route("/uk-benefits-calculator-2026")
+@app.route("/government-benefits-calculator-2026")
+@app.route("/benefit-entitlement-calculator-2026")
+@app.route("/benefits-checker-2026")
+@app.route("/working-tax-credit-calculator-2026")
+@app.route("/working-tax-credit-calculator-2026-27")
+@app.route("/tax-credits-calculator-2026")
+@app.route("/tax-credits-calculator-uk-2026")
+@app.route("/child-tax-credit-calculator-2026")
+@app.route("/family-income-benefit-calculator")
+@app.route("/pip-rates-2026-calculator")
+@app.route("/pip-calculator-2026")
+@app.route("/pip-rates-2026-27-calculator")
+@app.route("/uk-universal-credit-savings-limit-capital-rules-2026")
+@app.route("/universal-credit-savings-limit-capital-rules-2026")
+@app.route("/universal-credit-savings-limit-2026")
+@app.route("/savings-limit-for-universal-credit-2026")
+@app.route("/uc-savings-limit-2026")
+@app.route("/what-counts-as-savings-for-universal-credit")
+@app.route("/how-much-savings-allowed-on-benefits")
+@app.route("/how-much-savings-on-benefits-uk")
+@app.route("/do-isa-savings-affect-benefits")
+@app.route("/isa-savings-and-universal-credit")
+@app.route("/does-an-isa-count-as-savings-for-universal-credit")
+@app.route("/single-parent-universal-credit")
+@app.route("/universal-credit-single-parent-2026")
+@app.route("/lone-parent-universal-credit")
+@app.route("/universal-credit-lone-parent-2026")
+@app.route("/single-parent-benefits-uk-2026")
+@app.route("/housing-benefit-calculator-2026")
+@app.route("/housing-benefit-calculator-2026-27")
+@app.route("/housing-benefits-calculator-uk")
+@app.route("/pension-credit-calculator-2026")
+@app.route("/pension-credit-calculator-2026-27")
+@app.route("/pension-credit-estimator-2026")
+@app.route("/wales-daf")
+@app.route("/wales-daf-2026")
+@app.route("/daf-payment-wales")
+@app.route("/daf-payment-wales-2026")
+@app.route("/how-much-is-daf-payment-wales")
+@app.route("/discretionary-assistance-fund-wales")
+@app.route("/daf-wales-2026")
+@app.route("/newham-housing-benefit-calculator")
+@app.route("/birmingham-housing-benefit-calculator")
+@app.route("/manchester-housing-benefit-calculator")
+@app.route("/leeds-housing-benefit-calculator")
+@app.route("/liverpool-housing-benefit-calculator")
+@app.route("/sheffield-housing-benefit-calculator")
+@app.route("/bristol-housing-benefit-calculator")
+@app.route("/nottingham-housing-benefit-calculator")
+@app.route("/leicester-housing-benefit-calculator")
+@app.route("/coventry-housing-benefit-calculator")
+@app.route("/bradford-housing-benefit-calculator")
+@app.route("/cardiff-housing-benefit-calculator")
+@app.route("/tower-hamlets-housing-benefit-calculator")
+@app.route("/hackney-housing-benefit-calculator")
+@app.route("/lambeth-housing-benefit-calculator")
+@app.route("/southwark-housing-benefit-calculator")
+@app.route("/croydon-housing-benefit-calculator")
+@app.route("/haringey-housing-benefit-calculator")
+@app.route("/lewisham-housing-benefit-calculator")
+@app.route("/enfield-housing-benefit-calculator")
+@app.route("/newcastle-housing-benefit-calculator")
+@app.route("/sunderland-housing-benefit-calculator")
+@app.route("/hull-housing-benefit-calculator")
+@app.route("/derby-housing-benefit-calculator")
+@app.route("/doncaster-housing-benefit-calculator")
+def seo_batch_redirects():
+    return redirect(_SEO_REDIRECT_MAP[request.path], code=301)
+
+
 @app.route("/claim-maximiser")
 def claim_maximiser_landing():
     return render_page(
@@ -7951,8 +8197,8 @@ def home():
             situation_guides.append(item)
     return render_page(
         "landing.html",
-        title="UK Benefits Calculator 2026/27 | UC, PIP & Working Families",
-        description="Free UK benefits calculator 2026/27. Estimate Universal Credit, Child Benefit, PIP and childcare support for working families, single parents and renters. Current 2026/27 DWP rates. No login.",
+        title="UK Benefits Calculator 2026/27 | Working Families, UC & Child Benefit",
+        description="Free UK benefits calculator for 2026/27. Estimate Universal Credit (from £424.90/month), Child Benefit (£27.05/week), PIP and working family support using current DWP rates. No account needed. Results in seconds.",
         canonical_path="/",
         breadcrumbs_data=[],
         home_calc_page=home_calc_page,
@@ -8065,7 +8311,7 @@ def hub_page(slug: str):
     scenarios = [SCENARIO_PAGES[s] for s in page.get("related_scenarios", []) if s in SCENARIO_PAGES]
     return render_page(
         "hub_page.html",
-        title=f"{page['title']} | UK Benefits Calculator",
+        title=page.get("seo_title") or f"{page['title']} | UK Benefits Calculator",
         description=page["description"],
         canonical_path=f"/hub/{slug}",
         breadcrumbs_data=breadcrumbs({"name": "Hubs", "url": f"{SITE_URL}/hub"}, {"name": page["title"], "url": f"{SITE_URL}/hub/{slug}"}),
