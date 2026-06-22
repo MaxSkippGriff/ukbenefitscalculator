@@ -3081,8 +3081,8 @@ GUIDES: Dict[str, Dict[str, Any]] = {
     },
     "benefits-for-working-families": {
         "title": "Benefits for working families in 2026/27: what can you still claim while working?",
-        "seo_title": "Benefits for Working Families 2026/27 | UC Work Allowance, Child Benefit & Childcare",
-        "description": "Working family benefits 2026/27: UC work allowance £710/month tax-free before 55p taper applies. Child Benefit £27.05/week per first child. Up to 85% of childcare costs reimbursed via UC (£1,071/month cap). Two-child limit removed April 2026. Free calculator, no sign-up.",
+        "seo_title": "Benefits for Working Families 2026/27 — What You Can Still Claim While Working",
+        "description": "What benefits can a working family claim in 2026/27? UC work allowance £710/month before the 55p taper, Child Benefit £27.05/week, up to 85% of childcare costs and the two-child limit removed from April 2026. Worked examples and a free calculator — no sign-up.",
         "topic": "Families",
         "reading_time": 9,
         "sections": [
@@ -4918,8 +4918,8 @@ SITUATION_PAGES: Dict[str, Dict[str, Any]] = {
     "benefits-for-working-families": {
         "slug": "benefits-for-working-families",
         "title": "Benefits for working families 2026/27, Universal Credit, Child Benefit and childcare",
-        "seo_title": "Benefits for Working Families 2026/27 | UK Benefits Calculator",
-        "description": "Free guide and calculators for working families 2026/27. Estimate Universal Credit, Child Benefit, childcare support and more, many working families qualify for more than they expect.",
+        "seo_title": "Working Families Benefits Calculator 2026/27 | UC, Child Benefit & Childcare",
+        "description": "Free working families benefits calculator for 2026/27. Estimate Universal Credit, Child Benefit, childcare and Council Tax support — many working families qualify for more than they expect. An estimate to help you check, not an official DWP decision.",
         "intro": "Working does not end benefit entitlement for families. Universal Credit tapers gradually as earnings rise, and several other schemes, Child Benefit, Free School Meals, childcare support and Council Tax Reduction, remain available well into moderate incomes. This guide is built around the search most working parents actually have: what can a working family still claim in the UK in 2026/27, and what changes first as wages rise.",
         "sections": [
             {
@@ -8489,6 +8489,10 @@ def robots():
     body = "\n".join([
         "User-agent: *",
         "Allow: /",
+        "Allow: /universal-credit-calculator",
+        "Allow: /child-benefit-calculator",
+        "Allow: /pip-eligibility-checker",
+        "Allow: /pension-credit-calculator",
         "Disallow: /trap",
         "Disallow: /api/",
         "Disallow: /admin/",
