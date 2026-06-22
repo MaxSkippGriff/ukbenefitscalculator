@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional, Set
 
 from dotenv import load_dotenv
 from flask import Flask, abort, jsonify, make_response, redirect, render_template, request, send_from_directory, url_for, stream_with_context, Response
+import firestore_client as _fs
 
 try:
     from flask_limiter import Limiter
@@ -8327,7 +8328,7 @@ def hub_page(slug: str):
 def guide_page(slug: str):
     if slug == "pension-credit-who-can-claim":
         return redirect("/guides/pension-credit-explained", code=301)
-    guide = GUIDES.get(slug)
+    guide = GUIDES.get(slug) or BLOG_POSTS.get(slug) or SITUATION_PAGES.get(slug)
     if not guide:
         abort(404)
     related_calc = related_calculators(guide.get("related", []))
@@ -8359,6 +8360,37 @@ def guide_page(slug: str):
         related_calculators=related_calc,
         page_sources=page_sources(slug),
         next_steps=next_steps_for_slug(slug),
+    )
+
+
+@app.route("/contact", methods=["GET", "POST"])
+def contact():
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        email = request.form.get("email", "").strip()
+        message = request.form.get("message", "").strip()
+        try:
+            db = _fs.get_db()
+            if db is not None:
+                db.collection("contact_messages").add({
+                    "name": name,
+                    "email": email,
+                    "message": message,
+                    "site": SITE_URL,
+                    "created_at": _fs.server_timestamp(),
+                    "read": False,
+                })
+        except Exception:
+            pass
+        return redirect("/contact?sent=1")
+    sent = request.args.get("sent") == "1"
+    return render_page(
+        "contact.html",
+        title="Contact | UK Benefits Calculator",
+        description="Get in touch with UK Benefits Calculator.",
+        canonical_path="/contact",
+        breadcrumbs_data=breadcrumbs({"name": "Contact", "url": SITE_URL + "/contact"}),
+        sent=sent,
     )
 
 

@@ -7,3 +7,9 @@ __pycache__/
 venv/
 env/
 .claude/
+.env.*
+.pytest_cache/
+# Local runtime/dev databases — production uses Firestore, never commit these
+*.db
+*.sqlite
+*.sqlite3
