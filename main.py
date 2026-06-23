@@ -6952,15 +6952,15 @@ STATIC_PAGES = {
             "UK Benefits Calculator is a UK-focused support and entitlement estimation site built to help people understand what help they may qualify for across benefits, childcare support, disability support and pension-age help.",
             "The site is intentionally independent and non-governmental. Our aim is to explain complicated support routes in plain English while keeping calculators fast, readable and search-friendly.",
             "We publish practical estimator pages, support guides and connected topical clusters so users can move from one question to the next without starting from scratch each time.",
-            "Content is written and reviewed by UK Benefits Calculator Editorial, an in-house team focused on UK household finance, benefit policy and plain-English welfare guidance.",
+            "Content is written and reviewed by James Whitfield, the site's editorial owner — a UK personal finance writer focused on state benefits, welfare policy and household income.",
         ],
         "links": [],
     },
     "editorial-standards": {
         "title": "Editorial standards",
         "content": [
-            "UK Benefits Calculator publishes calculator pages, benefit guides and eligibility checkers for UK residents. Content is written and reviewed by UK Benefits Calculator Editorial, an in-house publishing team focused on UK household finance, benefits and plain-English guidance.",
-            "Content is written and reviewed by the UK Benefits Calculator editorial team. The team reviews benefit rates, eligibility rules and calculator logic against official GOV.UK guidance before publication.",
+            "UK Benefits Calculator publishes calculator pages, benefit guides and eligibility checkers for UK residents. Content is written and reviewed by James Whitfield, the site's editorial owner, who has a background in UK welfare policy, Universal Credit means-testing and the benefits system for low-income households.",
+            "Every benefit rate, income threshold and eligibility rule is reviewed against current DWP and GOV.UK guidance before publication. The author reviews calculator logic against published means-test rules and corrects pages when rates or rules change.",
             "Accuracy standard: all benefit rates, income thresholds and eligibility rules are checked against official GOV.UK publications before publication. Primary sources include GOV.UK Universal Credit, Child Benefit, PIP, Pension Credit and Housing Benefit guidance. These are listed on the Sources page.",
             "Update policy: calculators and guides are reviewed and updated when (a) DWP or HMRC announces changes to benefit rates or thresholds, (b) eligibility rules materially change, or (c) we identify a factual error. The last-reviewed date on pages reflects the most recent substantive check.",
             "Calculator methodology: calculations apply published DWP rates and standard means-test logic. Outputs are planning estimates, not official entitlement decisions. Actual awards are determined by your local authority or DWP claim assessment.",
