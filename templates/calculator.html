@@ -248,6 +248,40 @@
     </div>
   </div>
 
+  {% if earnings_ladder %}
+  <div class="result-block" id="earnings-ladder">
+    <h3>Are you better off working more?</h3>
+    <p style="font-size:0.9rem;color:var(--text-secondary,#555);line-height:1.6;margin:0 0 0.85rem;">
+      Universal Credit falls by 55p for every £1 you earn above your work allowance — but it never takes more than you earn, so working more always leaves you better off overall. Here's how your total monthly income changes as earnings rise, with everything else held the same.
+    </p>
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:0.88rem;min-width:460px;">
+        <thead>
+          <tr style="text-align:left;border-bottom:2px solid var(--border,#e5e5e5);">
+            <th style="padding:0.5rem 0.55rem;">Monthly earnings</th>
+            <th style="padding:0.5rem 0.55rem;text-align:right;">Universal Credit</th>
+            <th style="padding:0.5rem 0.55rem;text-align:right;">Total income</th>
+            <th style="padding:0.5rem 0.55rem;text-align:right;">Kept per extra £100</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in earnings_ladder.rows %}
+          <tr style="border-bottom:1px solid var(--border,#eee);{% if row.is_current %}background:var(--accent-light,#eef6ff);font-weight:600;{% endif %}">
+            <td style="padding:0.5rem 0.55rem;">£{{ "{:,.0f}".format(row.earnings) }}{% if row.is_current %} · you{% endif %}</td>
+            <td style="padding:0.5rem 0.55rem;text-align:right;">£{{ "{:,.0f}".format(row.uc) }}</td>
+            <td style="padding:0.5rem 0.55rem;text-align:right;">£{{ "{:,.0f}".format(row.total) }}</td>
+            <td style="padding:0.5rem 0.55rem;text-align:right;">{% if row.kept_per_100 is not none %}£{{ row.kept_per_100 }}{% else %}—{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:0.78rem;color:var(--text-tertiary,#777);line-height:1.55;margin:0.8rem 0 0;">
+      "Kept per extra £100" is how much your total monthly income rises for each £100 of extra earnings. Above the work allowance this settles at about £45 because of the 55% taper — less if Income Tax or National Insurance also apply. Uses the same figures as the calculator above; it doesn't model tax, National Insurance or the benefit cap. Estimates only — your actual award is decided by DWP.
+    </p>
+  </div>
+  {% endif %}
+
   {% if adsense_enabled and adsense_slot_calculator %}
   <section class="section adsense-wrap" style="padding:0 0 1rem;">
     {% include "partials/adsense_snippet.html" %}

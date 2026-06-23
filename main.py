@@ -231,6 +231,41 @@ def universal_credit_estimate(inputs: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def uc_earnings_ladder(inputs: Dict[str, Any]) -> Dict[str, Any] | None:
+    """Show how Universal Credit and total monthly income change as earnings rise,
+    holding the household constant. Reuses universal_credit_estimate so the figures
+    match the calculator exactly. Demonstrates the 55% taper — you keep more by
+    earning more, but each extra pound adds less than a pound to total income."""
+    if inputs.get("savings", 0) >= 16000:
+        return None
+    current = float(inputs.get("earnings", 0) or 0)
+    levels = [0, 500, 1000, 1500, 2000, 2500, 3000]
+    # Make sure the user's own earnings appear on the ladder.
+    if current and round(current) not in levels:
+        levels.append(int(round(current)))
+        levels = sorted(set(levels))
+    rows = []
+    prev = None
+    for level in levels:
+        est = universal_credit_estimate({**inputs, "earnings": float(level)})
+        uc = est["primary_amount"]
+        total = round_money(level + uc)
+        kept = None
+        if prev is not None:
+            step = level - prev["earnings"]
+            gain = total - prev["total"]
+            kept = round((gain / step) * 100) if step else None
+        rows.append({
+            "earnings": level,
+            "uc": uc,
+            "total": total,
+            "kept_per_100": kept,  # £ of total income kept per £100 extra earned
+            "is_current": bool(current) and abs(level - current) < 1,
+        })
+        prev = rows[-1]
+    return {"rows": rows, "current_earnings": round_money(current)}
+
+
 def child_benefit_estimate(inputs: Dict[str, Any]) -> Dict[str, Any]:
     weekly_total = child_benefit_weekly(inputs["children"])
     monthly_total = weekly_to_monthly(weekly_total)
@@ -8402,6 +8437,7 @@ def calculator_or_static(slug: str):
         estimate = CALCULATION_FUNCTIONS[page["formula"]](inputs)
         ordered_fields = ordered_fields_for_page(slug, page)
         ui_config = calculator_ui_config(slug, page)
+        earnings_ladder = uc_earnings_ladder(inputs) if page["formula"] == "universal_credit" else None
         return render_page(
             "calculator.html",
             title=page.get("seo_title") or f"{page['title']} | UK Benefits Calculator",
@@ -8413,6 +8449,7 @@ def calculator_or_static(slug: str):
             form_state=inputs,
             estimate=estimate,
             estimate_visual=build_estimate_visual(estimate),
+            earnings_ladder=earnings_ladder,
             ordered_fields=ordered_fields,
             ui_config=ui_config,
             result_highlights=calculator_result_highlights(slug, page, estimate, inputs),
